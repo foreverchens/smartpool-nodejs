@@ -13,13 +13,8 @@ class SmartPoolService {
     async analyze(symbol, hours) {
         await this.updateH1Kline(symbol);
         let h1KlineList = this.KLINE_CACHE.get(symbol).slice(hours);
-        let minP = 99999;
-        let maxP = 0;
-        for (let h1Kline of h1KlineList) {
-            minP = minP > h1Kline.lowP ? h1Kline.lowP : minP;
-            maxP = maxP < h1Kline.highP ? h1Kline.highP : maxP;
-        }
-
+        let minP = Math.min(...h1KlineList.map(e => e.lowP));
+        let maxP = Math.max(...h1KlineList.map(e => e.highP));
         let arrScale = minP * config.SCALE;
         let len = Math.trunc((maxP - minP) / arrScale);
         let dataArr = new Array(len).fill(0);
@@ -64,16 +59,11 @@ class SmartPoolService {
             : queue.peek().openT + this.HOUR;
         for (let maxHour = 16; maxHour > 0; maxHour--) {
             while ((lastTime - startTime) / this.HOUR >= maxHour) {
-                try {
-                    const klines = await czClient.listKline(models.klineParam(symbol, 60 * maxHour, startTime, startTime + this.HOUR * maxHour));
-                    for (let i = 0; i < klines.length; i += 60) {
-                        let klines1 = klines.slice(i, Math.min(i + 60, klines.length));
-                        let newH1Kline = this.klineListToH1Kline(klines1);
-                        newH1Kline.openT = startTime += this.HOUR;
-                        queue.push(newH1Kline);
-                    }
-                } catch (error) {
-                    console.error('Error fetching Kline data:', error.message);
+                const klines = await czClient.listKline(models.klineParam(symbol, 60 * maxHour, startTime, startTime + this.HOUR * maxHour));
+                for (let i = 0; i < klines.length; i += 60) {
+                    let newH1Kline = this.klineListToH1Kline(klines.slice(i, Math.min(i + 60, klines.length)));
+                    newH1Kline.openT = startTime += this.HOUR;
+                    queue.push(newH1Kline);
                 }
             }
         }
@@ -81,13 +71,8 @@ class SmartPoolService {
     }
 
     klineListToH1Kline(klines) {
-        let lowP = 99999;
-        let highP = 0;
-        for (let kline of klines) {
-            lowP = lowP > kline.lowP ? kline.lowP : lowP;
-            highP = highP < kline.highP ? kline.highP : highP;
-        }
-
+        let lowP = Math.min(...klines.map(e => e.lowP));
+        let highP = Math.max(...klines.map(e => e.highP));
         let arrScale = lowP * config.SCALE;
         let dataArr = new Array(Math.trunc((highP - lowP) / arrScale)).fill(0);
         for (let kline of klines) {

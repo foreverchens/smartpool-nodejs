@@ -9,8 +9,12 @@ async function run() {
     let rltArr = [];
     for (let symbol of symbolList) {
         console.log("~~~start %s~~~", symbol)
-        let rlt = await smartPoolService.analyze(symbol, config.CYCLE);
-        rltArr.push(rlt);
+        try {
+            let rlt = await smartPoolService.analyze(symbol, config.CYCLE);
+            rltArr.push(rlt);
+        } catch (error) {
+            console.error('err msg:', error.message);
+        }
     }
 
     let map = new Map([[0, []], [1, []], [2, []], [3, []], [4, []]]);

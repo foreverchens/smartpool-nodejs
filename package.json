@@ -1,0 +1,14 @@
+{
+  "devDependencies": {
+    "@types/jest": "^29.2.5",
+    "jest": "^29.3.1"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "axios": "^1.6.5",
+    "timers": "^0.1.1",
+    "tunnel": "^0.0.6"
+  }
+}

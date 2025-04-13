@@ -1,11 +1,9 @@
 const axios = require('axios');
-const tunnel = require("tunnel");
 const util = require('util');
 const models = require('../common/Models')
 const config = require("../common/Config")
 
 let axiosConfig = {
-    proxy: false, httpsAgent: tunnel.httpsOverHttp({proxy: {host: '127.0.0.1', port: '7890'}}),
 }
 
 class CzClient {
@@ -14,7 +12,10 @@ class CzClient {
         let data = await axios.get(config.LIST_SYMBOL_URL, axiosConfig);
         const set = ["TUSDUSDT", "USDCUSDT", "USDPUSDT", "EURUSDT", "AEURUSDT", "MANTAUSDT", "PAXGUSDT","FDUSDUSDT"]
         return data.data.symbols
+            // 非USDT币对、非数字货币币对
             .filter(ele => "USDT" === ele.quoteAsset && "TRADING" === ele.status && !set.includes(ele.symbol))
+            // 新上市币对剔除
+            .slice(0,-20)
             .map(ele => ele.symbol);
     }
 

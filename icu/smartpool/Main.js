@@ -1,37 +1,37 @@
-const czClient = require("./service/CzClient")
 const config = require("./common/Config")
-const smartPoolService = require("./service/SmartPoolService")
+const czClient = require("./service/CzClient")
 const {setInterval} = require('timers');
+const {Piscina} = require('piscina');
+const path = require('path');
+const threadPool = new Piscina({
+    filename: path.resolve(__dirname, './service/worker.js'), maxThreads: config.MAX_THREADS
+});
 
-async function run() {
-    console.log("~~~start~~~")
-    let symbolList = await czClient.listSymbol()
-    let rltArr = [];
-    for (let symbol of symbolList) {
-        console.log("~~~start %s~~~", symbol)
-        try {
-            let rlt = await smartPoolService.analyze(symbol, config.CYCLE);
-            rltArr.push(rlt);
-        } catch (error) {
-            console.error('err msg:', error.message);
-        }
-    }
-
-    let map = new Map([[0, []], [1, []], [2, []], [3, []], [4, []]]);
+function printArr(rltArr) {
+    let printArr = [[], [], [], [], []];
     for (let rlt of rltArr) {
         let key = rlt.amplitude < 2 || rlt.amplitude >= 10 ? 0 : Math.trunc(rlt.amplitude / 2);
-        map.get(key).push(rlt);
-    }
-    for (let i = 4; i >= 0; i--) {
-        let arr = map.get(i);
-        if (arr.length === 0) {
+        if (!printArr[key]) {
             continue;
         }
-        arr.sort((e1, e2) => e2.score - e1.score);
-        console.log("~~~~[%s]~~~~", i)
-        arr.slice(0, Math.min(5, arr.length)).forEach(ele => console.log(ele));
+        printArr[key].push(rlt);
     }
-    console.log("~~~end~~~")
+    printArr.forEach(arr => console.table(arr.sort((e1, e2) => e2.score - e1.score)
+        .slice(0, Math.min(5, arr.length))))
+}
+
+async function run() {
+    let rltArr = [];
+    let symbolList = await czClient.listSymbol();
+    let st = Date.now();
+    const tasks = symbolList.map((symbol, idx) => {
+        return threadPool.run([symbol, idx, symbolList.length]);
+    });
+    rltArr = await Promise.all(tasks);
+    let et = Date.now();
+    console.log('耗时: %s秒', (et - st) / 1000);
+    // 根据振幅分组、然后打印输出
+    printArr(rltArr);
 }
 
 async function Main() {

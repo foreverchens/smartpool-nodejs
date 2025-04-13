@@ -8,7 +8,10 @@
   },
   "dependencies": {
     "axios": "^1.6.5",
+    "piscina": "^4.9.2",
+    "poolifier": "^4.4.5",
     "timers": "^0.1.1",
-    "tunnel": "^0.0.6"
+    "tunnel": "^0.0.6",
+    "workerpool": "^9.2.0"
   }
 }

@@ -6,7 +6,6 @@ const models = require('../common/Models')
 class SmartPoolService {
     constructor() {
         this.HOUR_MS = 1000 * 60 * 60;
-        this.QUEUE_SIZE = config.MAX_DAY * 24;
         this.KLINE_CACHE = new Map();
     }
 

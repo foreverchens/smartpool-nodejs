@@ -24,14 +24,17 @@ async function run() {
     let rltArr = [];
     let symbolList = await czClient.listSymbol();
     let st = Date.now();
-    const tasks = symbolList.map((symbol, idx) => {
+    // symbolList = ['BTCUSDT','ETHUSDT','XRPUSDT','LTCUSDT','SOLUSDT']
+    rltArr = await Promise.all(symbolList.map((symbol, idx) => {
         return threadPool.run([symbol, idx, symbolList.length]);
-    });
-    rltArr = await Promise.all(tasks);
+    }));
     let et = Date.now();
     console.log('耗时: %s秒', (et - st) / 1000);
     // 根据振幅分组、然后打印输出
-    printArr(rltArr);
+    // 合约
+    printArr(rltArr.filter(ele => ele.symbol.endsWith('USDT')));
+    // 汇率
+    printArr(rltArr.filter(ele => !ele.symbol.endsWith('USDT')));
 }
 
 async function Main() {

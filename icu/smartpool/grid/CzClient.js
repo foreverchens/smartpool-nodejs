@@ -1,8 +1,11 @@
 const Binance = require('node-binance-api');
+const axios = require('axios');
+const crypto = require('crypto');
 
+const APIKEY = 'qbc5djgYcospWpt5RNwBUgVesnzAP0jj68ZXeciXuBSRQGPVbExQomZKjYenuZ1Q';
+const APISECRET = '40pOBNmUndKuGY33nqNi8SMMuC3GsWTA8aRP7rb4fHZDpUE4CDEKhVKoSFkqqTqx';
 const client = new Binance({
-    APIKEY: 'qbc5djgYcospWpt5RNwBUgVesnzAP0jj68ZXeciXuBSRQGPVbExQomZKjYenuZ1Q',
-    APISECRET: '40pOBNmUndKuGY33nqNi8SMMuC3GsWTA8aRP7rb4fHZDpUE4CDEKhVKoSFkqqTqx',
+    APIKEY: APIKEY, APISECRET: APISECRET,
 })
 
 /**
@@ -84,6 +87,14 @@ async function getFuturesPositionRisk() {
  */
 async function getFuturesPrice(symbol) {
     let rlt = await client.futuresPrices(symbol);
+    return rlt[symbol];
+}
+
+/**
+ * 获取最新订单簿价格
+ */
+async function getFuturesBookTicker(symbol) {
+    let rlt = await client.futuresBookTicker(symbol);
     return rlt[symbol];
 }
 
@@ -174,17 +185,38 @@ async function getFuturesOrder(symbol, orderId) {
     return await client.futuresOrderStatus(symbol, {'orderId': orderId})
 }
 
+function getFuturesTickerStream(baseAssert, quotaAssert, callback) {
+    client.futuresMiniTickerStream(null, async tickers => {
+        let baseP, quotaP;
+        tickers.forEach(ele => {
+            if (ele.symbol === baseAssert) {
+                baseP = ele.close
+            }
+            if (quotaAssert === ele.symbol) {
+                quotaP = ele.close
+            }
+        })
+        if (baseP && quotaP) {
+            await callback(baseP / quotaP)
+        }
+    })
+}
+
 
 module.exports = {
     getSpotAccount,
     getFuturesAccount,
     getFuturesBalance,
-    futureBuy, futureSell,
+    futureBuy,
+    futureSell,
     getFuturesPositionRisk,
     getFuturesPrice,
+    getFuturesBookTicker,
     placeFuturesOrder,
     futuresCancel,
     getSynPrice,
     getFuturesOpenOrders,
-    getFuturesOrder
+    getFuturesOrder,
+    futureMultiOrder,
+    getFuturesTickerStream
 };

@@ -61,7 +61,7 @@ class SmartPoolService {
 
         // 时间处理、保留到小时级别精度、填充k线队列时、找到最远k线的开盘时间
         const lastTime = Math.floor(Date.now() / this.HOUR_MS) * this.HOUR_MS;
-        let startTime = queue.isEmpty() ? lastTime - config.CYCLE * this.HOUR_MS : queue.peek().openT+this.HOUR_MS;
+        let startTime = queue.isEmpty() ? lastTime - config.CYCLE * this.HOUR_MS : queue.peek().openT + this.HOUR_MS;
         if ('BTCUSDT' === symbol) {
             console.log('curTime:%s\n总更新区间: %s --> %s', new Date().toLocaleString(), new Date(startTime).toLocaleString(), new Date(lastTime).toLocaleString())
         }
@@ -86,7 +86,7 @@ class SmartPoolService {
         }
         if ('BTCUSDT' === symbol) {
             let arr = queue.slice(config.CYCLE);
-            console.log('量化区间: %s --> %s,%s个小时', new Date(arr[0].openT).toLocaleString(), new Date(arr[arr.length - 1].openT + this.HOUR_MS).toLocaleString(),arr.length)
+            console.log('量化区间: %s --> %s,%s个小时', new Date(arr[0].openT).toLocaleString(), new Date(arr[arr.length - 1].openT + this.HOUR_MS).toLocaleString(), arr.length)
         }
     }
 

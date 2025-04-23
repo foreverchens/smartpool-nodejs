@@ -1,7 +1,8 @@
 const fs = require('fs')
-let content = fs.readFileSync('./database.txt', 'utf-8');
+let content = fs.readFileSync('./TRXUSDT_BNBUSDC_database.txt', 'utf-8');
 const data = content.split(/\r?\n/);
 data.pop()
+// console.table(data.map(ele => ele.split(',')));;
 const result = {};
 for (const line of data) {
     const [symbol, side, , priceStr, amountStr] = line.split(',');
@@ -48,5 +49,4 @@ for (const symbol in result) {
         realizedProfit: realizedProfit.toPrecision(3)
     };
 }
-
 console.table(summary);

@@ -12,6 +12,10 @@ class SmartPoolService {
     async analyze(symbol, hours) {
         await this.updateH1Kline(symbol);
         let h1KlineList = this.KLINE_CACHE.get(symbol).slice(hours);
+        if (h1KlineList.length === 0) {
+            // 新币对
+            return {}
+        }
         let minP = Math.min(...h1KlineList.map(e => e.lowP));
         let maxP = Math.max(...h1KlineList.map(e => e.highP));
         // 基于最低价格获取价格精度、
@@ -49,7 +53,9 @@ class SmartPoolService {
         let highP = +minP + (arrScale * r)
         let amplitude = (highP - lowP) * 100 / lowP;
         let score = countPt * 0.8 / amplitude;
-        return models.ShakeScore(symbol, Math.round(score), amplitude.toFixed(1), lowP.toPrecision(4), highP.toPrecision(4));
+        let price = await czClient.getPrice(symbol);
+        let pricePosition = ((price - lowP) / (highP - lowP)).toFixed(2);
+        return models.ShakeScore(symbol, Math.round(score), amplitude.toFixed(1), lowP.toPrecision(4), highP.toPrecision(4), pricePosition);
     }
 
     /**

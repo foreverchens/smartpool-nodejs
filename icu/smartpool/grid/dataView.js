@@ -11,8 +11,7 @@ for (const line of data) {
 
     if (!result[symbol]) {
         result[symbol] = {
-            BUY: {totalAmount: 0, totalCost: 0},
-            SELL: {totalAmount: 0, totalRevenue: 0}
+            BUY: {totalAmount: 0, totalCost: 0}, SELL: {totalAmount: 0, totalRevenue: 0}
         };
     }
 
@@ -39,14 +38,13 @@ for (const symbol in result) {
 
     summary[symbol] = {
         buy: {
-            avgP: avgBuyPrice.toPrecision(5),
-            totalVol: (buy.totalAmount * avgBuyPrice).toFixed(0)
-        },
-        sell: {
-            avgP: avgSellPrice.toPrecision(5),
-            totalAmount: (sell.totalAmount * avgSellPrice).toFixed(0)
-        },
-        realizedProfit: realizedProfit.toPrecision(3)
+            avgP: avgBuyPrice.toPrecision(5), totalVol: (buy.totalAmount * avgBuyPrice).toFixed(0)
+        }, sell: {
+            avgP: avgSellPrice.toPrecision(5), totalAmount: (sell.totalAmount * avgSellPrice).toFixed(0)
+        }, realizedProfit: realizedProfit.toPrecision(3)
     };
 }
 console.table(summary);
+console.log('总已实现盈利:%s$', Object.values(summary)
+    .map(ele => ele.realizedProfit)
+    .reduce((ele, num) => Number(ele) + Number(num)))

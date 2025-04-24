@@ -26,13 +26,14 @@ function H1Kline(openT,lowP,highP,dataArr){
     }
 }
 
-function ShakeScore(symbol,score,amplitude,lowP,highP){
+function ShakeScore(symbol,score,amplitude,lowP,highP,pricePosition){
     return {
         "symbol":symbol,
         "score":score,
         "amplitude":amplitude,
         "lowP":lowP,
         "highP":highP,
+        "pricePosition":pricePosition
     }
 }
 

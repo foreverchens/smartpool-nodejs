@@ -47,4 +47,4 @@ for (const symbol in result) {
 console.table(summary);
 console.log('总已实现盈利:%s$', Object.values(summary)
     .map(ele => ele.realizedProfit)
-    .reduce((ele, num) => Number(ele) + Number(num)))
+    .reduce((ele, num) => Number(ele) + Number(num), 0).toFixed(1))

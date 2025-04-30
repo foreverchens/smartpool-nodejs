@@ -10,6 +10,7 @@
     "axios": "^1.6.5",
     "binance-api-node": "^0.12.9",
     "node-binance-api": "^1.0.3",
+    "node-telegram-bot-api": "^0.66.0",
     "piscina": "^4.9.2",
     "poolifier": "^4.4.5",
     "timers": "^0.1.1",

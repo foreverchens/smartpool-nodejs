@@ -66,9 +66,9 @@ async function futureMultiOrder(orders) {
  * 获取合约持仓核心数据
  * @returns {Promise<Array>} [{ symbol, positionAmt, entryPrice, unrealizedProfit, leverage }]
  */
-async function getFuturesPositionRisk() {
+async function getFuturesPositionRisk(symbol = '') {
     const positions = await client.futuresPositionRisk();
-    return positions
+    let rlt = positions
         .filter(p => parseFloat(p.positionAmt) !== 0)
         .map(p => ({
             symbol: p.symbol,
@@ -78,6 +78,14 @@ async function getFuturesPositionRisk() {
             unrealizedProfit: p.unRealizedProfit,
             notional: p.notional
         }));
+    if (symbol) {
+        for (let ele of rlt) {
+            if (ele.symbol === symbol) {
+                return [ele];
+            }
+        }
+    }
+    return rlt;
 }
 
 /**

@@ -1,21 +1,38 @@
 // server.js
 import express from 'express'
-import models from "../common/Models.js";
-import czClient from "../service/CzClient.js";
+import axios from "axios";
 
 const app = express();
 const port = 3000;
 
-const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
-
 async function listKline(symbol, period) {
-    // let url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${period}&limit=60`
-    // let resp = await axios.get(url, {});
-
-    return await czClient.listKline(models.klineParam(symbol, 60 * 16, null, null, period));
+    symbol = symbol.toUpperCase();
+    if (!symbol.endsWith('USDT')) {
+        let [base, quota] = symbol.split('-');
+        symbol = base.concat('USDT');
+        let baseKlines = await listKline(symbol, period);
+        symbol = quota.concat('USDT');
+        let quotaKlines = await listKline(symbol, period);
+        // 合并k线
+        return baseKlines.map((baseKline, idx) => {
+            let quotaKline = quotaKlines[idx];
+            return {
+                openT: baseKline.openT,
+                openP: (baseKline.openP / quotaKline.openP).toPrecision(4),
+                highP: (baseKline.highP / quotaKline.highP).toPrecision(4),
+                lowP: (baseKline.lowP / quotaKline.lowP).toPrecision(4),
+                closeP: (baseKline.closeP / quotaKline.closeP).toPrecision(4)
+            }
+        })
+    }
+    let url = 'https://api.binance.com/api/v3/klines?symbol=' + symbol + '&interval=' + period + '&limit=960'
+    return (await axios.get(url, {})).data.map(function (ele) {
+        return {
+            openT: ele[0], openP: ele[1], highP: ele[2], lowP: ele[3], closeP: ele[4]
+        }
+    });
 }
 
-// 1. K 线数据接口
 app.get('/kline/:symbol/:period', async (req, res, next) => {
     try {
         const {symbol, period} = req.params;
@@ -29,7 +46,6 @@ app.get('/kline/:symbol/:period', async (req, res, next) => {
     }
 });
 
-// 2. 根路由：返回带下拉框和 ECharts 的 HTML
 app.get('/', (req, res) => {
     const defaultSymbol = 'BTCUSDT';
     res.send(`
@@ -47,16 +63,9 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <div id="controls">
-  
-
-    
      <label>币种：</label>
-     <input id="symbol" list="symbols" value="${defaultSymbol}" placeholder="请输入或选择币种" />
-     <datalist id="symbols">
-    ${symbols.map(s => `<option value="${s}">`).join('')}
-     </datalist>
+     <input id="symbol" list="symbols" value="${defaultSymbol}" placeholder="ETH-BTC" />
 
-    
     <label style="margin-left:20px">周期：</label>
     <select id="period">
       <option value="1m">1 分钟</option>
@@ -121,7 +130,11 @@ app.get('/', (req, res) => {
         }
         ],
         tooltip: { trigger: 'axis', axisPointer: { type: 'cross' }},
-        xAxis: { type: 'category', data: times },
+        xAxis: { type: 'category', data: times ,  min: 'dataMin',
+            max: function(value) {
+                return value.max + (value.max - value.min) * 0.05;
+            } 
+        },
         yAxis: { type: 'value',scale: true,position: 'right'},
        series: [{
         name: 'K 线',
@@ -161,9 +174,6 @@ app.get('/', (req, res) => {
 </html>
   `);
 });
-
-
-// 启动
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });

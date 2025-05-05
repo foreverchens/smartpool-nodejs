@@ -1,40 +1,25 @@
-function klineParam(symbol,limit,startTime,endTime){
+function klineParam(symbol, limit, startTime, endTime, period) {
     return {
-        "symbol":symbol,
-        "limit":limit,
-        "startTime":startTime,
-        "endTime":endTime
+        symbol, limit, startTime, endTime, period
     }
 }
 
-function kline(openT,openP,highP,lowP,closeP){
+function kline(openT, openP, highP, lowP, closeP) {
     return {
-        "openT":openT,
-        "openP":openP,
-        "highP":highP,
-        "lowP":lowP,
-        "closeP":closeP,
+        openT, openP, highP, lowP, closeP
     }
 }
 
-function H1Kline(openT,lowP,highP,dataArr){
+function H1Kline(openT, lowP, highP, dataArr) {
     return {
-        "openT":openT,
-        "lowP":lowP,
-        "highP":highP,
-        "dataArr":dataArr,
+        openT, lowP, highP, dataArr
     }
 }
 
-function ShakeScore(symbol,score,amplitude,lowP,highP,pricePosition){
+function ShakeScore(symbol, score, amplitude, lowP, highP, pricePosition) {
     return {
-        "symbol":symbol,
-        "score":score,
-        "amplitude":amplitude,
-        "lowP":lowP,
-        "highP":highP,
-        "pricePosition":pricePosition
+        symbol, score, amplitude, lowP, highP, pricePosition
     }
 }
 
-module.exports = {klineParam,kline,H1Kline,ShakeScore}
+module.exports = {klineParam, kline, H1Kline, ShakeScore}

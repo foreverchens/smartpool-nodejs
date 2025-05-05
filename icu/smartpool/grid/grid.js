@@ -59,6 +59,8 @@ function updateConfig() {
             // 更新单格利率、和下一交易汇率
             console.log('利率更新: %s -> %s', gridRate, config.gridRate)
             gridRate = config.gridRate;
+            buyPrice = Number((curPrice * (1 - gridRate)).toPrecision(5));
+            sellPrice = Number((curPrice * (1 + gridRate)).toPrecision(5));
         }
     } catch (err) {
         console.error('config.json 404')
@@ -70,7 +72,7 @@ function formatQtyByPrice(price, qty) {
         return Math.floor(qty)
     } else if (price > 10000) {
         return qty.toFixed(3)
-    } else if (price > 100) {
+    } else if (price > 1000) {
         return qty.toFixed(2)
     } else {
         return qty.toFixed(1);
@@ -111,30 +113,35 @@ async function orderCallback(baseOrderId, quotaOrderId) {
             return
         }
         if (baseOrder && baseOrder.status === 'NEW') {
-            // 撤单
-            // 存在撤单失败情况、原因:订单刚刚成交
-            await czClient.futuresCancel(baseAssert, baseOrderId);
+            // 修改订单为最新价格
             let sideBuy = baseOrder.side === 'BUY'
             // 重新获取订单簿
             let baseOrderBook = await czClient.getFuturesBookTicker(baseAssert);
             let baseP = sideBuy ? baseOrderBook.bidPrice : baseOrderBook.askPrice;
-            // 最新价重新挂单
-            baseOrder = sideBuy ? await czClient.futureBuy(baseAssert, baseOrder.origQty, baseP) : await czClient.futureSell(baseAssert, baseOrder.origQty, baseP)
-            console.log('%s-%s重新挂单[%s-->%s]', baseAssert, baseP, baseOrderId, baseOrder.orderId)
+            // 最新价修改挂单
+            if (baseP !== baseOrder.price) {
+                baseOrder = await czClient.futureModifyOrder(baseOrder.symbol, baseOrder.side, baseOrder.orderId, baseOrder.origQty, baseP);
+                console.log('%s-%s修改挂单', baseAssert, baseP)
+            } else {
+                console.log('%s-%s无需修改挂单', baseAssert, baseP)
+            }
         }
         if (!simpleGrid && quotaOrder && quotaOrder.status === 'NEW') {
-            // 撤单
-            await czClient.futuresCancel(quotaAssert, quotaOrderId);
+            // 修改订单为最新价格
             let sideBuy = quotaOrder.side === 'BUY'
             // 重新获取订单簿
             let quotaOrderBook = await czClient.getFuturesBookTicker(quotaAssert);
             let quotaP = sideBuy ? quotaOrderBook.bidPrice : quotaOrderBook.askPrice;
-            // 最新价重新挂单
-            quotaOrder = sideBuy ? await czClient.futureBuy(quotaAssert, quotaOrder.origQty, quotaP) : await czClient.futureSell(quotaAssert, quotaOrder.origQty, quotaP)
-            console.log('%s-%s重新挂单[%s-->%s]', quotaAssert, quotaP, quotaOrderId, quotaOrder.orderId)
+            // 最新价修改挂单
+            if (quotaP !== quotaOrder.price) {
+                quotaOrder = await czClient.futureModifyOrder(quotaOrder.symbol, quotaOrder.side, quotaOrder.orderId, quotaOrder.origQty, quotaP);
+                console.log('%s-%s修改挂单', quotaAssert, quotaP)
+            } else {
+                console.log('%s-%s无需修改挂单', quotaAssert, quotaP)
+            }
         }
     } catch (error) {
-        console.error(error)
+        console.error('orderCallback:\n' + error)
     }
     setTimeout(() => {
         orderCallback(baseOrder.orderId, quotaOrder.orderId)
@@ -196,14 +203,14 @@ async function gridLoop() {
                     }
                 }
                 baseOrder = await czClient.futureSell(baseAssert, baseQty, baseOrderBook.askPrice);
-                console.log('当前汇率%s高于卖出汇率价%s、执行卖出%s刀 %s、订单时间：%s\n卖单:%s', curPrice, sellPrice, gridValue, baseAssert, Date.now(), baseOrder)
+                console.log('当前汇率%s高于卖出汇率价%s、执行卖出%s 刀 %s、订单时间：%s\n卖单:%s', curPrice, sellPrice, gridValue, baseAssert, Date.now(), baseOrder)
                 if (!simpleGrid) {
                     quotaOrder = await czClient.futureBuy(quotaAssert, quotaQty, quotaP);
-                    console.log('当前汇率%s高于卖出汇率价%s、执行买入%s刀%s、订单时间：%s\n买单:%s', curPrice, sellPrice, gridValue, quotaAssert, Date.now(), quotaOrder)
+                    console.log('当前汇率%s高于卖出汇率价%s、执行买入%s 刀%s、订单时间：%s\n买单:%s', curPrice, sellPrice, gridValue, quotaAssert, Date.now(), quotaOrder)
                 }
             }
-            buyPrice = (curPrice * (1 - gridRate)).toPrecision(5);
-            sellPrice = (curPrice * (1 + gridRate)).toPrecision(5);
+            buyPrice = Number((curPrice * (1 - gridRate)).toPrecision(5));
+            sellPrice =Number((curPrice * (1 + gridRate)).toPrecision(5));
             setTimeout(() => {
                 orderCallback(baseOrder.orderId, quotaOrder.orderId)
             }, 1000 * 2)
@@ -225,8 +232,8 @@ async function Main() {
         setTimeout(Main, 1000 * 60)
     } else {
         console.log('启动...')
-        buyPrice = (curPrice * (1 - gridRate)).toPrecision(5);
-        sellPrice = (curPrice * (1 + gridRate)).toPrecision(5);
+        buyPrice = Number((curPrice * (1 - gridRate)).toPrecision(5));
+        sellPrice = Number((curPrice * (1 + gridRate)).toPrecision(5));
         console.log('初始汇率:%s 下一买入汇率:%s 下一卖出汇率:%s', curPrice, buyPrice, sellPrice)
         // 每 5 秒轮询一次
         setInterval(gridLoop, 1000 * 5)

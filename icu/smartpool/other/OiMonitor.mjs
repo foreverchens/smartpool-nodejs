@@ -1,5 +1,4 @@
-const axios = require("axios");
-
+import axios from "axios";
 async function getOi(symbol, period = '1d', limit = 30) {
     let url = `https://fapi.binance.com/futures/data/openInterestHist?symbol=${symbol}&limit=${limit}&period=${period}`;
     let rlt = await axios.get(url, {});

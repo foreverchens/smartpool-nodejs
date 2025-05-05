@@ -1,5 +1,5 @@
 const config = require("./common/Config")
-const czClient = require("./service/CzClient")
+const czClient = require("./service/CzClient.js")
 const {setInterval} = require('timers');
 const {Piscina} = require('piscina');
 const path = require('path');
@@ -40,7 +40,9 @@ async function run() {
     // 合约
     printArr(rltArr.filter(ele => ele.symbol && ele.symbol.endsWith('USDT')));
     // 汇率
-    printArr(rltArr.filter(ele => ele.symbol && !ele.symbol.endsWith('USDT')));
+    printArr(rltArr.filter(ele => ele.symbol && ele.symbol.endsWith('BTC')));
+    printArr(rltArr.filter(ele => ele.symbol && ele.symbol.endsWith('ETH')));
+    printArr(rltArr.filter(ele => ele.symbol && ele.symbol.endsWith('BNB')));
 }
 
 async function Main() {

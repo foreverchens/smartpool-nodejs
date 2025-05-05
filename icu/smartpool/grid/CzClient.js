@@ -21,7 +21,7 @@ async function getSpotAccount() {
 }
 
 /**
- * 获取合约账户余额
+ * 获取合约账户余额 没用
  * @returns {Promise<Object>} { assets: [{ asset, walletBalance, unrealizedProfit, marginBalance }] }
  */
 async function getFuturesAccount() {
@@ -37,7 +37,7 @@ async function getFuturesAccount() {
 }
 
 /**
- * 获取合约账户保证金余额、没用
+ * 获取合约账户保证金余额
  */
 async function getFuturesBalance() {
     let rlt = await client.futuresBalance();
@@ -95,7 +95,7 @@ async function getFuturesPositionRisk(symbol = '') {
  */
 async function getFuturesPrice(symbol) {
     let rlt = await client.futuresPrices(symbol);
-    return rlt[symbol];
+    return Number(rlt[symbol]);
 }
 
 /**
@@ -153,7 +153,7 @@ async function futuresCancel(symbol, orderId) {
  */
 async function getSynPrice(baseSymbol, quotaSymbol) {
     let rlt = await client.futuresPrices();
-    return (rlt[baseSymbol] / rlt[quotaSymbol]).toPrecision(5)
+    return Number((rlt[baseSymbol] / rlt[quotaSymbol]).toPrecision(5))
 }
 
 /**
@@ -193,6 +193,32 @@ async function getFuturesOrder(symbol, orderId) {
     return await client.futuresOrderStatus(symbol, {'orderId': orderId})
 }
 
+/**
+ * 修改订单
+ */
+async function futureModifyOrder(symbol, side, orderId, quantity, price, timestamp = Date.now()) {
+    const endpoint = 'https://fapi.binance.com/fapi/v1/order';
+    const params = {
+        symbol, orderId, side, quantity, price, timestamp,
+    };
+    const query = new URLSearchParams(params).toString();
+    const signature = crypto.createHmac('sha256', APISECRET)
+        .update(query)
+        .digest('hex');
+    const url = `${endpoint}?${query}&signature=${signature}`;
+    try {
+        const res = await axios.put(url, null, {
+            headers: {
+                'X-MBX-APIKEY': APIKEY
+            }
+        });
+        return res.data;
+    } catch (error) {
+        console.error('修改失败：', error.response ? error.response.data : error.message);
+        return {orderId}
+    }
+}
+
 function getFuturesTickerStream(baseAssert, quotaAssert, callback) {
     client.futuresMiniTickerStream(null, async tickers => {
         let baseP, quotaP;
@@ -226,5 +252,6 @@ module.exports = {
     getFuturesOpenOrders,
     getFuturesOrder,
     futureMultiOrder,
+    futureModifyOrder,
     getFuturesTickerStream
 };

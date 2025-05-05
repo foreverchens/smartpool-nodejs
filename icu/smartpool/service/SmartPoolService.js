@@ -1,4 +1,4 @@
-const czClient = require('./CzClient')
+const czClient = require('./CzClient.js')
 const config = require('../common/Config')
 const Queue = require('../common/CircularQueue')
 const models = require('../common/Models')
@@ -27,6 +27,9 @@ class SmartPoolService {
             let lowP = h1Kline.lowP;
             let startIndex = Math.trunc((lowP - minP) / arrScale);
             for (let i = 0; i < h1DataArr.length; i++) {
+                if (isNaN(h1DataArr[i])) {
+                    continue
+                }
                 dataArr[startIndex + i] += h1DataArr[i];
             }
         }
@@ -101,7 +104,8 @@ class SmartPoolService {
         let highP = Math.max(...klines.map(e => e.highP));
         let arrScale = lowP * config.SCALE;
         let dataArr = new Array(Math.trunc((highP - lowP) / arrScale)).fill(0);
-        for (let kline of klines) {
+        for (let i = 0; i < klines.length; i++) {
+            let kline = klines[i];
             let openP = kline.openP;
             let closeP = kline.closeP;
             if (openP > closeP) {
@@ -117,13 +121,21 @@ class SmartPoolService {
 
             let startIndex = Math.trunc((openP - lowP) / arrScale);
             let endIndex = Math.trunc((closeP - lowP) / arrScale);
-            while (startIndex < endIndex) {
+            while (startIndex < endIndex && startIndex < dataArr.length) {
                 dataArr[startIndex++]++;
+            }
+        }
+        for (let ele of dataArr) {
+            if (isNaN(ele)) {
+                continue;
             }
         }
         return models.H1Kline(null, lowP, highP, dataArr);
     }
 }
 
+// new SmartPoolService().updateH1Kline('ETH-BTC').then(ele=>{
+//     console.log(this.KLINE_CACHE.get('ETH-BTC'));
+// });
 
 module.exports = new SmartPoolService();

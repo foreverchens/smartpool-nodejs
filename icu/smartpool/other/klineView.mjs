@@ -19,10 +19,9 @@ async function listKline(symbol, period) {
 app.get('/kline/:symbol/:period', async (req, res, next) => {
     try {
         const {symbol, period} = req.params;
-        const periodMin = parseInt(period, 10);
         // 1. 等待拿到原始数据
         const data = await listKline(symbol, period);
-        if (!data) return res.status(404).json({error: 'symbol not found'});
+        if (!data) return res.status(400).json({error: '1'});
         // 4. 最后返回
         res.json(data);
     } catch (err) {
@@ -61,7 +60,7 @@ app.get('/', (req, res) => {
     <label style="margin-left:20px">周期：</label>
     <select id="period">
       <option value="1m">1 分钟</option>
-      <option value="5m">5 分钟</option>
+      <option value="5m" selected>5 分钟</option>
       <option value="15m">15 分钟</option>
       <option value="30m">30 分钟</option>
       <option value="1h">1 小时</option>

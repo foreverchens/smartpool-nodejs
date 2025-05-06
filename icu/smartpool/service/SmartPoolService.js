@@ -54,11 +54,11 @@ class SmartPoolService {
         // 震荡区间下沿、上沿、振幅、震荡得分｜点位密度=总点数/振幅、因最小价格精度一致、所以处于同一坐标系
         let lowP = +minP + (arrScale * l);
         let highP = +minP + (arrScale * r)
-        let amplitude = (highP - lowP) * 100 / lowP;
+        let amplitude = +((highP - lowP) * 100 / lowP).toFixed(1);
         let score = countPt * 0.8 / amplitude;
         let price = await czClient.getPrice(symbol);
-        let pricePosition = ((price - lowP) / (highP - lowP)).toFixed(2);
-        return models.ShakeScore(symbol, Math.round(score), amplitude.toFixed(1), lowP.toPrecision(4), highP.toPrecision(4), pricePosition);
+        let pricePosition = +((price - lowP) / (highP - lowP)).toFixed(2);
+        return models.ShakeScore(symbol, Math.round(score), amplitude, lowP.toPrecision(4), highP.toPrecision(4), pricePosition);
     }
 
     /**
@@ -133,9 +133,5 @@ class SmartPoolService {
         return models.H1Kline(null, lowP, highP, dataArr);
     }
 }
-
-// new SmartPoolService().updateH1Kline('ETH-BTC').then(ele=>{
-//     console.log(this.KLINE_CACHE.get('ETH-BTC'));
-// });
 
 module.exports = new SmartPoolService();

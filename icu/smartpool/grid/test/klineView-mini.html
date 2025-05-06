@@ -4,23 +4,54 @@
     <meta charset="UTF-8"/>
     <title>动态 K 线图</title>
     <style>
-        body { margin:0; padding:10px; font-family:Arial, sans-serif; background:#0f1624; }
-        #controls { margin-bottom:10px; color:#fff; }
-        #chart  { width:100%; height:600px; }
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+            background: #0f1624;
+        }
+
+        #controls {
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        #chart {
+            width: 100%;
+            height: 600px;
+        }
+
         input, select {
-            background:#1f2a48; color:#fff; border:1px solid #2c3e50;
-            padding:4px; border-radius:4px;
+            background: #1f2a48;
+            color: #fff;
+            border: 1px solid #2c3e50;
+            padding: 4px;
+            border-radius: 4px;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
 </head>
 <body>
 <div id="controls">
-    <label>币种：</label>
-    <input id="symbol" list="symbols" value="BTCUSDT" placeholder="ETH-BTC"/>
-    <datalist id="symbols">
-        <option value="BTCUSDT"><option value="ETHUSDT">
+    <label>base:</label>
+    <input id="base" list="bases" value="BTC" placeholder="BTC"/>
+    <datalist id="bases">
+        <option value="BTC">
+        <option value="ETH">
+        <option value="LTC"><!-- 按需补全 -->
     </datalist>
+
+    <label style="margin-left:10px">quota:</label>
+    <input id="quota" list="quotas" value="USDT" placeholder="USDT"/>
+    <datalist id="quotas">
+        <option value="USDT">
+        <option value="BTC">
+        <option value="ETH">
+    </datalist>
+
+    <button id="swap" style="margin-left:10px">↕️</button>
+
+
     <label style="margin-left:20px">周期：</label>
     <select id="period">
         <option value="1m">1 分钟</option>
@@ -35,12 +66,22 @@
 <script>
     const chart = echarts.init(document.getElementById('chart'));
 
+    // 从下拉框读当前选择
     function getParams() {
-        return {
-            symbol: document.getElementById('symbol').value.trim(),
-            period: document.getElementById('period').value
-        };
+        const base = document.getElementById('base').value.trim().toUpperCase();
+        const quota = document.getElementById('quota').value.trim().toUpperCase();
+        // 如果 quota 是 USDT，就拼成 BTCUSDT；否则拼成 ETH-BTC 格式，走跨币对逻辑
+        const symbol = (!quota || quota === 'USDT') ? base + 'USDT' : base + '-' + quota;
+        const period = document.getElementById('period').value;
+        return {symbol, period};
     }
+
+    document.getElementById('swap').addEventListener('click', () => {
+        const b = document.getElementById('base');
+        const q = document.getElementById('quota');
+        [b.value, q.value] = [q.value, b.value];
+        render();
+    });
 
     async function listKline(symbol, period) {
         symbol = symbol.toUpperCase();
@@ -51,10 +92,10 @@
             return baseK.map((b, i) => {
                 const q = quotaK[i];
                 return {
-                    openT:  b.openT,
-                    openP:  (b.openP  / q.openP ).toPrecision(4),
-                    highP:  (b.highP  / q.highP).toPrecision(4),
-                    lowP:   (b.lowP   / q.lowP ).toPrecision(4),
+                    openT: b.openT,
+                    openP: (b.openP / q.openP).toPrecision(4),
+                    highP: (b.highP / q.highP).toPrecision(4),
+                    lowP: (b.lowP / q.lowP).toPrecision(4),
                     closeP: (b.closeP / q.closeP).toPrecision(4)
                 };
             });
@@ -64,19 +105,19 @@
         const resp = await fetch(url);
         const data = await resp.json();
         return data.map(e => ({
-            openT:  e[0],
-            openP:  e[1],
-            highP:  e[2],
-            lowP:   e[3],
+            openT: e[0],
+            openP: e[1],
+            highP: e[2],
+            lowP: e[3],
             closeP: e[4]
         }));
     }
 
 
     async function render() {
-        const { symbol, period } = getParams();
-        const  agg = await listKline(symbol,period)
-        const times  = agg.map(c => new Date(c.openT).toLocaleString());
+        const {symbol, period} = getParams();
+        const agg = await listKline(symbol, period)
+        const times = agg.map(c => new Date(c.openT).toLocaleString());
         const values = agg.map(c => [c.openP, c.closeP, c.lowP, c.highP]);
 
         chart.setOption({
@@ -86,21 +127,21 @@
                 backgroundColor: '#111b2d', borderColor: '#1f2a48'
             },
             dataZoom: [
-                { type: 'inside', start: 50, end: 100 },
-                { type: 'slider', start: 0, end: 100, height: 20, bottom: 10 }
+                {type: 'inside', start: 50, end: 100},
+                {type: 'slider', start: 0, end: 100, height: 20, bottom: 10}
             ],
-            tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+            tooltip: {trigger: 'axis', axisPointer: {type: 'cross'}},
             xAxis: {
                 type: 'category', data: times,
                 min: 'dataMin',
                 max: v => v.max + (v.max - v.min) * 0.05,
-                axisLine: { lineStyle: { color: '#2c3e50' } },
-                axisLabel:{ color:'#8fa3bf' }, splitLine:{ show:true, lineStyle:{ color:'#1f2a48' }}
+                axisLine: {lineStyle: {color: '#2c3e50'}},
+                axisLabel: {color: '#8fa3bf'}, splitLine: {show: true, lineStyle: {color: '#1f2a48'}}
             },
             yAxis: {
                 type: 'value', scale: true, position: 'right',
-                axisLine: { lineStyle: { color: '#2c3e50' } },
-                axisLabel:{ color:'#8fa3bf' }, splitLine:{ show:true, lineStyle:{ color:'#1f2a48' }}
+                axisLine: {lineStyle: {color: '#2c3e50'}},
+                axisLabel: {color: '#8fa3bf'}, splitLine: {show: true, lineStyle: {color: '#1f2a48'}}
             },
             series: [{
                 name: 'K 线', type: 'candlestick', data: values,
@@ -109,14 +150,25 @@
                     borderColor: '#26a69a', borderColor0: '#ef5350'
                 },
                 emphasis: {
-                    itemStyle: { color: '#2ec7c9', color0: '#f4606c' }
+                    itemStyle: {color: '#2ec7c9', color0: '#f4606c'}
                 }
             }]
         });
     }
 
-    document.getElementById('symbol')
-        .addEventListener('keydown', e => { if (e.key === 'Enter') render(); });
+    // 事件绑定：币种 & 周期变化都重新渲染
+    document.getElementById('base')
+        .addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                render();
+            }
+        });
+    document.getElementById('quota')
+        .addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                render();
+            }
+        });
     document.getElementById('period')
         .addEventListener('change', render);
 

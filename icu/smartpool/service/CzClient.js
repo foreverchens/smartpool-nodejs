@@ -18,7 +18,7 @@ class CzClient {
         'BTC': {}, 'ETH': {}, 'BNB': {}
     }
 
-    exSet = ["TUSDUSDT", "USDCUSDT", "USDPUSDT", "EURUSDT", "AEURUSDT", "MANTAUSDT", "PAXGUSDT", "FDUSDUSDT", "WBETHETH", "WBTCBTC"]
+    exSet = ['BTCUSDT',"TUSDUSDT", "USDCUSDT", "USDPUSDT", "EURUSDT", "AEURUSDT", "MANTAUSDT", "PAXGUSDT", "FDUSDUSDT", "WBETHETH", "WBTCBTC"]
 
     symbolList;
 
@@ -28,10 +28,15 @@ class CzClient {
         }
         // 获取合约USDT币对&现货BTC&ETH币对
         let contractList = [];
-        contractList = await this.listContract();
+        // USDT合约
+        // contractList = await this.listContract();
         // 现 货
-        let spotList = await this.listSpot();
-        return this.symbolList = contractList.concat(spotList);
+        let spotList = [];
+        // spotList = await this.listSpot();
+        // 合约币对但BTC
+        let contractWithBtcList = [];
+        contractWithBtcList = await this.listContractWithBtc();
+        return this.symbolList = contractList.concat(spotList).concat(contractWithBtcList);
     }
 
     async listSpot() {
@@ -51,7 +56,7 @@ class CzClient {
                 // 交易量大于300w 平均交易量10M、因交易量过低过滤掉约55%
                 symbol = symbol.endsWith('BTC') ? symbol.replace('BTC', 'USDT') : symbol.endsWith('ETH') ? symbol.replace('ETH', 'USDT') : symbol.endsWith('BNB') ? symbol.replace('BNB', 'USDT') : symbol;
                 let vol = volList[symbol];
-                return Number(vol) > 10000000;
+                return Number(vol) > 20000000;
             })
     }
 
@@ -73,16 +78,14 @@ class CzClient {
                 // 过滤掉交易量小于10M的合约币对
                 // 交易量大于1000w、平均交易量50M左右、因交易量过低过滤掉约55%
                 let vol = volList[symbol];
-                return Number(vol) > 50000000;
+                return Number(vol) > 5000_0000;
             })
     }
 
     async listKline(obj) {
-        let symbol = obj.symbol;
+        let symbol = obj.symbol.toUpperCase();
         if (!symbol.endsWith('USDT')) {
-            // let base = symbol.slice(0, -3);
-            // let quota = symbol.slice(-3);
-            let [base,quota] = symbol.split('-');
+            let [base, quota] = symbol.split('-');
             obj.symbol = base.concat('USDT');
             let baseKlines = await this.listKline(obj);
             obj.symbol = quota.concat('USDT');
@@ -116,7 +119,7 @@ class CzClient {
                 if (!baseKline.openP || !baseKline.highP || !baseKline.lowP || !baseKline.closeP || !quotaKline.openP || !quotaKline.highP || !quotaKline.lowP || !quotaKline.closeP) {
                     console.log(baseKline);
                 }
-                return models.kline(baseKline.openT, (baseKline.openP / quotaKline.openP), (baseKline.highP / quotaKline.highP), (baseKline.lowP / quotaKline.lowP), (baseKline.closeP / quotaKline.closeP))
+                return models.kline(baseKline.openT, (baseKline.openP / quotaKline.openP).toPrecision(4), (baseKline.highP / quotaKline.highP).toPrecision(4), (baseKline.lowP / quotaKline.lowP).toPrecision(4), (baseKline.closeP / quotaKline.closeP).toPrecision(4))
             })
         }
         let interval = obj.period ? obj.period : '1m';
@@ -127,7 +130,6 @@ class CzClient {
         if (obj.endTime) {
             url = url.concat('&endTime=' + obj.endTime);
         }
-        console.log(url);
         return (await axios.get(url, {})).data.map(function (ele) {
             return models.kline(ele[0], ele[1], ele[2], ele[3], ele[4]);
         });
@@ -135,8 +137,7 @@ class CzClient {
 
     async getPrice(symbol) {
         if (!symbol.endsWith('USDT')) {
-            let base = symbol.slice(0, -3);
-            let quota = symbol.slice(-3);
+            let [base, quota] = symbol.split('-');
             let baseP = await this.getPrice(base.concat('USDT'));
             let quotaP = await this.getPrice(quota.concat('USDT'));
             return Number(baseP) / Number(quotaP);
@@ -149,6 +150,29 @@ class CzClient {
     hashCode(obj) {
         const str = JSON.stringify(obj, Object.keys(obj).sort());
         return crypto.createHash('sha256').update(str).digest('hex');
+    }
+
+    async listContractWithBtc() {
+        let volList = await axios.get('https://fapi.binance.com/fapi/v1/ticker/24hr', {});
+        volList = volList.data.reduce((acc, item) => {
+            acc[item.symbol] = item.quoteVolume;
+            return acc;
+        }, {});
+
+        let contractList = await axios.get('https://fapi.binance.com/fapi/v1/exchangeInfo', {});
+        return contractList.data.symbols
+            // 非USDT币对、非数字货币币对
+            .filter(ele => ele.symbol.endsWith('USDT') && "TRADING" === ele.status && !this.exSet.includes(ele.symbol))
+            // 新上市合约币对剔除
+            .slice(0, -20)
+            .filter(ele => {
+                // 过滤掉交易量小于10M的合约币对
+                // 交易量大于1000w、平均交易量50M左右、因交易量过低过滤掉约55%
+                let vol = volList[ele.symbol];
+                return Number(vol) > 5000_0000;
+            })
+            .map(ele => ele.symbol.replace('USDT','-BTC'))
+
     }
 }
 

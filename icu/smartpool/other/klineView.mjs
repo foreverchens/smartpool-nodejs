@@ -25,7 +25,7 @@ async function listKline(symbol, period) {
             }
         })
     }
-    let url = 'https://api.binance.com/api/v3/klines?symbol=' + symbol + '&interval=' + period + '&limit=960'
+    let url = 'https://fapi.binance.com/fapi/v1/klines?symbol=' + symbol + '&interval=' + period + '&limit=960'
     return (await axios.get(url, {})).data.map(function (ele) {
         return {
             openT: ele[0], openP: ele[1], highP: ele[2], lowP: ele[3], closeP: ele[4]
@@ -63,8 +63,20 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <div id="controls">
-     <label>币种：</label>
-     <input id="symbol" list="symbols" value="${defaultSymbol}" placeholder="ETH-BTC" />
+     <label>base:</label>
+     <input id="base" list="bases" value="BTC" placeholder="BTC" />
+     <datalist id="bases">
+       <option value="BTC"><option value="ETH"><option value="LTC"><!-- 按需补全 -->
+     </datalist>
+    
+     <label style="margin-left:10px">quota:</label>
+     <input id="quota" list="quotas" value="USDT" placeholder="USDT" />
+     <datalist id="quotas">
+       <option value="USDT"><option value="BTC"><option value="ETH">
+     </datalist>
+    
+     <button id="swap" style="margin-left:10px">↕️</button>
+     
 
     <label style="margin-left:20px">周期：</label>
     <select id="period">
@@ -83,11 +95,20 @@ app.get('/', (req, res) => {
 
     // 从下拉框读当前选择
     function getParams() {
-      return {
-        symbol: document.getElementById('symbol').value,
-        period: document.getElementById('period').value
-      };
+      const base  = document.getElementById('base').value.trim().toUpperCase();
+      const quota = document.getElementById('quota').value.trim().toUpperCase();
+      // 如果 quota 是 USDT，就拼成 BTCUSDT；否则拼成 ETH-BTC 格式，走跨币对逻辑
+      const symbol = (!quota||quota === 'USDT') ? base + 'USDT' : base + '-' + quota;
+      const period = document.getElementById('period').value;
+      return { symbol, period };
     }
+    document.getElementById('swap').addEventListener('click', () => {
+      const b = document.getElementById('base');
+      const q = document.getElementById('quota');
+      [b.value, q.value] = [q.value, b.value];
+      render();
+    });
+    
 
     // 请求并渲染
     async function render() {
@@ -118,7 +139,7 @@ app.get('/', (req, res) => {
         dataZoom: [
         { 
             type: 'inside',   // 鼠标滚轮、拖拽缩放都可用
-            start: 50,          // 默认显示百分比范围，0%–100%
+            start: 60,          // 默认显示百分比范围，0%–100%
             end: 100
         },
         { 
@@ -159,14 +180,21 @@ app.get('/', (req, res) => {
     }
 
     // 事件绑定：币种 & 周期变化都重新渲染
-    document.getElementById('symbol')
+    document.getElementById('base')
       .addEventListener('keydown', e => {
         if (e.key === 'Enter') {
              render();
          }
-        });
+      });
+    document.getElementById('quota')
+      .addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+             render();
+         }
+      });
     document.getElementById('period')
       .addEventListener('change', render);
+      
     // 首次渲染
     render();
   </script>

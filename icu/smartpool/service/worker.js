@@ -1,13 +1,15 @@
-const smartPoolService = require("./SmartPoolService");
-const config = require("../common/Config");
+import smartPoolService from "./SmartPoolService.js"
+import config from "../common/Config.js"
 
-module.exports = async function ([symbol,idx,len]) {
+export default async function ([symbol, idx, len]) {
+    let st = Date.now();
     try {
-        console.log(`进度 ${idx+1}-->${len} : ${symbol}`);
         return await smartPoolService.analyze(symbol, config.CYCLE);
     } catch (err) {
-        console.log(err);
+        console.log(err.message);
         return {};
+    } finally {
+        console.log(`进度 ${idx + 1}-->${len} : ${symbol}  耗时：${Date.now() - st}`);
     }
 };
 

@@ -1,7 +1,7 @@
-const czClient = require('./CzClient')
-const config = require('../common/Config')
-const Queue = require('../common/CircularQueue')
-const models = require('../common/Models')
+import czClient from "./CzClient.js";
+import config from "../common/Config.js"
+import Queue from "../common/CircularQueue.js"
+import models from "../common/Models.js"
 
 class SmartPoolService {
     constructor() {
@@ -12,6 +12,10 @@ class SmartPoolService {
     async analyze(symbol, hours) {
         await this.updateH1Kline(symbol);
         let h1KlineList = this.KLINE_CACHE.get(symbol).slice(hours);
+        if (h1KlineList.length === 0) {
+            // 新币对
+            return {}
+        }
         let minP = Math.min(...h1KlineList.map(e => e.lowP));
         let maxP = Math.max(...h1KlineList.map(e => e.highP));
         // 基于最低价格获取价格精度、
@@ -23,6 +27,9 @@ class SmartPoolService {
             let lowP = h1Kline.lowP;
             let startIndex = Math.trunc((lowP - minP) / arrScale);
             for (let i = 0; i < h1DataArr.length; i++) {
+                if (isNaN(h1DataArr[i])) {
+                    continue
+                }
                 dataArr[startIndex + i] += h1DataArr[i];
             }
         }
@@ -47,9 +54,11 @@ class SmartPoolService {
         // 震荡区间下沿、上沿、振幅、震荡得分｜点位密度=总点数/振幅、因最小价格精度一致、所以处于同一坐标系
         let lowP = +minP + (arrScale * l);
         let highP = +minP + (arrScale * r)
-        let amplitude = (highP - lowP) * 100 / lowP;
+        let amplitude = +((highP - lowP) * 100 / lowP).toFixed(1);
         let score = countPt * 0.8 / amplitude;
-        return models.ShakeScore(symbol, Math.round(score), amplitude.toFixed(1), lowP.toPrecision(4), highP.toPrecision(4));
+        let price = await czClient.getPrice(symbol);
+        let pricePosition = +((price - lowP) / (highP - lowP)).toFixed(2);
+        return models.ShakeScore(symbol, Math.round(score), amplitude, lowP.toPrecision(4), highP.toPrecision(4), pricePosition);
     }
 
     /**
@@ -95,7 +104,8 @@ class SmartPoolService {
         let highP = Math.max(...klines.map(e => e.highP));
         let arrScale = lowP * config.SCALE;
         let dataArr = new Array(Math.trunc((highP - lowP) / arrScale)).fill(0);
-        for (let kline of klines) {
+        for (let i = 0; i < klines.length; i++) {
+            let kline = klines[i];
             let openP = kline.openP;
             let closeP = kline.closeP;
             if (openP > closeP) {
@@ -111,13 +121,16 @@ class SmartPoolService {
 
             let startIndex = Math.trunc((openP - lowP) / arrScale);
             let endIndex = Math.trunc((closeP - lowP) / arrScale);
-            while (startIndex < endIndex) {
+            while (startIndex < endIndex && startIndex < dataArr.length) {
                 dataArr[startIndex++]++;
+            }
+        }
+        for (let ele of dataArr) {
+            if (isNaN(ele)) {
+                continue;
             }
         }
         return models.H1Kline(null, lowP, highP, dataArr);
     }
 }
-
-
-module.exports = new SmartPoolService();
+export default new SmartPoolService();

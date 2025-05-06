@@ -1,25 +1,27 @@
-function klineParam(symbol, limit, startTime, endTime, period) {
-    return {
-        symbol, limit, startTime, endTime, period
+class Models {
+    klineParam(symbol, limit, startTime, endTime, period) {
+        return {
+            symbol, limit, startTime, endTime, period
+        }
+    }
+
+    kline(openT, openP, highP, lowP, closeP) {
+        return {
+            openT, openP, highP, lowP, closeP
+        }
+    }
+
+    H1Kline(openT, lowP, highP, dataArr) {
+        return {
+            openT, lowP, highP, dataArr
+        }
+    }
+
+    ShakeScore(symbol, score, amplitude, lowP, highP, pricePosition) {
+        return {
+            symbol, score, amplitude, lowP, highP, pricePosition
+        }
     }
 }
+export default new Models();
 
-function kline(openT, openP, highP, lowP, closeP) {
-    return {
-        openT, openP, highP, lowP, closeP
-    }
-}
-
-function H1Kline(openT, lowP, highP, dataArr) {
-    return {
-        openT, lowP, highP, dataArr
-    }
-}
-
-function ShakeScore(symbol, score, amplitude, lowP, highP, pricePosition) {
-    return {
-        symbol, score, amplitude, lowP, highP, pricePosition
-    }
-}
-
-module.exports = {klineParam, kline, H1Kline, ShakeScore}

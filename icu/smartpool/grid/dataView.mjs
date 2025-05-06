@@ -1,14 +1,6 @@
 import {readdir, readFile} from 'fs/promises';
 import {join, extname, resolve} from 'path';
-// import readline from 'readline';
-
 import czClient from './CzClient.js'
-
-const TARGET_DIR = './';
-// const rl = readline.createInterface({
-//     input: process.stdin,
-//     output: process.stdout
-// });
 
 async function scanFiles(dirPath) {
     let result = [];
@@ -28,7 +20,7 @@ async function scanFiles(dirPath) {
 async function dataHandle(fileList) {
     let summary = {}
     for (let fileName of fileList) {
-        const fullFilePath = resolve(TARGET_DIR.concat(fileName));
+        const fullFilePath = resolve('./'.concat(fileName));
         let content = await readFile(fullFilePath, 'utf-8');
         const data = content.split(/\r?\n/);
         data.pop()
@@ -73,10 +65,10 @@ async function dataHandle(fileList) {
 }
 
 async function loop() {
-    let fileList = await scanFiles(TARGET_DIR);
+    let fileList = await scanFiles('./');
     dataHandle(fileList).then(rlt => {
         console.table(rlt);
-        console.log('总已实现盈利: %s$', Object.values(rlt)
+        console.log('已实现盈利: %s$', Object.values(rlt)
             .map(ele => ele.realizedProfit)
             .reduce((ele, num) => Number(ele) + Number(num), 0).toFixed(1))
     });
@@ -121,20 +113,6 @@ async function loop() {
         })
 }
 
-
-// 定义循环输入函数
-function promptInput() {
-    rl.question('', (answer) => {
-        if (answer.trim().toLowerCase() === 'exit') {
-            console.log('退出程序。');
-            rl.close();
-        } else {
-            loop()
-            promptInput(); // 继续下一轮输入
-        }
-    });
-}
-
 await loop()
-// setInterval(loop, 1000 * 60 * 60);
+setInterval(loop, 1000 * 60 * 60);
 

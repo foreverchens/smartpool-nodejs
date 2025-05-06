@@ -56,15 +56,7 @@ class CircularQueue {
     }
 }
 
-
-module.exports = CircularQueue;
-//
-// let que = new CircularQueue(5);
-// for (let i = 0; i < 8; i++) {
-//     que.push(i + 1)
-// }
-// console.log(que);
-// console.log(que.slice(4));
+export default CircularQueue;
 
 
 

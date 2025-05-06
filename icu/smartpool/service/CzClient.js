@@ -1,10 +1,8 @@
-const axios = require('axios');
-const util = require('util');
-const crypto = require('crypto');
-
-const models = require('../common/Models')
-const config = require("../common/Config")
-
+import axios from "axios";
+import util from "util";
+import crypto from "crypto";
+import config from "../common/Config.js";
+import models from "../common/Models.js";
 
 class CzClient {
 
@@ -153,6 +151,7 @@ class CzClient {
     }
 
     async listContractWithBtc() {
+        // 获取交易量数据
         let volList = await axios.get('https://fapi.binance.com/fapi/v1/ticker/24hr', {});
         volList = volList.data.reduce((acc, item) => {
             acc[item.symbol] = item.quoteVolume;
@@ -166,17 +165,17 @@ class CzClient {
             // 新上市合约币对剔除
             .slice(0, -20)
             .filter(ele => {
-                // 过滤掉交易量小于10M的合约币对
-                // 交易量大于1000w、平均交易量50M左右、因交易量过低过滤掉约55%
+                // 过滤掉交易量小于50M的合约币对
                 let vol = volList[ele.symbol];
                 return Number(vol) > 5000_0000;
             })
-            .map(ele => ele.symbol.replace('USDT','-BTC'))
+            .map(ele => ele.symbol.replace('USDT', '-BTC'))
 
     }
 }
 
-module.exports = new CzClient();
+export default new CzClient();
+
 
 
 

@@ -1,7 +1,7 @@
-const czClient = require('./CzClient.js')
-const config = require('../common/Config')
-const Queue = require('../common/CircularQueue')
-const models = require('../common/Models')
+import czClient from "./CzClient.js";
+import config from "../common/Config.js"
+import Queue from "../common/CircularQueue.js"
+import models from "../common/Models.js"
 
 class SmartPoolService {
     constructor() {
@@ -133,5 +133,4 @@ class SmartPoolService {
         return models.H1Kline(null, lowP, highP, dataArr);
     }
 }
-
-module.exports = new SmartPoolService();
+export default new SmartPoolService();

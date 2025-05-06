@@ -1,4 +1,4 @@
-const czClient = require('../CzClient')
+import czClient from "../CzClient.js";
 
 let symbol = 'BTCUSDT';
 
@@ -18,7 +18,7 @@ czClient.futureBuy(symbol, '0.003', '80000').then(e => {
     console.table(e)
     let orderId = e.orderId;
     // getFuturesOrder test
-    czClient.getFuturesOrder(symbol,orderId).then(e => console.log(e))
+    czClient.getFuturesOrder(symbol, orderId).then(e => console.log(e))
     // cancelFuturesOrder test
     czClient.futuresCancel(symbol, orderId).then(r => console.log(r))
 })

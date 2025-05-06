@@ -1,8 +1,8 @@
-const czClient = require('./CzClient');
-const fs = require('fs')
+import czClient from "./CzClient.js";
+import fs from "fs";
 
-let baseAssert = 'EOSUSDT'
-let quotaAssert = 'XRPUSDC'
+let baseAssert = 'BTCUSDC'
+let quotaAssert = 'USDT'
 // 启动价格和方向
 let startPrice;
 // 默认上涨
@@ -27,9 +27,9 @@ if (sd && sp) {
 }
 
 // 等比网格、单网格比例
-let gridRate = 0.005;
+let gridRate = 0.002;
 // 单网格交易仓位等值USDT
-let gridValue = 100;
+let gridValue = 200;
 let curPrice, buyPrice, sellPrice;
 // 兼容单币网格
 const simpleGrid = quotaAssert === 'USDT';
@@ -210,7 +210,7 @@ async function gridLoop() {
                 }
             }
             buyPrice = Number((curPrice * (1 - gridRate)).toPrecision(5));
-            sellPrice =Number((curPrice * (1 + gridRate)).toPrecision(5));
+            sellPrice = Number((curPrice * (1 + gridRate)).toPrecision(5));
             setTimeout(() => {
                 orderCallback(baseOrder.orderId, quotaOrder.orderId)
             }, 1000 * 2)

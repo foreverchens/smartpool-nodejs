@@ -11,9 +11,9 @@ class Models {
         }
     }
 
-    H1Kline(openT, lowP, highP, dataArr) {
+    H1Kline(openT, lowP, highP, dataArr,rise) {
         return {
-            openT, lowP, highP, dataArr
+            openT, lowP, highP, dataArr,rise,
         }
     }
 

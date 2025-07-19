@@ -14,6 +14,9 @@ async function run() {
      * 获取币种震荡数据
      */
     let symbolList = await czClient.listSymbol();
+    // symbolList = symbolList.slice(0,5);
+    // symbolList = ['BTCUSDT','ETHUSDT','LTCUSDT','XRPUSDT'];
+    console.log(symbolList);
     let st = Date.now();
     let rltArr = await Promise.all(symbolList.map((symbol, idx) => {
         return threadPool.run([symbol, idx, symbolList.length]);

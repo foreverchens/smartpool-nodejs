@@ -21,32 +21,46 @@ class SmartPoolService {
         // 基于最低价格获取价格精度、
         let arrScale = minP * config.SCALE;
         let len = Math.trunc((maxP - minP) / arrScale);
-        let dataArr = new Array(len).fill(0);
-        for (let h1Kline of h1KlineList) {
+        let dataArr = new Array(len).fill(0.0);
+        // 过去24h的震荡状态 涨为1 跌为0
+        let stateArr = new Array(24).fill(0);
+        for (let i = 0; i < h1KlineList.length; i++) {
+            let h1Kline = h1KlineList[i];
             let h1DataArr = h1Kline.dataArr;
             let lowP = h1Kline.lowP;
+            // 一直涨或一直跌都会增加count count越大权重越低
+            stateArr[i % 24] = h1Kline.rise ? 1 : 0;
+            let weightRate = 1;
+            if (i >= 3) {
+                // 至少拥有4根k线状态才开始分析
+                weightRate = this.getWeightRate(Math.min(i, 24), stateArr);
+                if (isNaN(weightRate)) {
+                    weightRate = this.getWeightRate(Math.min(i, 24), stateArr);
+                    continue;
+                }
+            }
             let startIndex = Math.trunc((lowP - minP) / arrScale);
             for (let i = 0; i < h1DataArr.length; i++) {
                 if (isNaN(h1DataArr[i])) {
                     continue
                 }
-                dataArr[startIndex + i] += h1DataArr[i];
+                dataArr[startIndex + i] += (h1DataArr[i] * weightRate);
             }
         }
         // 总点数
-        let countPt = dataArr.reduce((rlt, cur) => rlt + cur, 0);
+        let countPt = dataArr.reduce((rlt, cur) => rlt + cur, 0.0);
         // 从左从右向中间依次去除稀疏点、将剩余的80%区间、定为震荡区间、
         let subCountPt = countPt * 0.2;
         let l = 0, r = dataArr.length - 1;
         while (subCountPt > 0) {
-            while (dataArr[l] < 1) {
+            while (dataArr[l] < 1.0) {
                 l++;
             }
             subCountPt -= dataArr[l++];
-            if (subCountPt < 1) {
+            if (subCountPt < 1.0) {
                 break;
             }
-            while (dataArr[r] < 1) {
+            while (dataArr[r] < 1.0) {
                 r--;
             }
             subCountPt -= dataArr[r--];
@@ -130,7 +144,28 @@ class SmartPoolService {
                 continue;
             }
         }
-        return models.H1Kline(null, lowP, highP, dataArr);
+        let rise = klines[klines.length - 1].closeP > klines[0].openP
+        return models.H1Kline(null, lowP, highP, dataArr, rise);
+    }
+
+
+    /**
+     *
+     * @param len  数组的统计长度
+     * @param stateArr  状态数组 长度24 涨为1 跌为0
+     * @returns {number}
+     */
+    getWeightRate(len, stateArr) {
+        const count = stateArr
+            .slice(0, len)
+            .reduce((sum, v) => sum + v, 0);
+        const table = [1.000, 0.994, 0.975, 0.944, 0.901, 0.846, 0.778, 0.698, 0.605, 0.500];
+        const half = len / 2;
+        const rawRate = Math.round(Math.abs((half - count) * 10 / half));
+        // 前面满1或满0的情况
+        const idx = rawRate === table.length ? table.length - 1 : rawRate;
+        return table[idx];
     }
 }
+
 export default new SmartPoolService();

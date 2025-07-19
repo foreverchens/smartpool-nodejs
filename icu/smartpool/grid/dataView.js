@@ -32,32 +32,35 @@ async function dataHandle(fileList) {
             const amount = parseFloat(amountStr);
             if (!result[symbol]) {
                 result[symbol] = {
-                    BUY: {totalAmount: 0, totalCost: 0}, SELL: {totalAmount: 0, totalRevenue: 0}
+                    BUY: {totalAmount: 0, totalVol: 0}, SELL: {totalAmount: 0, totalVol: 0}
                 };
             }
             if (side === 'BUY') {
                 result[symbol].BUY.totalAmount += amount;
-                result[symbol].BUY.totalCost += price * amount;
+                result[symbol].BUY.totalVol += price * amount;
             } else {
                 result[symbol].SELL.totalAmount += amount;
-                result[symbol].SELL.totalRevenue += price * amount;
+                result[symbol].SELL.totalVol += price * amount;
             }
         }
         for (const symbol in result) {
             const buy = result[symbol].BUY;
             const sell = result[symbol].SELL;
             // 平均价格
-            const avgBuyPrice = buy.totalAmount > 0 ? buy.totalCost / buy.totalAmount : 0;
-            const avgSellPrice = sell.totalAmount > 0 ? sell.totalRevenue / sell.totalAmount : 0;
+            const avgBuyPrice = buy.totalAmount > 0 ? buy.totalVol / buy.totalAmount : 0;
+            const avgSellPrice = sell.totalAmount > 0 ? sell.totalVol / sell.totalAmount : 0;
             // 已实现利润计算（取 min(买入数量, 卖出数量) 作为成交量）
             const matchedAmount = Math.min(buy.totalAmount, sell.totalAmount);
             const realizedProfit = matchedAmount * (avgSellPrice - avgBuyPrice);
+            const txFeeRlt = await czClient.getTotalCommission(symbol);
             summary[symbol] = {
                 buy: {
                     avgP: avgBuyPrice.toPrecision(5), totalVol: (buy.totalAmount * avgBuyPrice).toFixed(0)
                 }, sell: {
-                    avgP: avgSellPrice.toPrecision(5), totalAmount: (sell.totalAmount * avgSellPrice).toFixed(0)
-                }, realizedProfit: realizedProfit.toPrecision(3)
+                    avgP: avgSellPrice.toPrecision(5), totalVol: (sell.totalAmount * avgSellPrice).toFixed(0)
+                }, totalTxFee: txFeeRlt.totalTxFee.toFixed(2) + '$',
+                limitRate: txFeeRlt.limitRate,
+                realizedProfit: (realizedProfit - txFeeRlt.totalTxFee).toPrecision(3)
             };
         }
     }
@@ -66,7 +69,7 @@ async function dataHandle(fileList) {
 
 async function loop() {
     let fileList = await scanFiles('./');
-    dataHandle(fileList).then(rlt => {
+    await dataHandle(fileList).then(rlt => {
         console.table(rlt);
         console.log('已实现盈利: %s$', Object.values(rlt)
             .map(ele => ele.realizedProfit)
@@ -114,5 +117,9 @@ async function loop() {
 }
 
 await loop()
-setInterval(loop, 1000 * 60 * 60);
+setInterval(loop, 1000 * 60 * 60)
+process.stdin.on('data', (input) => {
+    loop().catch(e => console.log(e))
+});
+
 

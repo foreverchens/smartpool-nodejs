@@ -16,11 +16,52 @@ class CzClient {
         'BTC': {}, 'ETH': {}, 'BNB': {}
     }
 
-    exSet = ['BTCUSDT',"TUSDUSDT", "USDCUSDT", "USDPUSDT", "EURUSDT", "AEURUSDT", "MANTAUSDT", "PAXGUSDT", "FDUSDUSDT", "WBETHETH", "WBTCBTC"]
+    exSet = ['BTCUSDT', "TUSDUSDT", "USDCUSDT", "USDPUSDT", "EURUSDT", "AEURUSDT", "MANTAUSDT", "PAXGUSDT", "FDUSDUSDT", "WBETHETH", "WBTCBTC"]
 
     symbolList;
 
     async listSymbol() {
+        if (1) {
+            return ('ETH-BTC\n' +
+                'SOL-BTC\n' +
+                'XRP-BTC\n' +
+                'DOGE-BTC\n' +
+                'SUI-BTC\n' +
+                'ADA-BTC\n' +
+                'ENA-BTC\n' +
+                'AVAX-BTC\n' +
+                'LINK-BTC\n' +
+                'BNB-BTC\n' +
+                'LTC-BTC\n' +
+                'VIRTUAL-BTC\n' +
+                'AAVE-BTC\n' +
+                // 'FIL-BTC\n' +
+                // 'OP-BTC\n' +
+                'UNI-BTC\n' +
+                // 'DOT-BTC\n' +
+                // '1000SHIB-BTC\n' +
+                'ONDO-BTC\n' +
+                // 'WLD-BTC\n' +
+                'BCH-BTC\n' +
+                'TRX-BTC\n' +
+                // 'NEAR-BTC\n' +
+                'TAO-BTC\n' +
+                // 'ORDI-BTC\n' +
+                // 'TIA-BTC\n' +
+                // 'ARB-BTC\n' +
+                // 'CRV-BTC\n' +
+                // 'FET-BTC\n' +
+                // 'APT-BTC\n' +
+                // 'ETC-BTC\n' +
+                // 'HBAR-BTC\n' +
+                // 'ENS-BTC\n' +
+                'XLM-BTC'
+                // 'ATOM-BTC\n' +
+                // 'S-BTC\n' +
+                // 'TON-BTC\n' +
+                // 'ENS-BTC'
+            ).split('\n');
+        }
         if (this.symbolList) {
             return this.symbolList;
         }
@@ -103,12 +144,12 @@ class CzClient {
             }
             if (baseKlines.length !== quotaKlines.length) {
                 console.error('长度不一')
-                return
+                return []
             }
             for (let i = 0; i < baseKlines.length; i++) {
                 if (baseKlines[i].openT !== quotaKlines[i].openT) {
                     console.error('时间不一')
-                    return
+                    return []
                 }
             }
             // 合并k线
@@ -143,7 +184,6 @@ class CzClient {
         let resp = symbol && symbol.endsWith('USDT') ? await axios.get('https://fapi.binance.com/fapi/v2/ticker/price?symbol=' + symbol, {}) : await axios.get('https://api.binance.com/api/v1/ticker/price?symbol=' + symbol, {});
         return resp.data.price;
     }
-
 
     hashCode(obj) {
         const str = JSON.stringify(obj, Object.keys(obj).sort());

@@ -238,6 +238,40 @@ class CzClient {
         })
     }
 
+    async getTotalCommission(symbol) {
+        let totalQuotaVol = 0;
+        let limitQuotaVol = 0;
+        let price = await this.getFuturesPrice('BNBUSDT');
+        let trades = await client.futuresUserTrades(symbol, {startTime: 1748471000000});
+        let reduce = trades.reduce((rlt, ele) => {
+            let commission = ele.commission;
+            let commissionAsset = ele.commissionAsset;
+            if (!rlt[commissionAsset]) {
+                rlt[commissionAsset] = 0;
+            }
+            totalQuotaVol += +ele.quoteQty;
+            if ((commission * price) / (ele.quoteQty) * 100 <= 0.02) {
+                limitQuotaVol += +ele.quoteQty;
+            }
+            rlt[commissionAsset] += +commission;
+            return rlt;
+        }, {});
+        return {
+            totalTxFee: +((reduce.USDT ? reduce.USDT : 0) + (reduce.USDC ? reduce.USDC : 0) + (reduce.BNB ? reduce.BNB * price : 0)),
+            limitRate: (totalQuotaVol === 0 ? 0:(limitQuotaVol * 100 / totalQuotaVol ).toFixed(1)) + '%'
+        }
+    }
+
+    async futuresDepth(symbol) {
+        let rlt = await client.futuresDepth(symbol, {limit: 10});
+        return {
+            bids: rlt.bids, asks: rlt.asks
+        };
+    }
+
+    async listKline(symbol, interval, params = {}) {
+        return await client.candlesticks(symbol, interval, params);
+    }
 }
 
 export default new CzClient();

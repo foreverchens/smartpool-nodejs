@@ -34,7 +34,7 @@
 <body>
 <div id="controls">
     <label>base:</label>
-    <input id="base" list="bases" value="BTC" placeholder="BTC"/>
+    <input id="base" list="bases" value="ETH" placeholder="ETH"/>
     <datalist id="bases">
         <option value="BTC">
         <option value="ETH">
@@ -42,7 +42,7 @@
     </datalist>
 
     <label style="margin-left:10px">quota:</label>
-    <input id="quota" list="quotas" value="USDT" placeholder="USDT"/>
+    <input id="quota" list="quotas" value="BTC" placeholder="BTC"/>
     <datalist id="quotas">
         <option value="USDT">
         <option value="BTC">
@@ -121,7 +121,27 @@
                 {type: 'inside', start: 60, end: 100},
                 {type: 'slider', start: 0, end: 100, height: 20, bottom: 10}
             ],
-            tooltip: {trigger: 'axis', axisPointer: {type: 'cross'}},
+            // tooltip: {trigger: 'axis', axisPointer: {type: 'cross'}},
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {type: 'cross'},
+                formatter: function (params) {
+                    // params 是数组，取第一个 series 的数据
+                    const k = params[0];
+                    console.log(k)
+                    // k.data = [open, close, low, high]
+                    let [idx, open, close, low, high] = k.data;
+                    const change = ((close - open) / open * 100).toFixed(2).concat('%')
+                    return [
+                        '时间：' + k.axisValueLabel,
+                        '开盘：' + (+open).toPrecision(4),
+                        '收盘：' + (+close).toPrecision(4),
+                        '最低：' + (+low).toPrecision(4),
+                        '最高：' + (+high).toPrecision(4),
+                        '涨跌幅：' + change
+                    ].join('<br/>');
+                }
+            },
             xAxis: {
                 type: 'category', data: times,
                 min: 'dataMin',

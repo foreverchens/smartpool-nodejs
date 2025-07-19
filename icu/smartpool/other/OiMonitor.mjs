@@ -78,7 +78,7 @@ async function main() {
         let cap = 0;
         if (id) {
             cap = await getCap(id);
-            if (Number(cap) > 5000_0000) {
+            if (Number(cap) > 2_000_0000 || +cap === 0) {
                 continue;
             }
         }

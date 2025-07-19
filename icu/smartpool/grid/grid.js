@@ -1,16 +1,13 @@
 import czClient from "./CzClient.js";
 import fs from "fs";
 
-let baseAssert = 'BTCUSDC'
+let baseAssert = 'ETHUSDC'
 let quotaAssert = 'USDT'
 // 启动价格和方向
 let startPrice;
-// 默认上涨
-let sideUp;
-
 
 // 追加终端参数
-const [bs, qs, sd, sp] = process.argv.slice(2);
+const [bs, qs, sp] = process.argv.slice(2);
 if (bs) {
     baseAssert = bs;
     console.log('baseAssert终端参数:%s', baseAssert)
@@ -19,17 +16,14 @@ if (qs) {
     quotaAssert = qs;
     console.log('quotaAssert终端参数:%s', quotaAssert)
 }
-if (sd && sp) {
-    sideUp = sd !== 'DOWN'
-    console.log('是否看多网格:%s', sideUp)
-    startPrice = sp;
+if (sp) {
+    startPrice = +sp;
     console.log('startPrice终端参数:%s', startPrice)
 }
-
 // 等比网格、单网格比例
-let gridRate = 0.002;
+let gridRate = 0.005;
 // 单网格交易仓位等值USDT
-let gridValue = 200;
+let gridValue = 100;
 let curPrice, buyPrice, sellPrice;
 // 兼容单币网格
 const simpleGrid = quotaAssert === 'USDT';
@@ -38,11 +32,11 @@ const reversed = false
 
 // 加载配置
 updateConfig()
+fs.writeFileSync('../other/outlog/target.pid', process.pid.toString());
 console.table({
     'baseAssert': baseAssert,
     'quotaAssert': quotaAssert,
     'startPrice': startPrice,
-    'sideUp': sideUp,
     'gridRate': gridRate,
     'gridValue': gridValue,
     'simpleGrid': simpleGrid,
@@ -72,12 +66,13 @@ function formatQtyByPrice(price, qty) {
         return Math.floor(qty)
     } else if (price > 10000) {
         return qty.toFixed(3)
-    } else if (price > 1000) {
+    } else if (price > 100) {
         return qty.toFixed(2)
     } else {
         return qty.toFixed(1);
     }
 }
+
 
 async function getCurPrice() {
     return simpleGrid ? await czClient.getFuturesPrice(baseAssert) : await czClient.getSynPrice(baseAssert, quotaAssert);
@@ -160,14 +155,14 @@ async function gridLoop() {
             let baseP, quotaP;
             let baseQty, quotaQty;
 
-            baseOrderBook = await czClient.getFuturesBookTicker(baseAssert);
-            baseP = baseOrderBook.bidPrice;
+            baseOrderBook = await czClient.futuresDepth(baseAssert);
+            baseP = baseOrderBook.bids[0].price;
             baseQty = formatQtyByPrice(baseP, gridValue / baseP)
             console.log('baseP:%s,baseQty:%s', baseP, baseQty)
 
             if (!simpleGrid) {
-                quotaOrderBook = await czClient.getFuturesBookTicker(quotaAssert);
-                quotaP = quotaOrderBook.bidPrice;
+                quotaOrderBook = await czClient.futuresDepth(quotaAssert);
+                quotaP = quotaOrderBook.asks[0].price;
                 quotaQty = formatQtyByPrice(quotaP, gridValue / quotaP)
                 console.log('quotaP:%s,quotaQty:%s', quotaP, quotaQty)
             }
@@ -185,10 +180,12 @@ async function gridLoop() {
                         return
                     }
                 }
-                baseOrder = await czClient.futureBuy(baseAssert, baseQty, baseP);
+                baseOrder = await czClient.futureBuy(baseAssert, baseQty, baseOrderBook.bids[9].price);
+                baseOrder = await czClient.futureModifyOrder(baseAssert, baseOrder.side, baseOrder.orderId, baseQty, baseOrderBook.bids[0].price);
                 console.log('当前汇率%s低于买入汇率价%s、执行买入%s刀%s、订单时间：%s\n买单:%s', curPrice, buyPrice, gridValue, baseAssert, Date.now(), baseOrder)
                 if (!simpleGrid) {
-                    quotaOrder = await czClient.futureSell(quotaAssert, quotaQty, quotaOrderBook.askPrice)
+                    quotaOrder = await czClient.futureSell(quotaAssert, quotaQty, quotaOrderBook.asks[9].price)
+                    quotaOrder = await czClient.futureModifyOrder(quotaAssert, quotaOrder.side, quotaOrder.orderId, quotaQty, quotaOrderBook.asks[0].price);
                     console.log('当前汇率%s低于买入汇率价%s、执行卖出%s刀%s、订单时间：%s\n卖单:%s', curPrice, buyPrice, gridValue, quotaAssert, Date.now(), quotaOrder)
                 }
             } else {
@@ -202,10 +199,12 @@ async function gridLoop() {
                         return
                     }
                 }
-                baseOrder = await czClient.futureSell(baseAssert, baseQty, baseOrderBook.askPrice);
+                baseOrder = await czClient.futureSell(baseAssert, baseQty, baseOrderBook.asks[9].price);
+                baseOrder = await czClient.futureModifyOrder(baseAssert, baseOrder.side, baseOrder.orderId, baseQty, baseOrderBook.asks[0].price);
                 console.log('当前汇率%s高于卖出汇率价%s、执行卖出%s 刀 %s、订单时间：%s\n卖单:%s', curPrice, sellPrice, gridValue, baseAssert, Date.now(), baseOrder)
                 if (!simpleGrid) {
-                    quotaOrder = await czClient.futureBuy(quotaAssert, quotaQty, quotaP);
+                    quotaOrder = await czClient.futureBuy(quotaAssert, quotaQty, quotaOrderBook.bids[9].price);
+                    quotaOrder = await czClient.futureModifyOrder(quotaAssert, quotaOrder.side, quotaOrder.orderId, quotaQty, quotaOrderBook.bids[0].price);
                     console.log('当前汇率%s高于卖出汇率价%s、执行买入%s 刀%s、订单时间：%s\n买单:%s', curPrice, sellPrice, gridValue, quotaAssert, Date.now(), quotaOrder)
                 }
             }
@@ -221,17 +220,44 @@ async function gridLoop() {
 }
 
 
+async function initPosit(basePosit, quotaPosit) {
+    let baseOrderBook, quotaOrderBook;
+    let baseP, quotaP;
+    let baseQty, quotaQty;
+
+    baseOrderBook = await czClient.getFuturesBookTicker(baseAssert);
+    baseP = baseOrderBook.bidPrice;
+    baseQty = formatQtyByPrice(baseP, basePosit / baseP)
+    console.log('baseP:%s,baseQty:%s', baseP, baseQty)
+
+    if (!simpleGrid) {
+        quotaOrderBook = await czClient.getFuturesBookTicker(quotaAssert);
+        quotaP = quotaOrderBook.bidPrice;
+        quotaQty = formatQtyByPrice(quotaP, quotaPosit / quotaP)
+        console.log('quotaP:%s,quotaQty:%s', quotaP, quotaQty)
+    }
+    // 买入base 卖出quota
+    let baseOrder = await czClient.futureBuy(baseAssert, baseQty, baseP);
+    let quotaOrder = await czClient.futureSell(quotaAssert, quotaQty, quotaP);
+    setTimeout(() => {
+        orderCallback(baseOrder.orderId, quotaOrder.orderId)
+    }, 1000 * 2)
+    console.log('完成初始建仓...')
+    console.log(baseOrder);
+    console.log(quotaOrder);
+}
+
 async function Main() {
     // 获取最新汇率
     curPrice = await getCurPrice();
-    if ((sideUp && startPrice < curPrice) || (!sideUp && startPrice > curPrice)) {
-        // 看涨、但是启动价格还低于当前价格
-        // 看跌、但是启动价格还高于当前价格
+    if (startPrice && startPrice < curPrice) {
+        // 设置了启动价格、但是当前未抵达启动价格
         // 延迟启动
-        console.log('看涨？:[%s],启动价格:[%s],当前价格:[%s],延迟启动...', sideUp, startPrice, curPrice)
+        console.log('启动价格:[%s],当前价格:[%s],延迟启动...', startPrice, curPrice)
         setTimeout(Main, 1000 * 60)
     } else {
         console.log('启动...')
+        // await initPosti(1000, 1000);
         buyPrice = Number((curPrice * (1 - gridRate)).toPrecision(5));
         sellPrice = Number((curPrice * (1 + gridRate)).toPrecision(5));
         console.log('初始汇率:%s 下一买入汇率:%s 下一卖出汇率:%s', curPrice, buyPrice, sellPrice)
@@ -239,5 +265,6 @@ async function Main() {
         setInterval(gridLoop, 1000 * 5)
     }
 }
+
 
 Main().catch(e => console.log(e))

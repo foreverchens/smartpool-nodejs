@@ -5,9 +5,9 @@ class Config {
     KLINE_SPOT_URL = "https://api.binance.com/api/v3/klines"
 
     // 最大周期、天计
-    MAX_DAY = 7;
+    MAX_DAY = 30;
     // 量化周期、小时计
-    CYCLE = 24 * 7;
+    CYCLE = 24 * 28;
     // 价格的最小精度
     SCALE = 0.0001
     // 线程池大小

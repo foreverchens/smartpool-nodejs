@@ -10,6 +10,7 @@ class SmartPoolService {
     }
 
     async analyze(symbol, hours) {
+        console.log('[%s] ==> [%s]', symbol, new Date(new Date().getTime() - hours * 60 * 60 * 1000));
         await this.updateH1Kline(symbol);
         let h1KlineList = this.KLINE_CACHE.get(symbol).slice(hours);
         if (h1KlineList.length === 0) {
@@ -24,27 +25,30 @@ class SmartPoolService {
         let dataArr = new Array(len).fill(0.0);
         // 过去24h的震荡状态 涨为1 跌为0
         let stateArr = new Array(24).fill(0);
+        let price24hAgo = h1KlineList[0].lowP;
         for (let i = 0; i < h1KlineList.length; i++) {
             let h1Kline = h1KlineList[i];
             let h1DataArr = h1Kline.dataArr;
             let lowP = h1Kline.lowP;
             // 一直涨或一直跌都会增加count count越大权重越低
             stateArr[i % 24] = h1Kline.rise ? 1 : 0;
-            let weightRate = 1;
-            if (i >= 3) {
-                // 至少拥有4根k线状态才开始分析
-                weightRate = this.getWeightRate(Math.min(i, 24), stateArr);
-                if (isNaN(weightRate)) {
-                    weightRate = this.getWeightRate(Math.min(i, 24), stateArr);
-                    continue;
-                }
+            let stateWeight = 1;
+            let priceWeight = 1;
+            if (i >= 23) {
+                // 至少拥有24根k线状态才开始分析
+                // 震荡状态分布权重
+                stateWeight = this.getStateWeight(stateArr);
+                // 相对振幅权重
+                let amp = (h1Kline.lowP - price24hAgo) / price24hAgo * 100;
+                priceWeight = this.getPriceWeight(amp);
+                price24hAgo = h1KlineList[i - 22].lowP;
             }
             let startIndex = Math.trunc((lowP - minP) / arrScale);
             for (let i = 0; i < h1DataArr.length; i++) {
                 if (isNaN(h1DataArr[i])) {
                     continue
                 }
-                dataArr[startIndex + i] += (h1DataArr[i] * weightRate);
+                dataArr[startIndex + i] += (h1DataArr[i] * stateWeight * priceWeight);
             }
         }
         // 总点数
@@ -71,8 +75,8 @@ class SmartPoolService {
         let amplitude = +((highP - lowP) * 100 / lowP).toFixed(1);
         let score = countPt * 0.8 / amplitude;
         let price = await czClient.getPrice(symbol);
-        let pricePosition = +((price - lowP) / (highP - lowP)).toFixed(2);
-        return models.ShakeScore(symbol, Math.round(score), amplitude, lowP.toPrecision(4), highP.toPrecision(4), pricePosition);
+        let pricePosit = +((price - lowP) / (highP - lowP)).toFixed(2);
+        return models.ShakeScore(symbol, Math.round(score), amplitude, lowP.toPrecision(4), highP.toPrecision(4), pricePosit);
     }
 
     /**
@@ -151,20 +155,36 @@ class SmartPoolService {
 
     /**
      *
-     * @param len  数组的统计长度
+     * 当 1 的数量占据一半时 说明震荡
+     * 当 1 的数量偏离一半时 说明趋势 同时保持减速下降曲线 先加速下降 后缓慢下降
      * @param stateArr  状态数组 长度24 涨为1 跌为0
      * @returns {number}
      */
-    getWeightRate(len, stateArr) {
+    getStateWeight(stateArr) {
         const count = stateArr
-            .slice(0, len)
             .reduce((sum, v) => sum + v, 0);
-        const table = [1.000, 0.994, 0.975, 0.944, 0.901, 0.846, 0.778, 0.698, 0.605, 0.500];
-        const half = len / 2;
-        const rawRate = Math.round(Math.abs((half - count) * 10 / half));
-        // 前面满1或满0的情况
-        const idx = rawRate === table.length ? table.length - 1 : rawRate;
-        return table[idx];
+        const half = stateArr.length / 2;
+        // [0,1] 当 1 的数量 由 均衡慢慢倾斜时  rawRate 从0 开始慢慢增大
+        const rawRate = Math.abs((half - count) / half);
+        // [0.5,1] 减速下降曲线 当 1 的数量 由 均衡慢慢倾斜时  weight 从 1 先加速下降 后缓慢下降
+        const weight = 0.5 + 0.5 * Math.pow(1 - rawRate, 2);
+        return parseFloat(weight.toFixed(3));
+    }
+
+    /**
+     * 双山寨币 24h内的振幅
+     * 3%内算佳 振幅越大 越趋于趋势
+     * 使用加速下降曲线 低振幅时缓慢下降 反之加速下降
+     *
+     * @param amp
+     * @returns {number}
+     */
+    getPriceWeight(amp) {
+        // [0,1] 对振幅简单处理 使其值域置于[0,1]
+        const rawRate = Math.min(Math.abs(amp), 10) / 10;
+        // [0.5,1] 加速下降曲线 振幅越大 weight 从 1开始 先缓慢下降后加速下降
+        const weight = 0.5 + 0.5 * (1 - Math.pow(rawRate, 2));
+        return parseFloat(weight.toFixed(3));
     }
 }
 

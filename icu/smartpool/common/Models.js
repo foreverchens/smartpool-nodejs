@@ -17,9 +17,9 @@ class Models {
         }
     }
 
-    ShakeScore(symbol, score, amplitude, lowP, highP, pricePosition) {
+    ShakeScore(symbol, score, amp, lowP, highP, pricePosit) {
         return {
-            symbol, score, amplitude, lowP, highP, pricePosition
+            symbol, score, amp, lowP, highP, pricePosit
         }
     }
 }

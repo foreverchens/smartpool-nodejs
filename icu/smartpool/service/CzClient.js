@@ -33,7 +33,7 @@ class CzClient {
                 'LINK-BTC\n' +
                 'BNB-BTC\n' +
                 'LTC-BTC\n' +
-                'VIRTUAL-BTC\n' +
+                // 'VIRTUAL-BTC\n' +
                 'AAVE-BTC\n' +
                 // 'FIL-BTC\n' +
                 // 'OP-BTC\n' +

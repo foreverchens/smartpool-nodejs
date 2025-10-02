@@ -3,31 +3,54 @@ import czClient from "./service/CzClient.js";
 import {setInterval} from "timers";
 import Piscina from "piscina";
 import path from "path";
-import fs from "fs"
+import fs from "fs";
 
 const threadPool = new Piscina({
     filename: path.resolve('./service/worker.js'), maxThreads: config.MAX_THREADS
 });
+const DATA_DIR = path.resolve('./data');
+const DATA_FILE = path.join(DATA_DIR, 'latest.json');
 
-let l = 0;
+async function persistBatch(batch) {
+    try {
+        await fs.promises.mkdir(DATA_DIR, {recursive: true});
+        await fs.promises.writeFile(DATA_FILE, JSON.stringify(batch, null, 2), 'utf-8');
+    } catch (err) {
+        console.error('写入批次数据失败:', err);
+    }
+}
+
 async function run() {
+    const batchTimestamp = new Date().toISOString();
+    const batchPayload = {timestamp: batchTimestamp};
+
+    const saveStage = async (stageName, value) => {
+        const savedAt = new Date().toISOString();
+        const snapshot = value === undefined ? null : JSON.parse(JSON.stringify(value));
+        batchPayload[stageName] = {savedAt, data: snapshot};
+        batchPayload.lastStage = stageName;
+        batchPayload.lastSavedAt = savedAt;
+        await persistBatch(batchPayload);
+    };
+
     /**
      * 获取币种震荡数据
      */
     let symbolList = await czClient.listSymbol();
-    symbolList = symbolList.slice(0,l += 2);
+    symbolList = symbolList.slice(0, 10);
+    await saveStage('symbolList', symbolList);
     // symbolList = ['BTCUSDT','ETHUSDT','LTCUSDT','XRPUSDT'];
     console.log(symbolList);
     let st = Date.now();
     let rltArr = await Promise.all(symbolList.map((symbol, idx) => {
         return threadPool.run([symbol, idx, symbolList.length]);
     }));
+    await saveStage('rltArr', rltArr);
     let et = Date.now();
     console.log('耗时: %s秒', (et - st) / 1000);
-    console.log("----------BTC锚定币币对原始分析数据----------")
+    console.log("----------BTC锚定币币对原始分析数据----------");
     console.table(rltArr);
-    console.log("----------BTC锚定币币对原始分析数据----------")
-
+    console.log("----------BTC锚定币币对原始分析数据----------");
 
     /**
      *  简单过滤
@@ -35,55 +58,63 @@ async function run() {
      *  对btc汇率位置高于1.1、强势、回调可能弱
      *  [-0.1,1.1]内震荡最佳
      */
-    rltArr = rltArr.filter(ele => ele.score > 5000 && ele.symbol && ele.symbol.endsWith('BTC'))
-    let centerList = rltArr.filter(ele => ele.pricePosit > -0.1 && ele.pricePosit < 1.1)
-        .sort((a, b) => b.pricePosit - a.pricePosit)
+    let filtered = rltArr.filter(ele => ele && ele.score > 5000 && ele.symbol && ele.symbol.endsWith('BTC'));
+    let centerList = filtered.filter(ele => ele.pricePosit > -0.1 && ele.pricePosit < 1.1)
+        .sort((a, b) => b.pricePosit - a.pricePosit);
+    await saveStage('centerList', centerList);
 
-    console.log("----------对得分和价格位置过滤后数据----------")
+    console.log("----------对得分和价格位置过滤后数据----------");
     console.table(centerList);
-    console.log("----------对得分和价格位置过滤后数据----------")
+    console.log("----------对得分和价格位置过滤后数据----------");
 
     let len = centerList.length;
     /**
      * 将处于震荡的币分为高低两组、[0.8,1.1]为高位组、[-0.1,0.2]为低位组、以低位组为base做多、高位组为quota做空、势能最大
      */
-    let highList = centerList.slice(0, len * 0.5)
-        .sort((a, b) => b.score - a.score)
-        .slice();
-    let lowList = centerList
+    let highCandidates = centerList.slice(0, len * 0.5)
+        .sort((a, b) => b.score - a.score);
+    let lowCandidates = centerList
         .slice(len * -0.5)
         .sort((a, b) => b.score - a.score);
-    console.log("----------价格高位组数据----------")
-    console.table(highList);
-    console.log("----------价格高位组数据----------")
-    console.log("----------价格地位组数据----------")
-    console.table(lowList);
-    console.log("----------价格地位组数据----------")
 
-    highList = highList.slice(0, highList.length > 5 ? 5 : highList.length);
-    lowList = lowList.slice(0, lowList.length > 5 ? 5 : lowList.length);
+    console.log("----------价格高位组数据----------");
+    console.table(highCandidates);
+    console.log("----------价格高位组数据----------");
+    console.log("----------价格低位组数据----------");
+    console.table(lowCandidates);
+    console.log("----------价格低位组数据----------");
+
+    const topHighList = highCandidates.slice(0, highCandidates.length > 5 ? 5 : highCandidates.length);
+    const topLowList = lowCandidates.slice(0, lowCandidates.length > 5 ? 5 : lowCandidates.length);
+    await saveStage('highList', topHighList);
+    await saveStage('lowList', topLowList);
+
     /**
      *  两者组装为币币交易对、获取震荡指标
      */
-    lowList = lowList.map(ele => ele.symbol.replace('-BTC', ''));
-    let highLowList = []
-    highList.map(ele => ele.symbol.replace('-BTC', '')).forEach(e1 => {
-        lowList.forEach(e2 => {
-            highLowList.push(e2 + '-' + e1)
-        })
-    })
-    console.log("----------双币币对列表----------")
+    const lowSymbolList = topLowList.map(ele => ele.symbol.replace('-BTC', ''));
+    const highSymbolList = topHighList.map(ele => ele.symbol.replace('-BTC', ''));
+    let highLowList = [];
+    highSymbolList.forEach(e1 => {
+        lowSymbolList.forEach(e2 => {
+            highLowList.push(e2 + '-' + e1);
+        });
+    });
+    await saveStage('highLowList', highLowList);
+    console.log("----------双币币对列表----------");
     console.table(highLowList);
-    console.log("----------双币币对列表----------")
-    rltArr = await Promise.all(highLowList.map((symbol, idx) => {
+    console.log("----------双币币对列表----------");
+
+    let pairResults = await Promise.all(highLowList.map((symbol, idx) => {
         return threadPool.run([symbol, idx, highLowList.length]);
     }));
-    let data = rltArr.sort((a, b) => b.score - a.score);
-    console.log("----------双币币对分析数据----------")
+    let data = pairResults.sort((a, b) => b.score - a.score);
+    await saveStage('data', data);
+    console.log("----------双币币对分析数据----------");
     console.table(data);
-    console.log("----------双币币对分析数据----------")
+    console.log("----------双币币对分析数据----------");
     fs.writeFileSync('./other/outlog/smartpool.json', JSON.stringify(data));
 }
 
 await run();
-setInterval(run, 1000 * 60 * 60)
+setInterval(run, 1000 * 60 * 60);

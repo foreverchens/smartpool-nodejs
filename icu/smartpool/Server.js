@@ -9,6 +9,7 @@ const PORT = 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_FILE = path.join(__dirname, 'data', 'latest.json');
+const VIEW_DIR = path.join(__dirname, 'view');
 const STAGE_KEYS = ['symbolList', 'rltArr', 'centerList', 'highList', 'lowList', 'highLowList', 'data'];
 
 async function loadBatch() {
@@ -93,8 +94,12 @@ createFieldEndpoint('low-list', 'lowList');
 createFieldEndpoint('pairs', 'highLowList');
 createFieldEndpoint('final-results', 'data');
 
-app.get('/page', (req, res) => {
-    res.redirect('/simple.html');
+app.get('/page', (req, res, next) => {
+    res.sendFile(path.join(VIEW_DIR, 'simple.html'), err => {
+        if (err) {
+            next(err);
+        }
+    });
 });
 
 app.use(express.static(__dirname));

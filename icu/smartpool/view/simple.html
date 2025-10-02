@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>简单页面</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        pre.centered {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+            text-align: center;
+        }
+
+        select {
+            padding: 4px 6px;
+        }
+    </style>
+</head>
+<body>
+<h1>简单页面</h1>
+<div style="margin-bottom:12px;">
+    <label for="stage-select">选择阶段：</label>
+    <select id="stage-select" disabled>
+        <option value="">加载中...</option>
+    </select>
+</div>
+
+<section id="lists-section" style="margin-top:16px; display:none;">
+    <p><strong>初始币对列表：</strong><span id="symbol-list">加载中...</span></p>
+    <p><strong>双币币对列表：</strong><span id="pair-list">加载中...</span></p>
+</section>
+
+<div id="content" style="margin-top:16px;">请选择阶段</div>
+<table id="stage-table" border="1" cellpadding="6" cellspacing="0" style="margin-top:12px; display: none;">
+    <thead>
+    <tr id="stage-header"></tr>
+    </thead>
+    <tbody></tbody>
+</table>
+<script>
+    const stageSelect = document.getElementById('stage-select');
+    const container = document.getElementById('content');
+    const table = document.getElementById('stage-table');
+    const theadRow = document.getElementById('stage-header');
+    const tbody = table.querySelector('tbody');
+    const listsSection = document.getElementById('lists-section');
+    const symbolListSpan = document.getElementById('symbol-list');
+    const pairListSpan = document.getElementById('pair-list');
+
+    const STAGE_OPTIONS = [
+        {label: '初始结果', value: 'initial-results', stage: 'rltArr'},
+        {label: '过滤后币种', value: 'center-list', stage: 'centerList'},
+        {label: '高位列表', value: 'high-list', stage: 'highList'},
+        {label: '低位列表', value: 'low-list', stage: 'lowList'},
+        {label: '最终结果', value: 'final-results', stage: 'data'}
+    ];
+    const DEFAULT_STAGE = 'center-list';
+    const STAGE_META_BY_VALUE = STAGE_OPTIONS.reduce((acc, cur) => {
+        acc[cur.value] = cur;
+        return acc;
+    }, {});
+    let currentStageValue = DEFAULT_STAGE;
+
+    function buildTableHeader(keys) {
+        theadRow.innerHTML = keys.map(key => `<th>${key}</th>`).join('');
+    }
+
+    function formatDateTime(value) {
+        if (!value) {
+            return '未知';
+        }
+        const time = Date.parse(value);
+        if (Number.isNaN(time)) {
+            return value;
+        }
+        return new Date(time).toLocaleString();
+    }
+
+    function fetchJson(url) {
+        return fetch(url)
+            .then(async resp => {
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok) {
+                    const message = data && data.error ? data.error : resp.statusText || '请求失败';
+                    throw new Error(message);
+                }
+                return data;
+            });
+    }
+
+    function getKlineUrl(symbol) {
+        const params = new URLSearchParams({symbol});
+        return `/other/klineView.html?${params.toString()}`;
+    }
+
+    function createSymbolLink(symbol) {
+        const link = document.createElement('a');
+        link.href = getKlineUrl(symbol);
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.textContent = symbol;
+        return link;
+    }
+
+    function renderLinkList(containerEl, list) {
+        containerEl.innerHTML = '';
+        if (!Array.isArray(list) || list.length === 0) {
+            containerEl.textContent = '无数据';
+            return;
+        }
+        list.forEach((symbol, index) => {
+            if (typeof symbol !== 'string' || !symbol) {
+                return;
+            }
+            containerEl.appendChild(createSymbolLink(symbol));
+            if (index < list.length - 1) {
+                containerEl.appendChild(document.createTextNode(', '));
+            }
+        });
+        if (!containerEl.hasChildNodes()) {
+            containerEl.textContent = '无数据';
+        }
+    }
+
+    async function renderStage(stagePath, stageLabel) {
+        if (!stagePath) {
+            container.textContent = '请选择阶段';
+            table.style.display = 'none';
+            return;
+        }
+        container.textContent = '阶段数据加载中...';
+        table.style.display = 'none';
+        try {
+            const {data, savedAt, batchTimestamp, stage} = await fetchJson(`/api/data/${stagePath}`);
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                container.textContent = `阶段 ${stageLabel || stage} 暂无数据`;
+                table.style.display = 'none';
+                return;
+            }
+            const sorted = data.slice().sort((a, b) => {
+                if (typeof a === 'object' && typeof b === 'object' && 'score' in a && 'score' in b) {
+                    return Number(b.score || 0) - Number(a.score || 0);
+                }
+                return 0;
+            });
+            const keys = Object.keys(sorted[0]);
+            buildTableHeader(keys);
+            tbody.innerHTML = '';
+            sorted.forEach(row => {
+                const tr = document.createElement('tr');
+                keys.forEach(key => {
+                    const td = document.createElement('td');
+                    const cellVal = row[key];
+                    if (key === 'symbol' && typeof cellVal === 'string' && cellVal) {
+                        td.appendChild(createSymbolLink(cellVal));
+                    } else if (typeof cellVal === 'object' && cellVal !== null) {
+                        const pre = document.createElement('pre');
+                        pre.className = 'centered';
+                        pre.textContent = JSON.stringify(cellVal, null, 2);
+                        td.appendChild(pre);
+                    } else {
+                        const pre = document.createElement('pre');
+                        pre.className = 'centered';
+                        pre.textContent = cellVal === undefined ? '' : String(cellVal);
+                        td.appendChild(pre);
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            container.innerHTML = `
+                <p><strong>批次时间：</strong>${formatDateTime(batchTimestamp)}</p>
+                <p><strong>阶段：</strong>${stageLabel || stage}</p>
+                <p><strong>保存时间：</strong>${formatDateTime(savedAt)}</p>
+                <p><strong>记录数：</strong>${sorted.length}</p>
+            `;
+            table.style.display = '';
+        } catch (err) {
+            container.textContent = '阶段数据加载失败: ' + err.message;
+            table.style.display = 'none';
+            throw err;
+        }
+    }
+
+    async function loadSymbolAndPairs() {
+        try {
+            const symbolResp = await fetchJson('/api/data/symbol-list').catch(() => null);
+            const pairResp = await fetchJson('/api/data/pairs').catch(() => null);
+            renderLinkList(symbolListSpan, symbolResp && symbolResp.data);
+            renderLinkList(pairListSpan, pairResp && pairResp.data);
+        } catch (err) {
+            symbolListSpan.textContent = '加载失败';
+            pairListSpan.textContent = '加载失败';
+        }
+        listsSection.style.display = '';
+    }
+
+    async function populateStageOptions() {
+        stageSelect.disabled = true;
+        stageSelect.innerHTML = '<option value="">加载中...</option>';
+        try {
+            const summary = await fetchJson('/api/data');
+            const stageSummaryMap = new Map(summary.stageSummary.map(item => [item.stage, item]));
+            let fallbackStage = null;
+            const optionsHtml = STAGE_OPTIONS.map(opt => {
+                const stageInfo = stageSummaryMap.get(opt.stage);
+                const disabled = !stageInfo || stageInfo.size === 0;
+                if (!disabled && !fallbackStage) {
+                    fallbackStage = opt;
+                }
+                const label = `${opt.label}${stageInfo && stageInfo.savedAt ? ` (${formatDateTime(stageInfo.savedAt)})` : ''}`;
+                return `<option value="${opt.value}" ${disabled ? 'disabled' : ''}>${label}</option>`;
+            });
+            stageSelect.innerHTML = optionsHtml.join('') || '<option value="">无可用阶段</option>';
+            stageSelect.disabled = false;
+
+            let stageMeta = null;
+            const preservedMeta = STAGE_META_BY_VALUE[currentStageValue];
+            if (preservedMeta) {
+                const info = stageSummaryMap.get(preservedMeta.stage);
+                if (info && info.size > 0) {
+                    stageMeta = preservedMeta;
+                }
+            }
+            if (!stageMeta) {
+                const defaultMeta = STAGE_META_BY_VALUE[DEFAULT_STAGE];
+                if (defaultMeta) {
+                    const info = stageSummaryMap.get(defaultMeta.stage);
+                    if (info && info.size > 0) {
+                        stageMeta = defaultMeta;
+                    }
+                }
+            }
+            if (!stageMeta) {
+                stageMeta = fallbackStage;
+            }
+            if (!stageMeta) {
+                table.style.display = 'none';
+                container.textContent = '暂无可展示阶段';
+                return;
+            }
+            currentStageValue = stageMeta.value;
+            stageSelect.value = stageMeta.value;
+            await renderStage(stageMeta.value, stageMeta.label);
+        } catch (err) {
+            container.textContent = '阶段概览加载失败: ' + err.message;
+            stageSelect.innerHTML = '<option value="">加载失败</option>';
+            stageSelect.disabled = true;
+            table.style.display = 'none';
+            throw err;
+        }
+    }
+
+    stageSelect.addEventListener('change', () => {
+        const selectedValue = stageSelect.value;
+        const optionMeta = STAGE_META_BY_VALUE[selectedValue];
+        if (!selectedValue || !optionMeta) {
+            currentStageValue = '';
+            container.textContent = '请选择阶段';
+            table.style.display = 'none';
+            return;
+        }
+        currentStageValue = selectedValue;
+        renderStage(selectedValue, optionMeta.label).catch(err => console.error(err));
+    });
+
+    (async function initialize() {
+        try {
+            await populateStageOptions();
+            await loadSymbolAndPairs();
+        } catch (err) {
+            container.textContent = '初始化失败: ' + err.message;
+        }
+    })();
+</script>
+</body>
+</html>

@@ -15,7 +15,9 @@ const STAGE_KEYS = ['symbolList', 'rltArr', 'centerList', 'highList', 'lowList',
 async function loadBatch() {
     const content = await fsPromises.readFile(DATA_FILE, 'utf-8');
     const parsed = JSON.parse(content);
-    if (parsed.data && typeof parsed.data === 'object') {
+    const hasStageKeys = STAGE_KEYS.some(stageKey => Object.prototype.hasOwnProperty.call(parsed, stageKey));
+
+    if (!hasStageKeys && parsed.data && typeof parsed.data === 'object') {
         const normalized = parsed.data;
         if (!normalized.timestamp && parsed.timestamp) {
             normalized.timestamp = parsed.timestamp;
@@ -25,6 +27,19 @@ async function loadBatch() {
         }
         return normalized;
     }
+
+    if (!parsed.lastSavedAt) {
+        const latestStage = STAGE_KEYS.map(key => parsed[key])
+            .filter(Boolean)
+            .map(stage => stage.savedAt)
+            .filter(Boolean)
+            .sort()
+            .pop();
+        if (latestStage) {
+            parsed.lastSavedAt = latestStage;
+        }
+    }
+
     return parsed;
 }
 

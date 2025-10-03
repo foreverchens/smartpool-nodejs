@@ -300,6 +300,11 @@
             border-radius: 6px;
         }
 
+        .list-meta {
+            margin-left: 8px;
+            font-size: 12px;
+        }
+
         @media (max-width: 960px) {
             .page-header {
                 flex-direction: column;
@@ -347,8 +352,8 @@
 </section>
 
 <section id="lists-section" style="display:none;">
-    <p><strong>初始币对列表：</strong><span id="symbol-list">加载中...</span></p>
-    <p><strong>双币币对列表：</strong><span id="pair-list">加载中...</span></p>
+    <p><strong>初始币对列表：</strong><span id="symbol-list">加载中...</span><span id="symbol-list-meta" class="list-meta muted"></span></p>
+    <p><strong>双币币对列表：</strong><span id="pair-list">加载中...</span><span id="pair-list-meta" class="list-meta muted"></span></p>
 </section>
 <div id="workspace" class="layout" style="display:none;">
     <aside id="stage-symbols">
@@ -373,8 +378,8 @@
                     <option value="5m">5 分钟</option>
                     <option value="15m">15 分钟</option>
                     <option value="30m">30 分钟</option>
-                    <option value="1h" selected>1 小时</option>
-                    <option value="4h">4 小时</option>
+                    <option value="1h" >1 小时</option>
+                    <option value="4h" selected>4 小时</option>
                 </select>
             </div>
         </div>
@@ -395,6 +400,8 @@
     const listsSection = document.getElementById('lists-section');
     const initialListSpan = document.getElementById('symbol-list');
     const pairListSpan = document.getElementById('pair-list');
+    const symbolListMeta = document.getElementById('symbol-list-meta');
+    const pairListMeta = document.getElementById('pair-list-meta');
     const workspace = document.getElementById('workspace');
     const stageSymbolListEl = document.getElementById('stage-symbol-list');
     const summaryMetricsEl = document.getElementById('summary-metrics');
@@ -578,16 +585,27 @@
             });
     }
 
-    function renderLinkList(containerEl, list) {
+    function renderLinkList(containerEl, list, metaEl, savedAt) {
         containerEl.innerHTML = '';
-        if (!Array.isArray(list) || list.length === 0) {
+        const finalList = Array.isArray(list)
+            ? list.map(item => {
+                if (typeof item === 'string') {
+                    return item.trim();
+                }
+                if (item && typeof item === 'object' && typeof item.symbol === 'string') {
+                    return item.symbol.trim();
+                }
+                return '';
+            }).filter(Boolean)
+            : [];
+        if (!finalList.length) {
             containerEl.textContent = '无数据';
+            if (metaEl) {
+                metaEl.textContent = savedAt ? `(更新于 ${formatDateTime(savedAt)})` : '';
+            }
             return;
         }
-        list.forEach((symbol, index) => {
-            if (typeof symbol !== 'string' || !symbol) {
-                return;
-            }
+        finalList.forEach((symbol, index) => {
             const link = document.createElement('a');
             link.href = '#';
             link.textContent = symbol;
@@ -596,12 +614,15 @@
                 selectSymbolByName(symbol, true);
             });
             containerEl.appendChild(link);
-            if (index < list.length - 1) {
+            if (index < finalList.length - 1) {
                 containerEl.appendChild(document.createTextNode(', '));
             }
         });
         if (!containerEl.hasChildNodes()) {
             containerEl.textContent = '无数据';
+        }
+        if (metaEl) {
+            metaEl.textContent = savedAt ? `(更新于 ${formatDateTime(savedAt)})` : '';
         }
     }
 
@@ -1089,11 +1110,27 @@
                 fetchJson('/api/data/symbol-list').catch(() => null),
                 fetchJson('/api/data/pairs').catch(() => null)
             ]);
-            renderLinkList(initialListSpan, symbolResp && symbolResp.data);
-            renderLinkList(pairListSpan, pairResp && pairResp.data);
+            renderLinkList(
+                initialListSpan,
+                symbolResp && symbolResp.data,
+                symbolListMeta,
+                symbolResp && symbolResp.savedAt
+            );
+            renderLinkList(
+                pairListSpan,
+                pairResp && pairResp.data,
+                pairListMeta,
+                pairResp && pairResp.savedAt
+            );
         } catch (err) {
             initialListSpan.textContent = '加载失败';
             pairListSpan.textContent = '加载失败';
+            if (symbolListMeta) {
+                symbolListMeta.textContent = '';
+            }
+            if (pairListMeta) {
+                pairListMeta.textContent = '';
+            }
         }
         listsSection.style.display = '';
     }

@@ -95,7 +95,6 @@ async function run() {
         console.log("----------对得分和价格位置过滤后数据----------");
         console.table(centerList);
         console.log("----------对得分和价格位置过滤后数据----------");
-
         let len = centerList.length;
         /**
          * 将处于震荡的币分为高低两组、[0.8,1.1]为高位组、[-0.1,0.2]为低位组、以低位组为base做多、高位组为quota做空、势能最大

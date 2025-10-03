@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>简单页面</title>
+    <title>双币网格震荡分析平台</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,8 +13,9 @@
         }
 
         h1 {
-            margin: 0 0 16px;
-            font-size: 22px;
+            margin: 0;
+            font-size: 26px;
+            letter-spacing: 0.5px;
         }
 
         select {
@@ -27,6 +28,92 @@
 
         a {
             color: #64b5f6;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 16px;
+        }
+
+        .page-title {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .page-title small {
+            color: #8fa3bf;
+            font-size: 13px;
+        }
+
+        .stage-selector {
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: #111b2d;
+            border: 1px solid #1f2a48;
+            box-shadow: 0 0 18px rgba(15, 22, 36, 0.4);
+        }
+
+        .stage-selector label {
+            color: #8fa3bf;
+            font-size: 14px;
+            letter-spacing: 0.4px;
+        }
+
+        .stage-selector select {
+            min-width: 200px;
+            padding: 6px 10px;
+            font-size: 15px;
+        }
+
+        .stage-overview {
+            margin-bottom: 16px;
+            padding: 16px;
+            background: #111b2d;
+            border: 1px solid #1f2a48;
+            border-radius: 8px;
+            box-shadow: 0 0 22px rgba(15, 22, 36, 0.35);
+        }
+
+        .stage-message {
+            margin: 0;
+            color: #8fa3bf;
+            font-size: 14px;
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 14px 24px;
+        }
+
+        .overview-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 10px 12px;
+            background: rgba(36, 45, 68, 0.45);
+            border: 1px solid #1f2a48;
+            border-radius: 6px;
+        }
+
+        .overview-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #8fa3bf;
+        }
+
+        .overview-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #e0e6f1;
         }
 
         .layout {
@@ -206,11 +293,30 @@
         }
 
         #lists-section {
-            margin-top: 16px;
+            margin-top: 18px;
             padding: 12px;
             background: #111b2d;
             border: 1px solid #1f2a48;
             border-radius: 6px;
+        }
+
+        @media (max-width: 960px) {
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .stage-selector {
+                align-self: flex-start;
+            }
+
+            .layout {
+                flex-direction: column;
+            }
+
+            #stage-symbols {
+                max-height: none;
+            }
         }
 
         strong {
@@ -223,20 +329,27 @@
     </style>
 </head>
 <body>
-<h1>简单页面</h1>
-<div style="margin-bottom:12px;">
-    <label for="stage-select">选择阶段：</label>
-    <select id="stage-select" disabled>
-        <option value="">加载中...</option>
-    </select>
-</div>
+<header class="page-header">
+    <div class="page-title">
+        <h1>双币网格震荡分析平台</h1>
+        <small>追踪币对节奏，掌握双币震荡策略</small>
+    </div>
+    <div class="stage-selector">
+        <label for="stage-select">阶段</label>
+        <select id="stage-select" disabled>
+            <option value="">加载中...</option>
+        </select>
+    </div>
+</header>
 
-<section id="lists-section" style="margin-top:16px; display:none;">
+<section id="stage-overview" class="stage-overview">
+    <div id="content" class="stage-message">请选择阶段</div>
+</section>
+
+<section id="lists-section" style="display:none;">
     <p><strong>初始币对列表：</strong><span id="symbol-list">加载中...</span></p>
     <p><strong>双币币对列表：</strong><span id="pair-list">加载中...</span></p>
 </section>
-
-<div id="content" style="margin-top:16px;">请选择阶段</div>
 <div id="workspace" class="layout" style="display:none;">
     <aside id="stage-symbols">
         <h2>币对列表</h2>
@@ -261,7 +374,7 @@
                     <option value="15m">15 分钟</option>
                     <option value="30m">30 分钟</option>
                     <option value="1h" selected>1 小时</option>
-                    <option value="4h" >4 小时</option>
+                    <option value="4h">4 小时</option>
                 </select>
             </div>
         </div>
@@ -317,9 +430,21 @@
     let klineRequestId = 0;
     let activeBoundaries = null;
     const boundaryCache = new Map();
-    const QUALITY_HINT_TEXT = '评分等级：C (<10000)，B (<15000)，A (<20000)，S (<25000)，SSS (≥25000)';
+    const QUALITY_HINT_TEXT = '品质等级：C (<10000)，B (<15000)，A (<20000)，S (<25000)，SSS (≥25000)';
     if (qualityHintEl) {
         qualityHintEl.textContent = QUALITY_HINT_TEXT;
+    }
+
+    function setStageMessage(text) {
+        container.textContent = text;
+        container.classList.remove('overview-grid');
+        container.classList.add('stage-message');
+    }
+
+    function setStageSummary(html) {
+        container.innerHTML = html;
+        container.classList.remove('stage-message');
+        container.classList.add('overview-grid');
     }
 
     function assignInputValues(base, quote) {
@@ -556,9 +681,7 @@
             return;
         }
         activeBoundaries = null;
-        if (row && (row.lowP !== undefined || row.highP !== undefined)) {
-            console.warn('[updateSummary] invalid bounds for symbol:', row.symbol, 'lowP:', row.lowP, 'highP:', row.highP);
-        }
+        console.warn('[updateSummary] invalid bounds for symbol:', row.symbol, 'lowP:', row.lowP, 'highP:', row.highP);
     }
 
     function updateDetails(row) {
@@ -893,11 +1016,11 @@
 
     async function renderStage(stagePath, stageLabel) {
         if (!stagePath) {
-            container.textContent = '请选择阶段';
+            setStageMessage('请选择阶段');
             workspace.style.display = 'none';
             return;
         }
-        container.textContent = '阶段数据加载中...';
+        setStageMessage('阶段数据加载中...');
         workspace.style.display = 'none';
         chart.clear();
         chartFeedbackEl.textContent = '';
@@ -905,7 +1028,7 @@
             const {data, savedAt, batchTimestamp, stage} = await fetchJson(`/api/data/${stagePath}`);
             const stageName = stageLabel || stage;
             if (!data || !Array.isArray(data) || data.length === 0) {
-                container.textContent = `阶段 ${stageName} 暂无数据`;
+                setStageMessage(`阶段 ${stageName} 暂无数据`);
                 workspace.style.display = 'none';
                 activeSymbol = '';
                 markActiveSymbol('');
@@ -930,12 +1053,12 @@
             renderSymbolList(sorted);
             const visibleSymbols = Array.from(symbolRowMap.keys());
             const summaryHtml = [
-                `<p><strong>阶段：</strong>${stageName}</p>`,
-                `<p><strong>批次时间：</strong>${formatDateTime(batchTimestamp)}</p>`,
-                `<p><strong>保存时间：</strong>${formatDateTime(savedAt)}</p>`,
-                `<p><strong>币对数量：</strong>${visibleSymbols.length}</p>`
+                `<div class="overview-item"><span class="overview-label">阶段</span><span class="overview-value">${stageName}</span></div>`,
+                `<div class="overview-item"><span class="overview-label">批次时间</span><span class="overview-value">${formatDateTime(batchTimestamp)}</span></div>`,
+                `<div class="overview-item"><span class="overview-label">保存时间</span><span class="overview-value">${formatDateTime(savedAt)}</span></div>`,
+                `<div class="overview-item"><span class="overview-label">币对数量</span><span class="overview-value">${visibleSymbols.length}</span></div>`
             ].join('');
-            container.innerHTML = summaryHtml;
+            setStageSummary(summaryHtml);
             workspace.style.display = 'flex';
             requestAnimationFrame(() => chart.resize());
 
@@ -954,7 +1077,7 @@
                 assignInputValues('', '');
             }
         } catch (err) {
-            container.textContent = '阶段数据加载失败: ' + err.message;
+            setStageMessage('阶段数据加载失败: ' + err.message);
             workspace.style.display = 'none';
             throw err;
         }
@@ -1015,7 +1138,7 @@
                 stageMeta = fallbackStage;
             }
             if (!stageMeta) {
-                container.textContent = '暂无可展示阶段';
+                setStageMessage('暂无可展示阶段');
                 workspace.style.display = 'none';
                 return;
             }
@@ -1023,7 +1146,7 @@
             stageSelect.value = stageMeta.value;
             await renderStage(stageMeta.value, stageMeta.label);
         } catch (err) {
-            container.textContent = '阶段概览加载失败: ' + err.message;
+            setStageMessage('阶段概览加载失败: ' + err.message);
             stageSelect.innerHTML = '<option value="">加载失败</option>';
             stageSelect.disabled = true;
             workspace.style.display = 'none';
@@ -1036,7 +1159,7 @@
         const optionMeta = STAGE_META_BY_VALUE[selectedValue];
         if (!selectedValue || !optionMeta) {
             currentStageValue = '';
-            container.textContent = '请选择阶段';
+            setStageMessage('请选择阶段');
             workspace.style.display = 'none';
             chart.clear();
             chartFeedbackEl.textContent = '';
@@ -1077,7 +1200,7 @@
             await populateStageOptions();
             await loadSymbolAndPairs();
         } catch (err) {
-            container.textContent = '初始化失败: ' + err.message;
+            setStageMessage('初始化失败: ' + err.message);
         }
     })();
 </script>

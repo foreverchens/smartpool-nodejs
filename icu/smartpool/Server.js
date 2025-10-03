@@ -15,7 +15,9 @@ const STAGE_KEYS = ['symbolList', 'rltArr', 'centerList', 'highList', 'lowList',
 async function loadBatch() {
     const content = await fsPromises.readFile(DATA_FILE, 'utf-8');
     const parsed = JSON.parse(content);
-    if (parsed.data && typeof parsed.data === 'object') {
+    const hasStageKeys = STAGE_KEYS.some(stageKey => Object.prototype.hasOwnProperty.call(parsed, stageKey));
+
+    if (!hasStageKeys && parsed.data && typeof parsed.data === 'object') {
         const normalized = parsed.data;
         if (!normalized.timestamp && parsed.timestamp) {
             normalized.timestamp = parsed.timestamp;
@@ -25,6 +27,19 @@ async function loadBatch() {
         }
         return normalized;
     }
+
+    if (!parsed.lastSavedAt) {
+        const latestStage = STAGE_KEYS.map(key => parsed[key])
+            .filter(Boolean)
+            .map(stage => stage.savedAt)
+            .filter(Boolean)
+            .sort()
+            .pop();
+        if (latestStage) {
+            parsed.lastSavedAt = latestStage;
+        }
+    }
+
     return parsed;
 }
 
@@ -54,7 +69,9 @@ function createFieldEndpoint(pathSuffix, stageName) {
                 stage: stageName,
                 batchTimestamp: batch.timestamp,
                 savedAt: stage.savedAt,
-                data: stage.data
+                data: stage.data,
+                cycleHours: batch.cycleHours,
+                cycleDays: batch.cycleDays
             });
         } catch (err) {
             handleReadError(res, err);
@@ -79,6 +96,8 @@ app.get('/api/data', async (req, res) => {
             message: '最新批次数据',
             timestamp: batch.timestamp,
             savedAt: batch.lastSavedAt,
+            cycleHours: batch.cycleHours,
+            cycleDays: batch.cycleDays,
             stageSummary
         });
     } catch (err) {
@@ -95,7 +114,7 @@ createFieldEndpoint('pairs', 'highLowList');
 createFieldEndpoint('final-results', 'data');
 
 app.get('/', (req, res, next) => {
-    res.sendFile(path.join(VIEW_DIR, 'simple.html'), err => {
+    res.sendFile(path.join(VIEW_DIR, 'home.html'), err => {
         if (err) {
             next(err);
         }

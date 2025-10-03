@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>双币网格震荡分析平台</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 16px;
+            background: #0f1624;
+            color: #e0e6f1;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 26px;
+            letter-spacing: 0.5px;
+        }
+
+        select {
+            padding: 4px 6px;
+            background: #1f2a48;
+            color: #e0e6f1;
+            border: 1px solid #2c3e50;
+            border-radius: 4px;
+        }
+
+        a {
+            color: #64b5f6;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 16px;
+        }
+
+        .page-title {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .page-title small {
+            color: #8fa3bf;
+            font-size: 13px;
+        }
+
+        .stage-selector {
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: #111b2d;
+            border: 1px solid #1f2a48;
+            box-shadow: 0 0 18px rgba(15, 22, 36, 0.4);
+        }
+
+        .stage-selector label {
+            color: #8fa3bf;
+            font-size: 14px;
+            letter-spacing: 0.4px;
+        }
+
+        .stage-selector select {
+            min-width: 200px;
+            padding: 6px 10px;
+            font-size: 15px;
+        }
+
+        .stage-overview {
+            margin-bottom: 16px;
+            padding: 16px;
+            background: #111b2d;
+            border: 1px solid #1f2a48;
+            border-radius: 8px;
+            box-shadow: 0 0 22px rgba(15, 22, 36, 0.35);
+        }
+
+        .stage-message {
+            margin: 0;
+            color: #8fa3bf;
+            font-size: 14px;
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 14px 24px;
+        }
+
+        .overview-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 10px 12px;
+            background: rgba(36, 45, 68, 0.45);
+            border: 1px solid #1f2a48;
+            border-radius: 6px;
+        }
+
+        .overview-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #8fa3bf;
+        }
+
+        .overview-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #e0e6f1;
+        }
+
+        .layout {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        #stage-symbols {
+            flex: 0 0 280px;
+            background: #111b2d;
+            border: 1px solid #1f2a48;
+            border-radius: 6px;
+            padding: 12px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        #stage-symbols h2 {
+            margin: 0 0 12px;
+            font-size: 18px;
+        }
+
+        #stage-symbol-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .symbol-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #1b253b;
+            border: 1px solid transparent;
+            transition: background 0.2s, border 0.2s;
+        }
+
+        .symbol-item:hover {
+            background: #233050;
+        }
+
+        .symbol-item.active {
+            border-color: #3d8bfd;
+            background: #1e3866;
+        }
+
+        .symbol-name {
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        .symbol-quality {
+            font-size: 13px;
+            color: #90caf9;
+        }
+
+        #chart-section {
+            flex: 1;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        #symbol-summary {
+            background: #111b2d;
+            border: 1px solid #1f2a48;
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            gap: 12px 24px;
+            align-items: center;
+        }
+
+        #symbol-inputs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        #symbol-inputs input {
+            width: 80px;
+            padding: 4px 6px;
+            background: #1f2a48;
+            color: #e0e6f1;
+            border: 1px solid #2c3e50;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        #symbol-inputs button {
+            padding: 4px 8px;
+            background: #2b3d66;
+            color: #e0e6f1;
+            border: 1px solid #3d5a99;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #symbol-inputs button:hover {
+            background: #365082;
+        }
+
+        #summary-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 24px;
+        }
+
+        .summary-item {
+            min-width: 120px;
+        }
+
+        .summary-label {
+            display: block;
+            font-size: 12px;
+            color: #8fa3bf;
+        }
+
+        .summary-value {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+
+        #period-controls {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #period-controls label {
+            font-size: 13px;
+            color: #8fa3bf;
+        }
+
+        #chart-container {
+            background: #111b2d;
+            border: 1px solid #1f2a48;
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        #chart {
+            width: 100%;
+            height: 520px;
+        }
+
+        #chart-feedback {
+            min-height: 18px;
+        }
+
+        #details-panel {
+            background: #111b2d;
+            border: 1px solid #1f2a48;
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        #details-panel h3 {
+            margin: 0 0 8px;
+            font-size: 16px;
+        }
+
+        #details-panel pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+            font-size: 13px;
+            color: #cfd8dc;
+        }
+
+        #lists-section {
+            margin-top: 18px;
+            padding: 12px;
+            background: #111b2d;
+            border: 1px solid #1f2a48;
+            border-radius: 6px;
+        }
+
+        @media (max-width: 960px) {
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .stage-selector {
+                align-self: flex-start;
+            }
+
+            .layout {
+                flex-direction: column;
+            }
+
+            #stage-symbols {
+                max-height: none;
+            }
+        }
+
+        strong {
+            color: #cfd8dc;
+        }
+
+        .muted {
+            color: #8fa3bf;
+        }
+    </style>
+</head>
+<body>
+<header class="page-header">
+    <div class="page-title">
+        <h1>双币网格震荡分析平台</h1>
+        <small>追踪币对节奏，掌握双币震荡策略</small>
+    </div>
+    <div class="stage-selector">
+        <label for="stage-select">阶段</label>
+        <select id="stage-select" disabled>
+            <option value="">加载中...</option>
+        </select>
+    </div>
+</header>
+
+<section id="stage-overview" class="stage-overview">
+    <div id="content" class="stage-message">请选择阶段</div>
+</section>
+
+<section id="lists-section" style="display:none;">
+    <p><strong>初始币对列表：</strong><span id="symbol-list">加载中...</span></p>
+    <p><strong>双币币对列表：</strong><span id="pair-list">加载中...</span></p>
+</section>
+<div id="workspace" class="layout" style="display:none;">
+    <aside id="stage-symbols">
+        <h2>币对列表</h2>
+        <p id="quality-hint" class="muted" style="margin: 0 0 8px; font-size: 12px;"></p>
+        <div id="stage-symbol-list"></div>
+    </aside>
+    <section id="chart-section">
+        <div id="symbol-summary">
+            <div id="symbol-inputs">
+                <label for="base-input">Base:</label>
+                <input id="base-input" placeholder="ETH" maxlength="10"/>
+                <label for="quote-input">Quote:</label>
+                <input id="quote-input" placeholder="BTC" maxlength="10"/>
+                <button id="symbol-apply" type="button">刷新</button>
+            </div>
+            <div id="summary-metrics"></div>
+            <div id="period-controls">
+                <label for="period-select">周期：</label>
+                <select id="period-select">
+                    <option value="1m">1 分钟</option>
+                    <option value="5m">5 分钟</option>
+                    <option value="15m">15 分钟</option>
+                    <option value="30m">30 分钟</option>
+                    <option value="1h" selected>1 小时</option>
+                    <option value="4h">4 小时</option>
+                </select>
+            </div>
+        </div>
+        <div id="chart-feedback" class="muted"></div>
+        <div id="chart-container">
+            <div id="chart"></div>
+        </div>
+        <div id="details-panel" style="display:none;">
+            <h3>详情</h3>
+            <pre id="details-json"></pre>
+        </div>
+    </section>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+<script>
+    const stageSelect = document.getElementById('stage-select');
+    const container = document.getElementById('content');
+    const listsSection = document.getElementById('lists-section');
+    const initialListSpan = document.getElementById('symbol-list');
+    const pairListSpan = document.getElementById('pair-list');
+    const workspace = document.getElementById('workspace');
+    const stageSymbolListEl = document.getElementById('stage-symbol-list');
+    const summaryMetricsEl = document.getElementById('summary-metrics');
+    const chartFeedbackEl = document.getElementById('chart-feedback');
+    const detailsPanel = document.getElementById('details-panel');
+    const detailsJsonEl = document.getElementById('details-json');
+    const periodSelect = document.getElementById('period-select');
+    const baseInput = document.getElementById('base-input');
+    const quoteInput = document.getElementById('quote-input');
+    const symbolApplyBtn = document.getElementById('symbol-apply');
+    const qualityHintEl = document.getElementById('quality-hint');
+
+    const chart = echarts.init(document.getElementById('chart'));
+    const STAGE_OPTIONS = [
+        // {label: '初始币对列表', value: 'initial-results', stage: 'rltArr'},
+        // {label: '过滤后BTC币对币种', value: 'center-list', stage: 'centerList'},
+        {label: '高位BTC币对列表', value: 'high-list', stage: 'highList'},
+        {label: '低位BTC币对列表', value: 'low-list', stage: 'lowList'},
+        {label: '双币币对列表', value: 'final-results', stage: 'data'}
+    ];
+    const DEFAULT_STAGE = 'final-results';
+    const STAGE_META_BY_VALUE = STAGE_OPTIONS.reduce((acc, cur) => {
+        acc[cur.value] = cur;
+        return acc;
+    }, {});
+    const KNOWN_QUOTES = ['USDT', 'USDC', 'BTC', 'ETH', 'BUSD'];
+    const LINEAR_QUOTES = new Set(['USDT', 'USDC', 'BUSD']);
+
+    let currentStageValue = DEFAULT_STAGE;
+    let currentRows = [];
+    let symbolRowMap = new Map();
+    let activeSymbol = '';
+    let klineRequestId = 0;
+    let activeBoundaries = null;
+    const boundaryCache = new Map();
+    const QUALITY_HINT_TEXT = '品质等级：C (<10000)，B (<15000)，A (<20000)，S (<25000)，SSS (≥25000)';
+    if (qualityHintEl) {
+        qualityHintEl.textContent = QUALITY_HINT_TEXT;
+    }
+
+    function setStageMessage(text) {
+        container.textContent = text;
+        container.classList.remove('overview-grid');
+        container.classList.add('stage-message');
+    }
+
+    function setStageSummary(html) {
+        container.innerHTML = html;
+        container.classList.remove('stage-message');
+        container.classList.add('overview-grid');
+    }
+
+    function assignInputValues(base, quote) {
+        baseInput.value = (base || '').toUpperCase();
+        quoteInput.value = (quote || '').toUpperCase();
+    }
+
+    function parseSymbol(symbol) {
+        if (!symbol) {
+            return {base: '', quote: ''};
+        }
+        const upper = symbol.toUpperCase();
+        if (upper.includes('-')) {
+            const [base, quote] = upper.split('-');
+            return {base, quote};
+        }
+        for (const quote of KNOWN_QUOTES) {
+            if (upper.endsWith(quote) && upper.length > quote.length) {
+                return {base: upper.slice(0, -quote.length), quote};
+            }
+        }
+        return {base: upper, quote: ''};
+    }
+
+    function normalizeSymbol(base, quote) {
+        const normalizedBase = (base || '').trim().toUpperCase();
+        const normalizedQuote = (quote || '').trim().toUpperCase();
+        if (!normalizedBase) {
+            return '';
+        }
+        let resolvedQuote = normalizedQuote;
+        if (!resolvedQuote) {
+            resolvedQuote = 'USDT';
+        }
+        if (LINEAR_QUOTES.has(resolvedQuote)) {
+            return normalizedBase + resolvedQuote;
+        }
+        return `${normalizedBase}-${resolvedQuote}`;
+    }
+
+    function deriveQuality(score) {
+        const value = Number(score);
+        if (!Number.isFinite(value)) {
+            return {grade: '--', hint: '未评级'};
+        }
+        if (value < 10000) {
+            return {grade: 'C', hint: '<10000'};
+        }
+        if (value < 15000) {
+            return {grade: 'B', hint: '<15000'};
+        }
+        if (value < 20000) {
+            return {grade: 'A', hint: '<20000'};
+        }
+        if (value < 25000) {
+            return {grade: 'S', hint: '<25000'};
+        }
+        return {grade: 'SSS', hint: '≥25000'};
+    }
+
+    function getInputSymbol() {
+        let base = baseInput.value.trim().toUpperCase();
+        let quote = quoteInput.value.trim().toUpperCase();
+
+        if (!base) {
+            assignInputValues('', quote);
+            return {base: '', quote, symbol: ''};
+        }
+
+        if (base.includes('-')) {
+            const parsed = parseSymbol(base);
+            if (parsed.base) {
+                base = parsed.base;
+                if (!quote) {
+                    quote = parsed.quote;
+                }
+            }
+        }
+
+        if (!quote) {
+            const parsed = parseSymbol(base);
+            if (parsed.base && parsed.quote) {
+                base = parsed.base;
+                quote = parsed.quote;
+            } else {
+                quote = 'USDT';
+            }
+        }
+
+        if (quote && base.endsWith(quote) && base.length > quote.length) {
+            base = base.slice(0, -quote.length);
+        }
+
+        assignInputValues(base, quote);
+        const symbol = normalizeSymbol(base, quote);
+        return {base, quote, symbol};
+    }
+
+    function extractBounds(row) {
+        if (!row) {
+            return null;
+        }
+        const lowVal = Number(row.lowP);
+        const highVal = Number(row.highP);
+        if (!Number.isFinite(lowVal) || !Number.isFinite(highVal)) {
+            return null;
+        }
+        return {low: lowVal, high: highVal};
+    }
+
+    function formatDateTime(value) {
+        if (!value) {
+            return '未知';
+        }
+        const time = Date.parse(value);
+        if (Number.isNaN(time)) {
+            return value;
+        }
+        return new Date(time).toLocaleString();
+    }
+
+    function fetchJson(url) {
+        return fetch(url)
+            .then(async resp => {
+                const data = await resp.json().catch(() => null);
+                if (!resp.ok) {
+                    const message = data && data.error ? data.error : resp.statusText || '请求失败';
+                    throw new Error(message);
+                }
+                return data;
+            });
+    }
+
+    function renderLinkList(containerEl, list) {
+        containerEl.innerHTML = '';
+        if (!Array.isArray(list) || list.length === 0) {
+            containerEl.textContent = '无数据';
+            return;
+        }
+        list.forEach((symbol, index) => {
+            if (typeof symbol !== 'string' || !symbol) {
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = '#';
+            link.textContent = symbol;
+            link.addEventListener('click', event => {
+                event.preventDefault();
+                selectSymbolByName(symbol, true);
+            });
+            containerEl.appendChild(link);
+            if (index < list.length - 1) {
+                containerEl.appendChild(document.createTextNode(', '));
+            }
+        });
+        if (!containerEl.hasChildNodes()) {
+            containerEl.textContent = '无数据';
+        }
+    }
+
+    function formatSummaryValue(value) {
+        if (value === null || value === undefined || value === '') {
+            return '--';
+        }
+        const num = Number(value);
+        if (!Number.isNaN(num)) {
+            if (Math.abs(num) >= 100) {
+                return num.toFixed(2);
+            }
+            if (Math.abs(num) >= 1) {
+                return num.toFixed(3);
+            }
+            return num.toPrecision(3);
+        }
+        return String(value);
+    }
+
+    function updateSummary(row) {
+        summaryMetricsEl.innerHTML = '';
+        if (!row) {
+            summaryMetricsEl.innerHTML = '<span class="muted">请选择币对</span>';
+            return;
+        }
+        const summaryFields = [
+            {key: 'symbol', label: '币对'},
+            {key: 'score', label: 'Score'},
+            {key: 'amp', label: '振幅'},
+            {key: 'lowP', label: '低位'},
+            {key: 'highP', label: '高位'},
+            {key: 'pricePosit', label: '价格位置'},
+            {key: 'volume', label: '成交量'},
+            {key: 'change', label: '涨跌幅'}
+        ];
+        const qualityInfo = deriveQuality(row.score);
+        let rendered = 0;
+        summaryFields.forEach(field => {
+            if (row[field.key] === undefined || row[field.key] === null || row[field.key] === '') {
+                return;
+            }
+            rendered++;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'summary-item';
+
+            const labelEl = document.createElement('span');
+            labelEl.className = 'summary-label';
+            labelEl.textContent = field.label;
+
+            const valueEl = document.createElement('span');
+            valueEl.className = 'summary-value';
+            valueEl.textContent = formatSummaryValue(row[field.key]);
+            if (field.key === 'score' && qualityInfo && qualityInfo.hint) {
+                valueEl.title = `评分：${qualityInfo.grade}，规则：${qualityInfo.hint}`;
+            }
+
+            wrapper.appendChild(labelEl);
+            wrapper.appendChild(valueEl);
+            summaryMetricsEl.appendChild(wrapper);
+        });
+        if (rendered === 0) {
+            summaryMetricsEl.innerHTML = '<span class="muted">该阶段未提供指标字段</span>';
+        }
+        const bounds = extractBounds(row);
+        if (bounds) {
+            activeBoundaries = bounds;
+            if (row && row.symbol) {
+                const parsed = parseSymbol(row.symbol);
+                const normalized = normalizeSymbol(parsed.base, parsed.quote) || row.symbol;
+                boundaryCache.set(row.symbol, bounds);
+                if (normalized !== row.symbol) {
+                    boundaryCache.set(normalized, bounds);
+                }
+            }
+            console.log('[updateSummary] symbol:', row && row.symbol, 'activeBoundaries:', bounds);
+            return;
+        }
+        activeBoundaries = null;
+        console.warn('[updateSummary] invalid bounds for symbol:', row.symbol, 'lowP:', row.lowP, 'highP:', row.highP);
+    }
+
+    function updateDetails(row) {
+        if (!row) {
+            detailsPanel.style.display = 'none';
+            detailsJsonEl.textContent = '';
+            return;
+        }
+        detailsJsonEl.textContent = JSON.stringify(row, null, 2);
+        detailsPanel.style.display = '';
+    }
+
+    function renderSymbolList(rows) {
+        stageSymbolListEl.innerHTML = '';
+        symbolRowMap = new Map();
+        boundaryCache.clear();
+        if (!Array.isArray(rows) || rows.length === 0) {
+            stageSymbolListEl.innerHTML = '<div class="muted">暂无币对</div>';
+            return;
+        }
+        rows.forEach(row => {
+            if (!row || !row.symbol) {
+                return;
+            }
+            const numericScore = Number(row.score);
+            if (Number.isFinite(numericScore) && numericScore < 5000) {
+                return;
+            }
+            const item = document.createElement('div');
+            item.className = 'symbol-item';
+            item.dataset.symbol = row.symbol;
+
+            const name = document.createElement('span');
+            name.className = 'symbol-name';
+            name.textContent = row.symbol;
+
+            const qualityInfo = deriveQuality(row.score);
+            const quality = document.createElement('span');
+            quality.className = 'symbol-quality';
+            quality.textContent = `评分：${qualityInfo.grade}`;
+            if (qualityInfo && qualityInfo.hint) {
+                quality.title = `评分：${formatSummaryValue(row.score)}，规则：${qualityInfo.hint}`;
+            }
+
+            item.appendChild(name);
+            item.appendChild(quality);
+
+            item.addEventListener('click', () => {
+                setActiveSymbol(row.symbol, true);
+            });
+
+            stageSymbolListEl.appendChild(item);
+            symbolRowMap.set(row.symbol, row);
+            const bounds = extractBounds(row);
+            if (bounds) {
+                const parsed = parseSymbol(row.symbol);
+                const normalized = normalizeSymbol(parsed.base, parsed.quote) || row.symbol;
+                boundaryCache.set(row.symbol, bounds);
+                if (normalized !== row.symbol) {
+                    boundaryCache.set(normalized, bounds);
+                }
+            }
+        });
+    }
+
+    function markActiveSymbol(symbol) {
+        Array.from(stageSymbolListEl.children).forEach(child => {
+            if (!(child instanceof HTMLElement)) {
+                return;
+            }
+            child.classList.toggle('active', child.dataset.symbol === symbol);
+        });
+    }
+
+    async function fetchKline(symbol, period) {
+        const upperSymbol = (symbol || '').toUpperCase();
+        if (upperSymbol.includes('-')) {
+            const [base, quote] = upperSymbol.split('-');
+            const [baseK, quoteK] = await Promise.all([
+                fetchKline(base + 'USDT', period),
+                fetchKline(quote + 'USDT', period)
+            ]);
+            const minLen = Math.min(baseK.length, quoteK.length);
+            return baseK.slice(0, minLen).map((b, i) => {
+                const q = quoteK[i];
+                return {
+                    openT: b.openT,
+                    openP: b.openP / q.openP,
+                    highP: b.highP / q.highP,
+                    lowP: b.lowP / q.lowP,
+                    closeP: b.closeP / q.closeP
+                };
+            });
+        }
+        const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${upperSymbol}&interval=${period}&limit=960`;
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            throw new Error(`K线接口请求失败 (${resp.status})`);
+        }
+        const data = await resp.json();
+        if (!Array.isArray(data)) {
+            throw new Error('K线数据格式异常');
+        }
+        return data.map(entry => ({
+            openT: entry[0],
+            openP: Number(entry[1]),
+            highP: Number(entry[2]),
+            lowP: Number(entry[3]),
+            closeP: Number(entry[4])
+        }));
+    }
+
+    async function renderKline(base, quote) {
+        const symbol = normalizeSymbol(base, quote);
+        if (!symbol) {
+            chart.clear();
+            chartFeedbackEl.textContent = '请选择币对查看K线';
+            return;
+        }
+        const period = periodSelect.value;
+        const cachedBounds = boundaryCache.get(symbol) || null;
+        const boundariesSnapshot = cachedBounds ? {...cachedBounds} : (activeBoundaries ? {...activeBoundaries} : null);
+        const requestId = ++klineRequestId;
+        chartFeedbackEl.textContent = '';
+        chart.showLoading('default', {
+            text: `加载 ${symbol} (${period}) K线...`,
+            color: '#64b5f6',
+            textColor: '#e0e6f1',
+            maskColor: 'rgba(15, 22, 36, 0.45)'
+        });
+        try {
+            const kline = await fetchKline(symbol, period);
+            if (requestId !== klineRequestId) {
+                return;
+            }
+            if (!Array.isArray(kline) || kline.length === 0) {
+                chartFeedbackEl.textContent = '未获取到有效的K线数据';
+                return;
+            }
+            const times = kline.map(c => new Date(c.openT).toLocaleString());
+            const values = kline.map(c => {
+                const open = Number(c.openP);
+                const close = Number(c.closeP);
+                const low = Number(c.lowP);
+                const high = Number(c.highP);
+                return [open, close, low, high];
+            });
+            const markLineData = [];
+            const formatBoundary = (val, forAxis = false) => {
+                if (!Number.isFinite(val)) {
+                    return '';
+                }
+                const abs = Math.abs(val);
+                if (abs === 0) {
+                    return forAxis ? '0.00000' : '0';
+                }
+                if (abs >= 1000) {
+                    return val.toFixed(0);
+                }
+                if (abs >= 1) {
+                    return val.toFixed(4);
+                }
+                const minDecimals = forAxis ? 5 : 5;
+                const dynamicDecimals = Math.ceil(-Math.log10(abs)) + 2;
+                const decimals = Math.min(10, Math.max(minDecimals, dynamicDecimals));
+                return val.toFixed(decimals);
+            };
+            console.log('[renderKline] symbol:', symbol, 'period:', period, 'activeBoundaries:', activeBoundaries, 'snapshot:', boundariesSnapshot);
+            const boundariesForRender = boundariesSnapshot && Number.isFinite(boundariesSnapshot.low) && Number.isFinite(boundariesSnapshot.high)
+                ? boundariesSnapshot
+                : (activeBoundaries && Number.isFinite(activeBoundaries.low) && Number.isFinite(activeBoundaries.high)
+                    ? {...activeBoundaries}
+                    : null);
+            if (boundariesForRender && Number.isFinite(boundariesForRender.low)) {
+                markLineData.push({
+                    yAxis: boundariesForRender.low,
+                    lineStyle: {color: '#f0b429', type: 'dashed', width: 1.5},
+                    label: {formatter: `低位 ${formatBoundary(boundariesForRender.low)}`}
+                });
+            }
+            if (boundariesForRender && Number.isFinite(boundariesForRender.high)) {
+                markLineData.push({
+                    yAxis: boundariesForRender.high,
+                    lineStyle: {color: '#ab47bc', type: 'dashed', width: 1.5},
+                    label: {formatter: `高位 ${formatBoundary(boundariesForRender.high)}`}
+                });
+            }
+            if (!markLineData.length) {
+                console.warn('[renderKline] markLine omitted due to invalid boundaries for symbol:', symbol, 'bounds(active):', activeBoundaries, 'bounds(snapshot):', boundariesSnapshot);
+            } else {
+                console.log('[renderKline] markLineData:', markLineData);
+            }
+
+            chart.setOption({
+                backgroundColor: '#0f1624',
+                grid: {
+                    left: '10%',
+                    right: '10%',
+                    top: '10%',
+                    bottom: '15%',
+                    backgroundColor: '#111b2d',
+                    borderColor: '#1f2a48'
+                },
+                dataZoom: [
+                    {type: 'inside', start: 60, end: 100},
+                    {type: 'slider', start: 0, end: 100, height: 20, bottom: 10}
+                ],
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {type: 'cross'},
+                    formatter(params) {
+                        const k = params[0];
+                        const [open, close, low, high] = k.data;
+                        const change = open ? ((close - open) / open * 100).toFixed(2) : '0.00';
+                        return [
+                            `时间：${k.axisValueLabel}`,
+                            `开盘：${Number(open).toPrecision(4)}`,
+                            `收盘：${Number(close).toPrecision(4)}`,
+                            `最低：${Number(low).toPrecision(4)}`,
+                            `最高：${Number(high).toPrecision(4)}`,
+                            `涨跌幅：${change}%`
+                        ].join('<br/>');
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    data: times,
+                    min: 'dataMin',
+                    max: value => value.max + (value.max - value.min) * 0.05,
+                    axisLine: {lineStyle: {color: '#2c3e50'}},
+                    axisLabel: {color: '#8fa3bf'},
+                    splitLine: {show: true, lineStyle: {color: '#1f2a48'}}
+                },
+                yAxis: {
+                    type: 'value',
+                    scale: true,
+                    position: 'right',
+                    axisLine: {lineStyle: {color: '#2c3e50'}},
+                    axisLabel: {
+                        color: '#8fa3bf',
+                        formatter(value) {
+                            return formatBoundary(value, true);
+                        }
+                    },
+                    splitLine: {show: true, lineStyle: {color: '#1f2a48'}}
+                },
+                series: [{
+                    name: symbol,
+                    type: 'candlestick',
+                    data: values,
+                    itemStyle: {
+                        color: '#26a69a',
+                        color0: '#ef5350',
+                        borderColor: '#26a69a',
+                        borderColor0: '#ef5350'
+                    },
+                    emphasis: {
+                        itemStyle: {color: '#2ec7c9', color0: '#f4606c'}
+                    },
+                    markLine: markLineData.length ? {
+                        symbol: 'none',
+                        data: markLineData
+                    } : undefined
+                }]
+            });
+            chart.resize();
+            chartFeedbackEl.textContent = '';
+        } catch (err) {
+            if (requestId !== klineRequestId) {
+                return;
+            }
+            chartFeedbackEl.textContent = `K线加载失败：${err.message}`;
+        } finally {
+            if (requestId === klineRequestId) {
+                chart.hideLoading();
+            }
+        }
+    }
+
+    function setActiveSymbol(symbol, withChart) {
+        if (!symbolRowMap.has(symbol)) {
+            return;
+        }
+        const row = symbolRowMap.get(symbol);
+        const {base, quote} = parseSymbol(symbol);
+        activeSymbol = normalizeSymbol(base, quote);
+        markActiveSymbol(symbol);
+        updateSummary(row);
+        updateDetails(row);
+        assignInputValues(base, quote);
+        if (withChart) {
+            renderKline(base, quote).catch(err => {
+                console.error(err);
+            });
+        }
+    }
+
+    function selectSymbolByName(symbol, renderChart = true) {
+        if (!symbol) {
+            return;
+        }
+        if (symbolRowMap.has(symbol)) {
+            setActiveSymbol(symbol, renderChart);
+            return;
+        }
+        const {base, quote} = parseSymbol(symbol);
+        const normalized = normalizeSymbol(base, quote);
+        if (!normalized) {
+            chartFeedbackEl.textContent = '无法解析该币对';
+            return;
+        }
+        assignInputValues(base, quote);
+        activeSymbol = normalized;
+        markActiveSymbol('');
+        const row = symbolRowMap.get(normalized) || null;
+        updateSummary(row || {symbol: normalized});
+        updateDetails(row || null);
+        if (renderChart) {
+            renderKline(base, quote).catch(err => console.error(err));
+        }
+    }
+
+    function applyManualSymbol() {
+        const {symbol} = getInputSymbol();
+        if (!symbol) {
+            chartFeedbackEl.textContent = '请输入 base/quote';
+            return;
+        }
+        chartFeedbackEl.textContent = '';
+        selectSymbolByName(symbol, true);
+    }
+
+    async function renderStage(stagePath, stageLabel) {
+        if (!stagePath) {
+            setStageMessage('请选择阶段');
+            workspace.style.display = 'none';
+            return;
+        }
+        setStageMessage('阶段数据加载中...');
+        workspace.style.display = 'none';
+        chart.clear();
+        chartFeedbackEl.textContent = '';
+        try {
+            const {data, savedAt, batchTimestamp, stage} = await fetchJson(`/api/data/${stagePath}`);
+            const stageName = stageLabel || stage;
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                setStageMessage(`阶段 ${stageName} 暂无数据`);
+                workspace.style.display = 'none';
+                activeSymbol = '';
+                markActiveSymbol('');
+                assignInputValues('', '');
+                return;
+            }
+            const sorted = data.slice().sort((a, b) => {
+                const scoreA = Number(a && a.score !== undefined ? a.score : 0);
+                const scoreB = Number(b && b.score !== undefined ? b.score : 0);
+                if (Number.isNaN(scoreA) && Number.isNaN(scoreB)) {
+                    return 0;
+                }
+                if (Number.isNaN(scoreA)) {
+                    return 1;
+                }
+                if (Number.isNaN(scoreB)) {
+                    return -1;
+                }
+                return scoreB - scoreA;
+            });
+            currentRows = sorted;
+            renderSymbolList(sorted);
+            const visibleSymbols = Array.from(symbolRowMap.keys());
+            const summaryHtml = [
+                `<div class="overview-item"><span class="overview-label">阶段</span><span class="overview-value">${stageName}</span></div>`,
+                `<div class="overview-item"><span class="overview-label">批次时间</span><span class="overview-value">${formatDateTime(batchTimestamp)}</span></div>`,
+                `<div class="overview-item"><span class="overview-label">保存时间</span><span class="overview-value">${formatDateTime(savedAt)}</span></div>`,
+                `<div class="overview-item"><span class="overview-label">币对数量</span><span class="overview-value">${visibleSymbols.length}</span></div>`
+            ].join('');
+            setStageSummary(summaryHtml);
+            workspace.style.display = 'flex';
+            requestAnimationFrame(() => chart.resize());
+
+            const defaultSymbol = activeSymbol && symbolRowMap.has(activeSymbol)
+                ? activeSymbol
+                : visibleSymbols[0];
+            if (defaultSymbol) {
+                setActiveSymbol(defaultSymbol, true);
+            } else {
+                chartFeedbackEl.textContent = '该阶段暂无币对';
+                chart.clear();
+                summaryMetricsEl.innerHTML = '<span class="muted">暂无数据</span>';
+                detailsPanel.style.display = 'none';
+                activeSymbol = '';
+                markActiveSymbol('');
+                assignInputValues('', '');
+            }
+        } catch (err) {
+            setStageMessage('阶段数据加载失败: ' + err.message);
+            workspace.style.display = 'none';
+            throw err;
+        }
+    }
+
+    async function loadSymbolAndPairs() {
+        try {
+            const [symbolResp, pairResp] = await Promise.all([
+                fetchJson('/api/data/symbol-list').catch(() => null),
+                fetchJson('/api/data/pairs').catch(() => null)
+            ]);
+            renderLinkList(initialListSpan, symbolResp && symbolResp.data);
+            renderLinkList(pairListSpan, pairResp && pairResp.data);
+        } catch (err) {
+            initialListSpan.textContent = '加载失败';
+            pairListSpan.textContent = '加载失败';
+        }
+        listsSection.style.display = '';
+    }
+
+    async function populateStageOptions() {
+        stageSelect.disabled = true;
+        stageSelect.innerHTML = '<option value="">加载中...</option>';
+        try {
+            const summary = await fetchJson('/api/data');
+            const stageSummaryMap = new Map(summary.stageSummary.map(item => [item.stage, item]));
+            let fallbackStage = null;
+            const optionsHtml = STAGE_OPTIONS.map(opt => {
+                const stageInfo = stageSummaryMap.get(opt.stage);
+                const disabled = !stageInfo || stageInfo.size === 0;
+                if (!disabled && !fallbackStage) {
+                    fallbackStage = opt;
+                }
+                const label = `${opt.label}${stageInfo && stageInfo.savedAt ? ` (${formatDateTime(stageInfo.savedAt)})` : ''}`;
+                return `<option value="${opt.value}" ${disabled ? 'disabled' : ''}>${label}</option>`;
+            });
+            stageSelect.innerHTML = optionsHtml.join('') || '<option value="">无可用阶段</option>';
+            stageSelect.disabled = false;
+
+            let stageMeta = null;
+            const preservedMeta = STAGE_META_BY_VALUE[currentStageValue];
+            if (preservedMeta) {
+                const info = stageSummaryMap.get(preservedMeta.stage);
+                if (info && info.size > 0) {
+                    stageMeta = preservedMeta;
+                }
+            }
+            if (!stageMeta) {
+                const defaultMeta = STAGE_META_BY_VALUE[DEFAULT_STAGE];
+                if (defaultMeta) {
+                    const info = stageSummaryMap.get(defaultMeta.stage);
+                    if (info && info.size > 0) {
+                        stageMeta = defaultMeta;
+                    }
+                }
+            }
+            if (!stageMeta) {
+                stageMeta = fallbackStage;
+            }
+            if (!stageMeta) {
+                setStageMessage('暂无可展示阶段');
+                workspace.style.display = 'none';
+                return;
+            }
+            currentStageValue = stageMeta.value;
+            stageSelect.value = stageMeta.value;
+            await renderStage(stageMeta.value, stageMeta.label);
+        } catch (err) {
+            setStageMessage('阶段概览加载失败: ' + err.message);
+            stageSelect.innerHTML = '<option value="">加载失败</option>';
+            stageSelect.disabled = true;
+            workspace.style.display = 'none';
+            throw err;
+        }
+    }
+
+    stageSelect.addEventListener('change', () => {
+        const selectedValue = stageSelect.value;
+        const optionMeta = STAGE_META_BY_VALUE[selectedValue];
+        if (!selectedValue || !optionMeta) {
+            currentStageValue = '';
+            setStageMessage('请选择阶段');
+            workspace.style.display = 'none';
+            chart.clear();
+            chartFeedbackEl.textContent = '';
+            summaryMetricsEl.innerHTML = '<span class="muted">请选择阶段</span>';
+            return;
+        }
+        currentStageValue = selectedValue;
+        renderStage(selectedValue, optionMeta.label).catch(err => console.error(err));
+    });
+
+    periodSelect.addEventListener('change', () => {
+        const {base, quote, symbol} = getInputSymbol();
+        if (symbol) {
+            renderKline(base, quote).catch(err => console.error(err));
+            return;
+        }
+        if (activeSymbol) {
+            const parsed = parseSymbol(activeSymbol);
+            renderKline(parsed.base, parsed.quote).catch(err => console.error(err));
+        }
+    });
+
+    symbolApplyBtn.addEventListener('click', applyManualSymbol);
+    [baseInput, quoteInput].forEach(input => {
+        input.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                applyManualSymbol();
+            }
+        });
+    });
+
+    window.addEventListener('resize', () => {
+        chart.resize();
+    });
+
+    (async function initialize() {
+        try {
+            await populateStageOptions();
+            await loadSymbolAndPairs();
+        } catch (err) {
+            setStageMessage('初始化失败: ' + err.message);
+        }
+    })();
+</script>
+</body>
+</html>

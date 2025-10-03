@@ -26,7 +26,11 @@ async function persistBatch(batch) {
 
 async function run() {
     const batchTimestamp = new Date().toISOString();
-    const batchPayload = {timestamp: batchTimestamp};
+    const batchPayload = {
+        timestamp: batchTimestamp,
+        cycleHours: config.CYCLE,
+        cycleDays: +(config.CYCLE / 24).toFixed(2)
+    };
 
     const saveStage = async (stageName, value) => {
         const savedAt = new Date().toISOString();

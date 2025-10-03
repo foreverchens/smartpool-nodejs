@@ -69,7 +69,9 @@ function createFieldEndpoint(pathSuffix, stageName) {
                 stage: stageName,
                 batchTimestamp: batch.timestamp,
                 savedAt: stage.savedAt,
-                data: stage.data
+                data: stage.data,
+                cycleHours: batch.cycleHours,
+                cycleDays: batch.cycleDays
             });
         } catch (err) {
             handleReadError(res, err);
@@ -94,6 +96,8 @@ app.get('/api/data', async (req, res) => {
             message: '最新批次数据',
             timestamp: batch.timestamp,
             savedAt: batch.lastSavedAt,
+            cycleHours: batch.cycleHours,
+            cycleDays: batch.cycleDays,
             stageSummary
         });
     } catch (err) {

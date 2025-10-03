@@ -94,7 +94,7 @@ createFieldEndpoint('low-list', 'lowList');
 createFieldEndpoint('pairs', 'highLowList');
 createFieldEndpoint('final-results', 'data');
 
-app.get('/page', (req, res, next) => {
+app.get('/', (req, res, next) => {
     res.sendFile(path.join(VIEW_DIR, 'simple.html'), err => {
         if (err) {
             next(err);

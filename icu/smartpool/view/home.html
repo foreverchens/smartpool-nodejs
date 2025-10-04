@@ -352,8 +352,8 @@
 </section>
 
 <section id="lists-section" style="display:none;">
-    <p><strong>初始币对列表：</strong><span id="symbol-list">加载中...</span><span id="symbol-list-meta" class="list-meta muted"></span></p>
-    <p><strong>双币币对列表：</strong><span id="pair-list">加载中...</span><span id="pair-list-meta" class="list-meta muted"></span></p>
+    <p><strong>初始BTC币对列表：</strong><span id="symbol-list">加载中...</span><span id="symbol-list-meta" class="list-meta muted"></span></p>
+    <p><strong>初始双币币对列表：</strong><span id="pair-list">加载中...</span><span id="pair-list-meta" class="list-meta muted"></span></p>
 </section>
 <div id="workspace" class="layout" style="display:none;">
     <aside id="stage-symbols">
@@ -420,7 +420,7 @@
         // {label: '过滤后BTC币对币种', value: 'center-list', stage: 'centerList'},
         {label: '高位BTC币对列表', value: 'high-list', stage: 'highList'},
         {label: '低位BTC币对列表', value: 'low-list', stage: 'lowList'},
-        {label: '双币币对列表', value: 'final-results', stage: 'data'}
+        {label: '双币量化币对列表', value: 'final-results', stage: 'data'}
     ];
     const DEFAULT_STAGE = 'final-results';
     const STAGE_META_BY_VALUE = STAGE_OPTIONS.reduce((acc, cur) => {
@@ -437,7 +437,7 @@
     let klineRequestId = 0;
     let activeBoundaries = null;
     const boundaryCache = new Map();
-    const QUALITY_HINT_TEXT = '品质等级：C (<10000)，B (<15000)，A (<20000)，S (<25000)，SSS (≥25000)';
+    const QUALITY_HINT_TEXT = '评分等级：C (<10000)，B (<15000)，A (<20000)，S (<25000)，SSS (≥25000)';
     if (qualityHintEl) {
         qualityHintEl.textContent = QUALITY_HINT_TEXT;
     }

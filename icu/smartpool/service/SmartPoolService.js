@@ -1,18 +1,34 @@
 import czClient from "./CzClient.js";
 import config from "../common/Config.js"
-import Queue from "../common/CircularQueue.js"
 import models from "../common/Models.js"
+import KlineCacheManager from "./KlineCacheManager.js"
+
+const SCALE_FACTOR = config.SCALE_MULTIPLIER;
+const SCALE_PRECISION = config.SCALE;
+
+const toScaled = (value) => Math.trunc(Number(value) * SCALE_FACTOR);
+const fromScaled = (value) => value / SCALE_FACTOR;
+const computeArrScale = (base) => {
+    const scale = Number((BigInt(base) * BigInt(SCALE_PRECISION)) / BigInt(SCALE_FACTOR));
+    return scale > 0 ? scale : 1;
+};
+const indexDelta = (value, base, step) => {
+    if (step === 0) {
+        return 0;
+    }
+    return Number(BigInt(value - base) / BigInt(step));
+};
 
 class SmartPoolService {
     constructor() {
         this.HOUR_MS = 1000 * 60 * 60;
-        this.KLINE_CACHE = new Map();
+        this.cacheManager = new KlineCacheManager(config.MAX_DAY * 24);
     }
 
     async analyze(symbol, hours) {
-        console.log('[%s] ==> [%s]', symbol, new Date(new Date().getTime() - hours * 60 * 60 * 1000));
-        await this.updateH1Kline(symbol);
-        let h1KlineList = this.KLINE_CACHE.get(symbol).slice(hours);
+        const queue = await this.cacheManager.get(symbol);
+        await this.updateH1Kline(symbol, queue);
+        let h1KlineList = queue.slice(hours);
         if (h1KlineList.length === 0) {
             // 新币对
             return {}
@@ -20,9 +36,11 @@ class SmartPoolService {
         let minP = Math.min(...h1KlineList.map(e => e.lowP));
         let maxP = Math.max(...h1KlineList.map(e => e.highP));
         // 基于最低价格获取价格精度、
-        let arrScale = minP * config.SCALE;
-        let len = Math.trunc((maxP - minP) / arrScale);
-        let dataArr = new Array(len).fill(0.0);
+        let arrScale = computeArrScale(minP);
+        let diffP = maxP - minP;
+        let len = Number(BigInt(diffP) / BigInt(arrScale)) + 1;
+        len = len > 0 ? len : 1;
+        let dataArr = new Array(len).fill(0);
         // 过去24h的震荡状态 涨为1 跌为0
         let stateArr = new Array(24).fill(0);
         let price24hAgo = h1KlineList[0].lowP;
@@ -43,12 +61,16 @@ class SmartPoolService {
                 priceWeight = this.getPriceWeight(amp);
                 price24hAgo = h1KlineList[i - 22].lowP;
             }
-            let startIndex = Math.trunc((lowP - minP) / arrScale);
+            let startIndex = indexDelta(lowP, minP, arrScale);
             for (let i = 0; i < h1DataArr.length; i++) {
                 if (isNaN(h1DataArr[i])) {
                     continue
                 }
-                dataArr[startIndex + i] += (h1DataArr[i] * stateWeight * priceWeight);
+                const idx = startIndex + i;
+                if (idx >= dataArr.length) {
+                    break;
+                }
+                dataArr[idx] += (h1DataArr[i] * stateWeight * priceWeight);
             }
         }
         // 总点数
@@ -56,36 +78,48 @@ class SmartPoolService {
         // 从左从右向中间依次去除稀疏点、将剩余的80%区间、定为震荡区间、
         let subCountPt = countPt * 0.2;
         let l = 0, r = dataArr.length - 1;
-        while (subCountPt > 0) {
-            while (dataArr[l] < 1.0) {
+        while (subCountPt > 0 && l < dataArr.length && r >= 0) {
+            while (l < dataArr.length && dataArr[l] < 1.0) {
                 l++;
+            }
+            if (l >= dataArr.length) {
+                break;
             }
             subCountPt -= dataArr[l++];
             if (subCountPt < 1.0) {
                 break;
             }
-            while (dataArr[r] < 1.0) {
+            while (r >= 0 && dataArr[r] < 1.0) {
                 r--;
+            }
+            if (r < 0) {
+                break;
             }
             subCountPt -= dataArr[r--];
         }
+        l = Math.min(Math.max(l, 0), dataArr.length - 1);
+        r = Math.min(Math.max(r, 0), dataArr.length - 1);
         // 震荡区间下沿、上沿、振幅、震荡得分｜点位密度=总点数/振幅、因最小价格精度一致、所以处于同一坐标系
-        let lowP = +minP + (arrScale * l);
-        let highP = +minP + (arrScale * r)
-        let amplitude = +((highP - lowP) * 100 / lowP).toFixed(1);
-        let score = countPt * 0.8 / amplitude;
-        let price = await czClient.getPrice(symbol);
-        let pricePosit = +((price - lowP) / (highP - lowP)).toFixed(2);
-        return models.ShakeScore(symbol, Math.round(score), amplitude, lowP.toPrecision(4), highP.toPrecision(4), pricePosit);
+        let scaledLowP = minP + (arrScale * l);
+        let scaledHighP = minP + (arrScale * r);
+        if (scaledHighP < scaledLowP) {
+            [scaledLowP, scaledHighP] = [scaledHighP, scaledLowP];
+        }
+        const amplitudeBase = scaledLowP === 0 ? 1 : scaledLowP;
+        const amplitude = Number((((scaledHighP - scaledLowP) * 100) / amplitudeBase).toFixed(1));
+        const score = amplitude === 0 ? 0 : (countPt * 0.8 / amplitude);
+        const price = await czClient.getPrice(symbol);
+        const scaledPrice = toScaled(price);
+        const priceRange = scaledHighP - scaledLowP;
+        const pricePosit = priceRange === 0 ? 0 : +(((scaledPrice - scaledLowP) / priceRange)).toFixed(2);
+        return models.ShakeScore(symbol, Math.round(score), amplitude, fromScaled(scaledLowP).toPrecision(4), fromScaled(scaledHighP).toPrecision(4), pricePosit);
     }
 
     /**
      * 填充或更新k线
      */
-    async updateH1Kline(symbol) {
-        let queue = this.KLINE_CACHE.get(symbol) || new Queue(config.MAX_DAY * 24);
-        this.KLINE_CACHE.set(symbol, queue);
-
+    async updateH1Kline(symbol, queue) {
+        let hasUpdate = false;
         // 时间处理、保留到小时级别精度、填充k线队列时、找到最远k线的开盘时间
         const lastTime = Math.floor(Date.now() / this.HOUR_MS) * this.HOUR_MS;
         let startTime = queue.isEmpty() ? lastTime - config.CYCLE * this.HOUR_MS : queue.peek().openT + this.HOUR_MS;
@@ -109,7 +143,11 @@ class SmartPoolService {
                 newH1Kline.openT = startTime;
                 startTime += this.HOUR_MS;
                 queue.push(newH1Kline);
+                hasUpdate = true;
             }
+        }
+        if (hasUpdate) {
+            await this.cacheManager.save(symbol);
         }
         if ('BTCUSDT' === symbol) {
             let arr = queue.slice(config.CYCLE);
@@ -118,37 +156,43 @@ class SmartPoolService {
     }
 
     klineListToH1Kline(klines) {
-        let lowP = Math.min(...klines.map(e => e.lowP));
-        let highP = Math.max(...klines.map(e => e.highP));
-        let arrScale = lowP * config.SCALE;
-        let dataArr = new Array(Math.trunc((highP - lowP) / arrScale)).fill(0);
-        for (let i = 0; i < klines.length; i++) {
-            let kline = klines[i];
+        if (!klines || klines.length === 0) {
+            return models.H1Kline(null, 0, 0, [], false);
+        }
+        const scaledKlines = klines.map(kline => ({
+            openT: kline.openT,
+            openP: toScaled(kline.openP),
+            closeP: toScaled(kline.closeP),
+            highP: toScaled(kline.highP),
+            lowP: toScaled(kline.lowP)
+        }));
+        let lowP = scaledKlines.reduce((min, cur) => cur.lowP < min ? cur.lowP : min, scaledKlines[0].lowP);
+        let highP = scaledKlines.reduce((max, cur) => cur.highP > max ? cur.highP : max, scaledKlines[0].highP);
+        let arrScale = computeArrScale(lowP);
+        let diff = highP - lowP;
+        let length = Number(BigInt(diff) / BigInt(arrScale)) + 1;
+        length = length > 0 ? length : 1;
+        let dataArr = new Array(length).fill(0);
+        for (let kline of scaledKlines) {
             let openP = kline.openP;
             let closeP = kline.closeP;
             if (openP > closeP) {
                 //  开盘价高于收盘价、即下跌、交换数值使closeP大于openP、方便计算
-                let tmp = closeP;
-                closeP = openP;
-                openP = tmp;
+                [openP, closeP] = [closeP, openP];
             }
             if (closeP - openP < arrScale) {
                 // 低波动k线过滤
                 continue;
             }
 
-            let startIndex = Math.trunc((openP - lowP) / arrScale);
-            let endIndex = Math.trunc((closeP - lowP) / arrScale);
-            while (startIndex < endIndex && startIndex < dataArr.length) {
-                dataArr[startIndex++]++;
+            let startIndex = indexDelta(openP, lowP, arrScale);
+            let endIndex = indexDelta(closeP, lowP, arrScale);
+            let idx = startIndex;
+            while (idx < endIndex && idx < dataArr.length) {
+                dataArr[idx++]++;
             }
         }
-        for (let ele of dataArr) {
-            if (isNaN(ele)) {
-                continue;
-            }
-        }
-        let rise = klines[klines.length - 1].closeP > klines[0].openP
+        let rise = scaledKlines[scaledKlines.length - 1].closeP > scaledKlines[0].openP
         return models.H1Kline(null, lowP, highP, dataArr, rise);
     }
 

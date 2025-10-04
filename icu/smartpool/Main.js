@@ -12,7 +12,7 @@ const DATA_FILE = path.join(DATA_DIR, 'latest.json');
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 
-let symbolBatchLength = 2;
+let symbolBatchLength = 1;
 let nextTimer = null;
 
 async function persistBatch(batch) {
@@ -27,9 +27,7 @@ async function persistBatch(batch) {
 async function run() {
     const batchTimestamp = new Date().toISOString();
     const batchPayload = {
-        timestamp: batchTimestamp,
-        cycleHours: config.CYCLE,
-        cycleDays: +(config.CYCLE / 24).toFixed(2)
+        timestamp: batchTimestamp, cycleHours: config.CYCLE, cycleDays: +(config.CYCLE / 24).toFixed(2)
     };
 
     const saveStage = async (stageName, value) => {
@@ -45,6 +43,7 @@ async function run() {
     let totalSymbols = 0;
     let symbolList = [];
 
+    let st = Date.now();
     try {
         const fullSymbolList = await czClient.listSymbol();
         totalSymbols = fullSymbolList.length;
@@ -68,7 +67,7 @@ async function run() {
             return;
         }
 
-        // symbolList = ['BTCUSDT','ETHUSDT','LTCUSDT','XRPUSDT'];
+        // symbolList = ['ADA-BTC','SUI-BTC','ETH-BTC'];
         console.log(symbolList);
         let st = Date.now();
         let rltArr = await Promise.all(symbolList.map((symbol, idx) => {
@@ -76,7 +75,7 @@ async function run() {
         }));
         await saveStage('rltArr', rltArr);
         let et = Date.now();
-        console.log('耗时: %s秒', (et - st) / 1000);
+        console.log('BTC初始币对量化耗时: %s秒', (et - st) / 1000);
         console.log("----------BTC锚定币币对原始分析数据----------");
         console.table(rltArr);
         console.log("----------BTC锚定币币对原始分析数据----------");
@@ -88,7 +87,7 @@ async function run() {
          *  [-0.1,1.1]内震荡最佳
          */
         let filtered = rltArr.filter(ele => ele && ele.score > 5000 && ele.symbol && ele.symbol.endsWith('BTC'));
-        let centerList = filtered.filter(ele => ele.pricePosit > -0.1 && ele.pricePosit < 1.1)
+        let centerList = filtered.filter(ele => ele.pricePosit > -0.3 && ele.pricePosit < 1.3)
             .sort((a, b) => b.pricePosit - a.pricePosit);
         await saveStage('centerList', centerList);
 
@@ -112,8 +111,8 @@ async function run() {
         console.table(lowCandidates);
         console.log("----------价格低位组数据----------");
 
-        const topHighList = highCandidates.slice(0, highCandidates.length > 5 ? 5 : highCandidates.length);
-        const topLowList = lowCandidates.slice(0, lowCandidates.length > 5 ? 5 : lowCandidates.length);
+        const topHighList = highCandidates.slice(0, highCandidates.length > 10 ? 10 : highCandidates.length);
+        const topLowList = lowCandidates.slice(0, lowCandidates.length > 10 ? 10 : lowCandidates.length);
         await saveStage('highList', topHighList);
         await saveStage('lowList', topLowList);
 
@@ -132,10 +131,12 @@ async function run() {
         console.log("----------双币币对列表----------");
         console.table(highLowList);
         console.log("----------双币币对列表----------");
-
+        st = Date.now();
         let pairResults = await Promise.all(highLowList.map((symbol, idx) => {
             return threadPool.run([symbol, idx, highLowList.length]);
         }));
+        et = Date.now();
+        console.log('双币初始币对量化耗时: %s秒', (et - st) / 1000);
         let data = pairResults.sort((a, b) => b.score - a.score);
         await saveStage('data', data);
         console.log("----------双币币对分析数据----------");
@@ -146,6 +147,7 @@ async function run() {
         console.error('运行批次失败:', err);
         hasMore = true;
     } finally {
+        console.log('量化总耗时: %s秒', (Date.now() - st) / 1000);
         if (totalSymbols > 0) {
             if (hasMore) {
                 symbolBatchLength = Math.min(symbolBatchLength + 2, totalSymbols);
@@ -153,7 +155,7 @@ async function run() {
                 symbolBatchLength = totalSymbols;
             }
         }
-        const delay = hasMore ? MINUTE : HOUR;
+        const delay = hasMore ? MINUTE / 2 : MINUTE;
         if (nextTimer) {
             clearTimeout(nextTimer);
         }

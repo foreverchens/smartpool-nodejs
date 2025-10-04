@@ -19,6 +19,11 @@ class KlineCacheManager {
         const queue = await this.loadFromDisk(symbol);
         if (queue) {
             this.memoryCache.set(symbol, queue);
+            if (symbol === 'ETH-BTC') {
+                const last = queue.peek();
+                const endTime = last ? new Date(last.openT + 60 * 60 * 1000) : null;
+                console.log('[CACHE][ETH-BTC] loaded from disk, end @ %s', endTime ? endTime.toISOString() : 'empty');
+            }
             return queue;
         }
         const freshQueue = new Queue(this.capacity);
@@ -34,6 +39,11 @@ class KlineCacheManager {
         const filePath = this.getFilePath(symbol);
         const data = JSON.stringify(queue.toArray());
         await fs.promises.writeFile(filePath, data);
+        if (symbol === 'ETH-BTC') {
+            const last = queue.peek();
+            const endTime = last ? new Date(last.openT + 60 * 60 * 1000) : null;
+            console.log('[CACHE][ETH-BTC] persisted to disk, end @ %s', endTime ? endTime.toISOString() : 'empty');
+        }
     }
 
     async loadFromDisk(symbol) {

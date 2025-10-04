@@ -12,7 +12,7 @@ const DATA_FILE = path.join(DATA_DIR, 'latest.json');
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 
-let symbolBatchLength = 2;
+let symbolBatchLength = 21;
 let nextTimer = null;
 
 async function persistBatch(batch) {

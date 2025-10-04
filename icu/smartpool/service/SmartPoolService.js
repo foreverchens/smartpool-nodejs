@@ -1,7 +1,7 @@
 import czClient from "./CzClient.js";
 import config from "../common/Config.js"
-import Queue from "../common/CircularQueue.js"
 import models from "../common/Models.js"
+import KlineCacheManager from "./KlineCacheManager.js"
 
 const SCALE_FACTOR = config.SCALE_MULTIPLIER;
 const SCALE_PRECISION = config.SCALE;
@@ -22,12 +22,13 @@ const indexDelta = (value, base, step) => {
 class SmartPoolService {
     constructor() {
         this.HOUR_MS = 1000 * 60 * 60;
-        this.KLINE_CACHE = new Map();
+        this.cacheManager = new KlineCacheManager(config.MAX_DAY * 24);
     }
 
     async analyze(symbol, hours) {
-        await this.updateH1Kline(symbol);
-        let h1KlineList = this.KLINE_CACHE.get(symbol).slice(hours);
+        const queue = await this.cacheManager.get(symbol);
+        await this.updateH1Kline(symbol, queue);
+        let h1KlineList = queue.slice(hours);
         if (h1KlineList.length === 0) {
             // 新币对
             return {}
@@ -117,14 +118,12 @@ class SmartPoolService {
     /**
      * 填充或更新k线
      */
-    async updateH1Kline(symbol) {
-        let queue = this.KLINE_CACHE.get(symbol) || new Queue(config.MAX_DAY * 24);
-        this.KLINE_CACHE.set(symbol, queue);
-
+    async updateH1Kline(symbol, queue) {
+        let hasUpdate = false;
         // 时间处理、保留到小时级别精度、填充k线队列时、找到最远k线的开盘时间
         const lastTime = Math.floor(Date.now() / this.HOUR_MS) * this.HOUR_MS;
         let startTime = queue.isEmpty() ? lastTime - config.CYCLE * this.HOUR_MS : queue.peek().openT + this.HOUR_MS;
-        if ('ETH-BTC' === symbol) {
+        if ('BTCUSDT' === symbol) {
             console.log('curTime:%s\n总更新区间: %s --> %s', new Date().toLocaleString(), new Date(startTime).toLocaleString(), new Date(lastTime).toLocaleString())
         }
         //kpi单次限制1000根、16 * 60 < 1000
@@ -136,7 +135,7 @@ class SmartPoolService {
             if (klines.length === 0) {
                 break
             }
-            if ('ETH-BTC' === symbol) {
+            if ('BTCUSDT' === symbol) {
                 console.log('更新区间: %s --> %s', new Date(klines[0].openT).toLocaleString(), new Date(klines[klines.length - 1].openT).toLocaleString())
             }
             for (let i = 0; i < klines.length; i += 60) {
@@ -144,9 +143,13 @@ class SmartPoolService {
                 newH1Kline.openT = startTime;
                 startTime += this.HOUR_MS;
                 queue.push(newH1Kline);
+                hasUpdate = true;
             }
         }
-        if ('ETH-BTC' === symbol) {
+        if (hasUpdate) {
+            await this.cacheManager.save(symbol);
+        }
+        if ('BTCUSDT' === symbol) {
             let arr = queue.slice(config.CYCLE);
             console.log('量化区间: %s --> %s,%s个小时', new Date(arr[0].openT).toLocaleString(), new Date(arr[arr.length - 1].openT + this.HOUR_MS).toLocaleString(), arr.length)
         }

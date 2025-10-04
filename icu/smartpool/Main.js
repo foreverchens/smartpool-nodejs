@@ -12,7 +12,7 @@ const DATA_FILE = path.join(DATA_DIR, 'latest.json');
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 
-let symbolBatchLength = 1;
+let symbolBatchLength = 2;
 let nextTimer = null;
 
 async function persistBatch(batch) {
@@ -150,7 +150,7 @@ async function run() {
         console.log('量化总耗时: %s秒', (Date.now() - st) / 1000);
         if (totalSymbols > 0) {
             if (hasMore) {
-                symbolBatchLength = Math.min(symbolBatchLength + 2, totalSymbols);
+                symbolBatchLength = Math.min(symbolBatchLength + 1, totalSymbols);
             } else {
                 symbolBatchLength = totalSymbols;
             }

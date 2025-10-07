@@ -809,13 +809,14 @@
                 const q = quoteK[i];
                 return {
                     openT: b.openT,
-                    openP: b.openP / q.openP,
-                    highP: b.highP / q.highP,
-                    lowP: b.lowP / q.lowP,
-                    closeP: b.closeP / q.closeP
+                    openP: (b.openP / q.openP).toPrecision(8),
+                    highP: (b.highP / q.highP).toPrecision(8),
+                    lowP: (b.lowP / q.lowP).toPrecision(8),
+                    closeP: (b.closeP / q.closeP).toPrecision(8)
                 };
             });
         }
+
         const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${upperSymbol}&interval=${period}&limit=960`;
         const resp = await fetch(url);
         if (!resp.ok) {
@@ -934,14 +935,15 @@
                     axisPointer: {type: 'cross'},
                     formatter(params) {
                         const k = params[0];
-                        const [open, close, low, high] = k.data;
+                        const [idx, open, close, low, high] = k.data;
+                        console.log(k.data)
                         const change = open ? ((close - open) / open * 100).toFixed(2) : '0.00';
                         return [
                             `时间：${k.axisValueLabel}`,
-                            `开盘：${Number(open).toPrecision(4)}`,
-                            `收盘：${Number(close).toPrecision(4)}`,
-                            `最低：${Number(low).toPrecision(4)}`,
-                            `最高：${Number(high).toPrecision(4)}`,
+                            `开盘：${Number(open).toPrecision(8)}`,
+                            `收盘：${Number(close).toPrecision(8)}`,
+                            `最低：${Number(low).toPrecision(8)}`,
+                            `最高：${Number(high).toPrecision(8)}`,
                             `涨跌幅：${change}%`
                         ].join('<br/>');
                     }

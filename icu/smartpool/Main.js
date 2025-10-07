@@ -3,22 +3,20 @@ import czClient from "./service/CzClient.js";
 import Piscina from "piscina";
 import path from "path";
 import fs from "fs";
+import {writeLatestBatch} from "./common/db.js";
 
 const threadPool = new Piscina({
     filename: path.resolve('./service/worker.js'), maxThreads: config.MAX_THREADS
 });
-const DATA_DIR = path.resolve('./data');
-const DATA_FILE = path.join(DATA_DIR, 'latest.json');
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 
-let symbolBatchLength = 21;
+let symbolBatchLength = 20;
 let nextTimer = null;
 
 async function persistBatch(batch) {
     try {
-        await fs.promises.mkdir(DATA_DIR, {recursive: true});
-        await fs.promises.writeFile(DATA_FILE, JSON.stringify(batch, null, 2), 'utf-8');
+        await writeLatestBatch(batch);
     } catch (err) {
         console.error('写入批次数据失败:', err);
     }
@@ -155,7 +153,7 @@ async function run() {
                 symbolBatchLength = totalSymbols;
             }
         }
-        const delay = hasMore ? MINUTE / 2 : MINUTE;
+        const delay = hasMore ? MINUTE / 2 : HOUR;
         if (nextTimer) {
             clearTimeout(nextTimer);
         }

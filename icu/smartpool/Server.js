@@ -1,20 +1,19 @@
 import express from 'express';
 import path from 'path';
-import {promises as fsPromises} from 'fs';
 import {fileURLToPath} from 'url';
+import {readLatestBatch} from './common/db.js';
 
 const app = express();
 const PORT = 3000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_FILE = path.join(__dirname, 'data', 'latest.json');
 const VIEW_DIR = path.join(__dirname, 'view');
 const STAGE_KEYS = ['symbolList', 'rltArr', 'centerList', 'highList', 'lowList', 'highLowList', 'data'];
 
 async function loadBatch() {
-    const content = await fsPromises.readFile(DATA_FILE, 'utf-8');
-    const parsed = JSON.parse(content);
+    const raw = await readLatestBatch();
+    const parsed = JSON.parse(JSON.stringify(raw));
     const hasStageKeys = STAGE_KEYS.some(stageKey => Object.prototype.hasOwnProperty.call(parsed, stageKey));
 
     if (!hasStageKeys && parsed.data && typeof parsed.data === 'object') {

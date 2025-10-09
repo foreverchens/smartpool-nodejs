@@ -74,10 +74,10 @@ async function run() {
         }));
         await saveStage('rltArr', rltArr);
         let et = Date.now();
-        console.log('BTC初始币对量化耗时: %s秒', (et - st) / 1000);
-        console.log("----------BTC锚定币币对原始分析数据----------");
-        console.table(rltArr);
-        console.log("----------BTC锚定币币对原始分析数据----------");
+        console.log('\nBTC初始币对量化耗时: %s秒\n', (et - st) / 1000);
+        // console.log("----------BTC锚定币币对原始分析数据----------");
+        // console.table(rltArr);
+        // console.log("----------BTC锚定币币对原始分析数据----------");
 
         /**
          *  简单过滤
@@ -90,9 +90,9 @@ async function run() {
             .sort((a, b) => b.pricePosit - a.pricePosit);
         await saveStage('centerList', centerList);
 
-        console.log("----------对得分和价格位置过滤后数据----------");
-        console.table(centerList);
-        console.log("----------对得分和价格位置过滤后数据----------");
+        // console.log("----------对得分和价格位置过滤后数据----------");
+        // console.table(centerList);
+        // console.log("----------对得分和价格位置过滤后数据----------");
         let len = centerList.length;
         /**
          * 将处于震荡的币分为高低两组、[0.8,1.1]为高位组、[-0.1,0.2]为低位组、以低位组为base做多、高位组为quota做空、势能最大
@@ -103,12 +103,12 @@ async function run() {
             .slice(len * -0.5)
             .sort((a, b) => b.score - a.score);
 
-        console.log("----------价格高位组数据----------");
-        console.table(highCandidates);
-        console.log("----------价格高位组数据----------");
-        console.log("----------价格低位组数据----------");
-        console.table(lowCandidates);
-        console.log("----------价格低位组数据----------");
+        // console.log("----------价格高位组数据----------");
+        // console.table(highCandidates);
+        // console.log("----------价格高位组数据----------");
+        // console.log("----------价格低位组数据----------");
+        // console.table(lowCandidates);
+        // console.log("----------价格低位组数据----------");
 
         const topHighList = highCandidates.slice(0, highCandidates.length > 10 ? 10 : highCandidates.length);
         const topLowList = lowCandidates.slice(0, lowCandidates.length > 10 ? 10 : lowCandidates.length);
@@ -130,19 +130,19 @@ async function run() {
         prevHighScorePairs.forEach(symbol => highLowSet.add(symbol));
         highLowList = Array.from(highLowSet);
         await saveStage('highLowList', highLowList);
-        console.log("----------双币币对列表----------");
-        console.table(highLowList);
-        console.log("----------双币币对列表----------");
+        // console.log("----------双币币对列表----------");
+        // console.table(highLowList);
+        // console.log("----------双币币对列表----------");
         st = Date.now();
         let pairResults = await Promise.all(highLowList.map((symbol, idx) => {
             return threadPool.run([symbol, idx, highLowList.length]);
         }));
         et = Date.now();
-        console.log('双币初始币对量化耗时: %s秒', (et - st) / 1000);
+        console.log('\n双币初始币对量化耗时: %s秒\n', (et - st) / 1000);
         let data = pairResults.sort((a, b) => b.score - a.score);
         await saveStage('data', data);
         console.log("----------双币币对分析数据----------");
-        console.table(data);
+        console.table(data.slice(0,10));
         console.log("----------双币币对分析数据----------");
         prevHighScorePairs = new Set(pairResults
             .filter(item => item && item.symbol && item.score > 20000)

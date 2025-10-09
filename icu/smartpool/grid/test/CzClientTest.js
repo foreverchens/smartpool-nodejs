@@ -1,6 +1,6 @@
 import czClient from "../CzClient.js";
 
-let symbol = 'BTCUSDT';
+let symbol = 'SOLUSDT';
 
 // getSpotAccount test
 czClient.getSpotAccount().then(e => console.table(e))
@@ -14,20 +14,22 @@ czClient.getFuturesAccount().then(e => console.table(e));
 czClient.getFuturesBalance().then(e => console.table(e))
 
 // futureBuy test
-czClient.futureBuy(symbol, '0.003', '80000').then(e => {
+// 下一笔不会立即成交的订单、下单成功后 先查询 在撤单
+czClient.futureBuy(symbol, '0.12', '200').then(e => {
     console.table(e)
     let orderId = e.orderId;
     // getFuturesOrder test
-    czClient.getFuturesOrder(symbol, orderId).then(e => console.log(e))
+    czClient.getFuturesOrder(symbol, orderId).then(e => console.log('get suc'))
     // cancelFuturesOrder test
-    czClient.futuresCancel(symbol, orderId).then(r => console.log(r))
+    czClient.futuresCancel(symbol, orderId).then(r => console.log('cancel suc'))
 })
 // futureBuy test
-czClient.futureSell(symbol, '0.003', '90000').then(e => {
+czClient.futureSell(symbol,'0.12', '240').then(e => {
     console.table(e)
     let orderId = e.orderId;
+    czClient.getFuturesOrder(symbol, orderId).then(e => console.log('get suc'))
     // cancelFuturesOrder test
-    czClient.futuresCancel(symbol, orderId).then(r => console.log(r))
+    czClient.futuresCancel(symbol, orderId).then(r => console.log('cancel suc'))
 })
 
 // getFuturesPositionRisk test

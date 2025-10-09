@@ -25,30 +25,54 @@ let gridRate = 0.005;
 // 单网格交易仓位等值USDT
 let gridValue = 100;
 let curPrice, buyPrice, sellPrice;
+let baseQty, quotaQty;
 // 兼容单币网格
 const simpleGrid = quotaAssert === 'USDT';
 // 是否支持反向、仅针对单币网格场景、默认不支持反向
 const reversed = false
 
-// 加载配置
-updateConfig()
-fs.writeFileSync('../other/outlog/target.pid', process.pid.toString());
-console.table({
-    'baseAssert': baseAssert,
-    'quotaAssert': quotaAssert,
-    'startPrice': startPrice,
-    'gridRate': gridRate,
-    'gridValue': gridValue,
-    'simpleGrid': simpleGrid,
-    'startTime': new Date().toLocaleString()
-})
+async function bootstrap() {
+    await updateConfig();
+    fs.writeFileSync('../other/outlog/target.pid', process.pid.toString());
+    console.table({
+        'baseAssert': baseAssert,
+        'quotaAssert': quotaAssert,
+        'startPrice': startPrice,
+        'gridRate': gridRate,
+        'gridValue': gridValue,
+        'simpleGrid': simpleGrid,
+        'startTime': new Date().toLocaleString()
+    })
+    await Main();
+}
 
-function updateConfig() {
+async function initQuantity() {
+    try {
+        const baseP = await czClient.getFuturesPrice(baseAssert);
+        baseQty = formatQtyByPrice(baseP, gridValue / baseP);
+        console.log('初始化base订单数量 baseQty:%s (price:%s)', baseQty, baseP);
+        if (!simpleGrid) {
+            const quotaP = await czClient.getFuturesPrice(quotaAssert);
+            quotaQty = formatQtyByPrice(quotaP, gridValue / quotaP);
+            console.log('初始化quote订单数量 quotaQty:%s (price:%s)', quotaQty, quotaP);
+        } else {
+            quotaQty = undefined;
+        }
+    } catch (error) {
+        console.error('初始化下单数量失败:', error);
+    }
+}
+
+async function updateConfig() {
+    let needQtyUpdate = false;
     try {
         const content = fs.readFileSync('./common/' + baseAssert + '_' + quotaAssert + '_config.json', 'utf-8');
         let config = JSON.parse(content);
         // 更新参数
-        gridValue = config.gridValue;
+        if (gridValue !== config.gridValue) {
+            gridValue = config.gridValue;
+            needQtyUpdate = true;
+        }
         if (gridRate !== config.gridRate) {
             // 更新单格利率、和下一交易汇率
             console.log('利率更新: %s -> %s', gridRate, config.gridRate)
@@ -58,6 +82,9 @@ function updateConfig() {
         }
     } catch (err) {
         console.error('config.json 404')
+    }
+    if (needQtyUpdate || baseQty === undefined || (!simpleGrid && quotaQty === undefined)) {
+        await initQuantity();
     }
 }
 
@@ -145,7 +172,7 @@ async function orderCallback(baseOrderId, quotaOrderId) {
 
 async function gridLoop() {
     try {
-        updateConfig();
+        await updateConfig();
         // 获取最新汇率
         curPrice = await getCurPrice();
         console.log('当前汇率:%s 下一买入汇率:%s 下一卖出汇率:%s', curPrice, buyPrice, sellPrice)
@@ -153,17 +180,14 @@ async function gridLoop() {
             // 进入交易价格
             let baseOrderBook, quotaOrderBook;
             let baseP, quotaP;
-            let baseQty, quotaQty;
 
             baseOrderBook = await czClient.futuresDepth(baseAssert);
             baseP = baseOrderBook.bids[0].price;
-            baseQty = formatQtyByPrice(baseP, gridValue / baseP)
             console.log('baseP:%s,baseQty:%s', baseP, baseQty)
 
             if (!simpleGrid) {
                 quotaOrderBook = await czClient.futuresDepth(quotaAssert);
                 quotaP = quotaOrderBook.asks[0].price;
-                quotaQty = formatQtyByPrice(quotaP, gridValue / quotaP)
                 console.log('quotaP:%s,quotaQty:%s', quotaP, quotaQty)
             }
 
@@ -175,7 +199,7 @@ async function gridLoop() {
                 if (simpleGrid && !reversed) {
                     // 单币网格、不支持反向、检查剩余仓位是否满足开单要求
                     // 当前为买入场合、持有空单时需检查、买前检查空单仓位、仓位不足则取消交易
-                    if (baseAssertPosit && baseAssertPosit.positionAmt && Number(baseAssertPosit.positionAmt) < 0 && Number(baseAssertPosit.positionAmt) + baseQty > 0) {
+                    if (baseAssertPosit && baseAssertPosit.positionAmt && Number(baseAssertPosit.positionAmt) < 0 && Number(baseAssertPosit.positionAmt) + Number(baseQty) > 0) {
                         console.log('仓位不足、待买入仓位:[%s],目前持有仓位:[%s]', baseQty, baseAssertPosit.positionAmt)
                         return
                     }
@@ -194,7 +218,7 @@ async function gridLoop() {
                 if (simpleGrid && !reversed) {
                     // 单币网格、不支持反向、检查剩余仓位是否满足开单要求
                     // 当前为卖出场合、持有多单时需检查、买前检查多单仓位、仓位不足则取消交易
-                    if (baseAssertPosit && baseAssertPosit.positionAmt && Number(baseAssertPosit.positionAmt) > 0 && Number(baseAssertPosit.positionAmt) - baseQty < 0) {
+                    if (baseAssertPosit && baseAssertPosit.positionAmt && Number(baseAssertPosit.positionAmt) > 0 && Number(baseAssertPosit.positionAmt) - Number(baseQty) < 0) {
                         console.log('仓位不足、待卖出仓位:[%s],目前持有仓位:[%s]', baseQty, baseAssertPosit.positionAmt)
                         return
                     }
@@ -267,4 +291,4 @@ async function Main() {
 }
 
 
-Main().catch(e => console.log(e))
+bootstrap().catch(e => console.log(e))

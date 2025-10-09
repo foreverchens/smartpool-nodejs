@@ -13,7 +13,7 @@ class Config {
     // 价格的最小精度（缩放后整数表示，等价于 0.0001）
     SCALE = 100_000;
     // 线程池大小
-    MAX_THREADS = 1;
+    MAX_THREADS = 5;
 
     getKlineUrl(symbol) {
         return symbol.endsWith('USDT') ? this.KLINE_CONTRACT_URL : this.KLINE_SPOT_URL;

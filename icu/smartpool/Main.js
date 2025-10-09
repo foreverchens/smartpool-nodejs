@@ -13,6 +13,7 @@ const HOUR = 60 * MINUTE;
 
 let symbolBatchLength = 20;
 let nextTimer = null;
+let prevHighScorePairs = new Set();
 
 async function persistBatch(batch) {
     try {
@@ -125,6 +126,9 @@ async function run() {
                 highLowList.push(e2 + '-' + e1);
             });
         });
+        const highLowSet = new Set(highLowList);
+        prevHighScorePairs.forEach(symbol => highLowSet.add(symbol));
+        highLowList = Array.from(highLowSet);
         await saveStage('highLowList', highLowList);
         console.log("----------双币币对列表----------");
         console.table(highLowList);
@@ -140,6 +144,9 @@ async function run() {
         console.log("----------双币币对分析数据----------");
         console.table(data);
         console.log("----------双币币对分析数据----------");
+        prevHighScorePairs = new Set(pairResults
+            .filter(item => item && item.symbol && item.score > 20000)
+            .map(item => item.symbol));
         fs.writeFileSync('./other/outlog/smartpool.json', JSON.stringify(data));
     } catch (err) {
         console.error('运行批次失败:', err);

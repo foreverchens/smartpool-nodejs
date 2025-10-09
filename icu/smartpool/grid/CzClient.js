@@ -111,14 +111,14 @@ class CzClient {
      * 下合约订单
      *
      let options = {
-    'symbol': 'SOLUSDT',
-    'side': 'BUY',
-    'type': 'LIMIT',
-    'quantity': '1',
-    'price': '100',
-    'reduceOnly': 'false',
-    'timeInForce': 'GTC'
- }
+     'symbol': 'SOLUSDT',
+     'side': 'BUY',
+     'type': 'LIMIT',
+     'quantity': '1',
+     'price': '100',
+     'reduceOnly': 'false',
+     'timeInForce': 'GTC'
+     }
      *
      * @param {Object} options
      * @param {string} options.symbol     合约交易对（如 'ETHUSDT'）
@@ -258,7 +258,7 @@ class CzClient {
         }, {});
         return {
             totalTxFee: +((reduce.USDT ? reduce.USDT : 0) + (reduce.USDC ? reduce.USDC : 0) + (reduce.BNB ? reduce.BNB * price : 0)),
-            limitRate: (totalQuotaVol === 0 ? 0:(limitQuotaVol * 100 / totalQuotaVol ).toFixed(1)) + '%'
+            limitRate: (totalQuotaVol === 0 ? 0 : (limitQuotaVol * 100 / totalQuotaVol).toFixed(1)) + '%'
         }
     }
 
@@ -273,5 +273,15 @@ class CzClient {
         return await client.candlesticks(symbol, interval, params);
     }
 }
-
+// let symbol = 'ETHUSDT';
+// let qty = '0.006'
+// let price = 4111;
+// let czClient = new CzClient();
+// czClient.futureBuy(symbol,qty,price).then(e=> console.log(e));
+// //
+// //
+// let orderId = '8389765977923508000';
+//
+// czClient.getFuturesOrder(symbol,'orderId').then(e=> console.log(e));
+// czClient.getFuturesOpenOrders(symbol).then(e=> console.log(e))
 export default new CzClient();

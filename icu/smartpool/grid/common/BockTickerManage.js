@@ -42,5 +42,11 @@ export function getTicker(symbol) {
 }
 
 
+// subscribe('btcusdt');
+// setInterval(()=>{
+//     console.log(getTicker('btcusdt'));
+// })
+
+
 
 

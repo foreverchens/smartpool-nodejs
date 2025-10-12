@@ -229,7 +229,7 @@ export async function dealOrder(orderList) {
         let isBuy = realOrder.side === 'BUY';
         let price = isBuy ? bidP : askP;
         if (price !== Number(realOrder.price)) {
-            console.log(price + '--' + realOrder.price);
+            console.log(realOrder.price + '  -->' + price);
             let rlt = await czClient.futureModifyOrder(realOrder.symbol, realOrder.side, realOrder.orderId, realOrder.origQty, price);
             if (rlt) {
                 order = rlt;

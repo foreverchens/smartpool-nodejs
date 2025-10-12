@@ -1,4 +1,88 @@
 {
   "orders": [
+    {
+      "taskId": "SOLXRP",
+      "taskBindId": "7383186547796730323",
+      "synthPrice": "77.338430",
+      "symbol": "SOLUSDC",
+      "orderId": 8664321510,
+      "side": "SELL",
+      "status": "FILLED",
+      "price": "194.2200",
+      "origQty": "0.05",
+      "updateTime": 1760288845959,
+      "txFee": 0,
+      "makerFeeRate": "100%"
+    },
+    {
+      "taskId": "SOLXRP",
+      "taskBindId": "7383186547796730323",
+      "synthPrice": "77.338430",
+      "symbol": "XRPUSDC",
+      "orderId": 5364143895,
+      "side": "BUY",
+      "status": "FILLED",
+      "price": "2.5113",
+      "origQty": "4.0",
+      "updateTime": 1760288846019,
+      "txFee": 0,
+      "makerFeeRate": "100%"
+    },
+    {
+      "taskId": "SOLXRP",
+      "taskBindId": "7383192294853251953",
+      "synthPrice": "76.894581",
+      "symbol": "SOLUSDC",
+      "orderId": 8664786155,
+      "side": "BUY",
+      "status": "FILLED",
+      "price": "195.1400",
+      "origQty": "0.05",
+      "updateTime": 1760290216156,
+      "txFee": 0,
+      "makerFeeRate": "100%"
+    },
+    {
+      "taskId": "SOLXRP",
+      "taskBindId": "7383192294853251953",
+      "synthPrice": "76.894581",
+      "symbol": "XRPUSDC",
+      "orderId": 5364573506,
+      "side": "SELL",
+      "status": "FILLED",
+      "price": "2.5379",
+      "origQty": "4.0",
+      "updateTime": 1760290216228,
+      "txFee": 0.0027918,
+      "makerFeeRate": "0%"
+    },
+    {
+      "taskId": "SOLXRP",
+      "taskBindId": "7383213191478229103",
+      "synthPrice": "76.802645",
+      "symbol": "SOLUSDC",
+      "orderId": 8666257347,
+      "side": "SELL",
+      "status": "FILLED",
+      "price": "192.7900",
+      "origQty": "0.05",
+      "updateTime": 1760295198313,
+      "txFee": 0,
+      "makerFeeRate": "100%"
+    },
+    {
+      "taskId": "SOLXRP",
+      "taskBindId": "7383213191478229103",
+      "synthPrice": "76.802645",
+      "symbol": "XRPUSDC",
+      "orderId": 5366057319,
+      "side": "BUY",
+      "status": "FILLED",
+      "price": "2.5102",
+      "origQty": "3.9",
+      "updateTime": 1760295198374,
+      "txFee": 0,
+      "makerFeeRate": "100%"
+    }
   ]
 }

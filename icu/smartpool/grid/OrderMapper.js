@@ -92,22 +92,27 @@ class OrderMapper {
         return {...order};
     }
 
-    // async list(){
-    //     await this._init();
-    //     const {orders} = this.db.data;
-    //     for (const element of orders) {
-    //         let order = element;
-    //         // 手续费获取
-    //         let {txFee, makerFeeRate} = await czClient.getTxFee(order.symbol, order.orderId);
-    //         order.txFee = txFee;
-    //         order.makerFeeRate = makerFeeRate;
-    //     }
-    //     await this.db.write();
-    //     return 1;
-    // }
+    async list() {
+        await this._init();
+        const {orders} = this.db.data;
+        for (const element of orders) {
+            let order = element;
+            if (order.makerFeeRate === '0%' && order.txFee === 0) {
+                // 手续费获取
+                let {txFee, makerFeeRate} = await czClient.getTxFee(order.symbol, order.orderId);
+                order.txFee = txFee;
+                order.makerFeeRate = makerFeeRate;
+                console.log(order.orderId);
+                console.log(txFee);
+                console.log(makerFeeRate);
+            }
+        }
+        await this.db.write();
+        return 1;
+    }
 }
 
 const orderMapper = new OrderMapper(db);
-
+// orderMapper.list().then(e=> console.log(e));
 export const saveOrder = order => orderMapper.save(order);
 export const updateOrderStatus = (orderId, status) => orderMapper.updateStatus(orderId, status);

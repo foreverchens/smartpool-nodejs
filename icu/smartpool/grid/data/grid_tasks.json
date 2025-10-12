@@ -1,2 +1,20 @@
 [
+    {
+        "id": "SOLXRP",
+        "baseAssert": "SOLUSDC",
+        "quoteAssert": "XRPUSDC",
+        "doubled": true,
+        "reversed": false,
+        "startPrice": 76.3571851,
+        "gridRate": 0.005,
+        "gridValue": 10,
+        "status": "RUNNING",
+        "runtime": {
+            "baseQty": "0.05",
+            "quoteQty": "3.9",
+            "buyPrice": 76.411624,
+            "sellPrice": 77.17958,
+            "lastTradePrice": "76.795602"
+        }
+    }
 ]

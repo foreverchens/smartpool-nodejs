@@ -371,5 +371,5 @@ class CzClient {
     }
 }
 
-// new CzClient().getTxFee('taousdt', 7383401456).then(e => console.log(e))
+// new CzClient().getTxFee('solusdc', 8671665878).then(e => console.log(e))
 export default new CzClient();

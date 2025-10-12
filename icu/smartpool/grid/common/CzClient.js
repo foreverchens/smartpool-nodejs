@@ -154,7 +154,7 @@ class CzClient {
      */
     async getSynPrice(baseSymbol, quotaSymbol) {
         let rlt = await client.futuresPrices();
-        return Number((rlt[baseSymbol] / rlt[quotaSymbol]).toPrecision(5))
+        return Number((rlt[baseSymbol] / rlt[quotaSymbol]).toPrecision(8))
     }
 
     /**
@@ -216,7 +216,7 @@ class CzClient {
             return res.data;
         } catch (error) {
             console.error('修改失败：', error.response ? error.response.data : error.message);
-            return {orderId}
+            return null;
         }
     }
 
@@ -272,16 +272,106 @@ class CzClient {
     async listKline(symbol, interval, params = {}) {
         return await client.candlesticks(symbol, interval, params);
     }
+
+    /**
+     * https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/trade/rest-api/Account-Trade-List
+     * [
+     *   {
+     *     symbol: 'SUIUSDT',
+     *     id: ,
+     *     orderId: ,
+     *     side: 'SELL',
+     *     price: '',
+     *     qty: '',
+     *     realizedPnl: '',
+     *     quoteQty: '',
+     *     commission: '',
+     *     commissionAsset: 'USDT',
+     *     time: ,
+     *     positionSide: 'BOTH',
+     *     maker: true,
+     *     buyer: false
+     *   }
+     * ]
+     */
+    async listTrades(symbol, params = {}) {
+        return await client.futuresUserTrades(symbol, params);
+    }
+
+    /**
+     * 返回该笔订单的手续费消耗 和maker手续费占比
+     * @param symbol
+     * @param orderId
+     * @returns {Promise<void>}
+     */
+    async getTxFee(symbol, orderId) {
+        const trades = await this.listTrades(symbol, {'orderId': orderId});
+        if (!trades || trades.length === 0) {
+            return {
+                'txFee': 0,
+                'makerFeeRate': '0%'
+            };
+        }
+
+        const commissionMap = {};
+        let totalQuoteQty = 0;
+        let makerQuoteQty = 0;
+
+        trades.forEach(trade => {
+            const commission = Number(trade.commission || 0);
+            const commissionAsset = trade.commissionAsset;
+            const quoteQty = Number(trade.quoteQty || 0);
+
+            if (commissionAsset) {
+                commissionMap[commissionAsset] = (commissionMap[commissionAsset] || 0) + commission;
+            }
+            totalQuoteQty += quoteQty;
+            if (trade.maker) {
+                makerQuoteQty += quoteQty;
+            }
+        });
+
+        const stableAssets = new Set(['USDT', 'USDC', 'BUSD', 'FDUSD', 'TUSD', 'DAI']);
+        const priceCache = {};
+
+        const convertAssetToUsdt = async (asset, amount) => {
+            if (!amount) {
+                return 0;
+            }
+            const normalizedAsset = (asset || '').toUpperCase();
+            if (stableAssets.has(normalizedAsset)) {
+                return amount;
+            }
+            const priceSymbol = normalizedAsset === 'BNB'
+                ? 'BNBUSDT'
+                : normalizedAsset.endsWith('USDT')
+                    ? normalizedAsset
+                    : `${normalizedAsset}USDT`;
+            try {
+                if (!priceCache[priceSymbol]) {
+                    priceCache[priceSymbol] = await this.getFuturesPrice(priceSymbol);
+                }
+                const price = Number(priceCache[priceSymbol]);
+                if (Number.isFinite(price) && price > 0) {
+                    return amount * price;
+                }
+            } catch (e) {
+                // ignore and fall through to returning the original amount
+            }
+            return amount;
+        };
+
+        const feeParts = await Promise.all(
+            Object.entries(commissionMap).map(([asset, amount]) => convertAssetToUsdt(asset, amount))
+        );
+        const totalFee = feeParts.reduce((sum, val) => sum + val, 0);
+
+        const makerRate = totalQuoteQty === 0 ? 0 : Number(((makerQuoteQty / totalQuoteQty) * 100).toFixed(1));
+
+        return {
+            'txFee': +totalFee.toFixed(8),
+            'makerFeeRate': `${makerRate}%`
+        };
+    }
 }
-// let symbol = 'ETHUSDT';
-// let qty = '0.006'
-// let price = 4111;
-// let czClient = new CzClient();
-// czClient.futureBuy(symbol,qty,price).then(e=> console.log(e));
-// //
-// //
-// let orderId = '8389765977923508000';
-//
-// czClient.getFuturesOrder(symbol,'orderId').then(e=> console.log(e));
-// czClient.getFuturesOpenOrders(symbol).then(e=> console.log(e))
 export default new CzClient();

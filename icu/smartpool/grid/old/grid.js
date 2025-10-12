@@ -1,4 +1,4 @@
-import czClient from "./CzClient.js";
+import czClient from "../common/CzClient.js";
 import fs from "fs";
 
 let baseAssert = 'ETHUSDC'

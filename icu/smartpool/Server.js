@@ -120,6 +120,14 @@ app.get('/', (req, res, next) => {
     });
 });
 
+app.get('/grid-dashboard', (req, res, next) => {
+    res.sendFile(path.join(VIEW_DIR, 'grid-dashboard.html'), err => {
+        if (err) {
+            next(err);
+        }
+    });
+});
+
 app.use(express.static(__dirname));
 
 app.use((req, res) => {

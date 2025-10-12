@@ -1,6 +1,6 @@
 import {readdir, readFile} from 'fs/promises';
-import {join, extname, resolve} from 'path';
-import czClient from './CzClient.js'
+import {extname, join, resolve} from 'path';
+import czClient from '../common/CzClient.js'
 
 async function scanFiles(dirPath) {
     let result = [];

@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>网格订单统计面板</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: #0f1624;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            background: #0f1624;
+            color: #e0e6f1;
+        }
+
+        a {
+            color: #64b5f6;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 12px 24px;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 0.4px;
+        }
+
+        header .meta {
+            display: flex;
+            gap: 16px;
+            font-size: 14px;
+            color: #90a4c1;
+        }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: #111b2d;
+            border: 1px solid #1f2a48;
+            border-radius: 10px;
+            padding: 16px 18px;
+            box-shadow: 0 0 18px rgba(10, 14, 26, 0.45);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: rgba(36, 45, 68, 0.55);
+            border: 1px solid rgba(63, 81, 128, 0.45);
+        }
+
+        .summary-label {
+            font-size: 12px;
+            letter-spacing: 0.6px;
+            color: #8fa3bf;
+            text-transform: uppercase;
+        }
+
+        .summary-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        h2 {
+            margin: 0 0 12px;
+            font-size: 18px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: rgba(45, 66, 104, 0.55);
+        }
+
+        th,
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #1f2a48;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        tbody tr:nth-child(odd) {
+            background: rgba(20, 30, 48, 0.6);
+        }
+
+        tbody tr:hover {
+            background: rgba(63, 81, 128, 0.35);
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-buy {
+            background: rgba(56, 142, 60, 0.28);
+            color: #9cdf7c;
+        }
+
+        .badge-sell {
+            background: rgba(244, 67, 54, 0.28);
+            color: #ffa4a2;
+        }
+
+        .timeline-table td {
+            white-space: nowrap;
+        }
+
+        .placeholder {
+            margin: 0;
+            color: #90a4c1;
+        }
+
+        .symbol-summary {
+            margin-bottom: 16px;
+        }
+
+        .symbol-summary-title {
+            margin: 0 0 10px;
+            font-size: 14px;
+            color: #8fa3bf;
+            letter-spacing: 0.4px;
+        }
+
+        .symbol-summary-table td,
+        .symbol-summary-table th {
+            white-space: nowrap;
+        }
+
+        .section-indicator {
+            margin: 0 0 12px;
+            font-size: 13px;
+            color: #8fa3bf;
+        }
+
+        .error {
+            color: #ef9a9a;
+        }
+
+        .profit-positive {
+            color: #9cdf7c;
+        }
+
+        .profit-negative {
+            color: #ef9a9a;
+        }
+
+        .profit-neutral {
+            color: #cfd8dc;
+        }
+
+        .profit-overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .profit-metric {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: rgba(36, 45, 68, 0.55);
+            border: 1px solid rgba(63, 81, 128, 0.45);
+        }
+
+        .profit-label {
+            font-size: 12px;
+            letter-spacing: 0.6px;
+            color: #8fa3bf;
+            text-transform: uppercase;
+        }
+
+        .profit-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .profit-leaders {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        .leader-list {
+            flex: 1 1 240px;
+            min-width: 220px;
+        }
+
+        .leader-list h3 {
+            margin: 0 0 10px;
+            font-size: 15px;
+            color: #90a4c1;
+        }
+
+        .leader-items {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .leader-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: rgba(27, 37, 59, 0.65);
+            border: 1px solid rgba(47, 65, 102, 0.6);
+        }
+
+        .leader-empty {
+            color: #90a4c1;
+        }
+
+        .pair-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .pair-card {
+            padding: 14px 16px;
+            border-radius: 10px;
+            background: rgba(27, 37, 59, 0.75);
+            border: 1px solid rgba(47, 65, 102, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            cursor: pointer;
+            transition: background 0.2s, border 0.2s;
+        }
+
+        .pair-card:hover {
+            border-color: rgba(100, 181, 246, 0.7);
+            background: rgba(33, 47, 75, 0.85);
+        }
+
+        .pair-card.active {
+            border-color: #3d8bfd;
+            box-shadow: 0 0 16px rgba(61, 139, 253, 0.35);
+            background: rgba(40, 60, 96, 0.9);
+        }
+
+        .pair-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .pair-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .pair-subtitle {
+            font-size: 13px;
+            color: #8fa3bf;
+        }
+
+        .pair-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px 12px;
+        }
+
+        .pair-metric {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 12px;
+            color: #8fa3bf;
+        }
+
+        .pair-metric-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #e0e6f1;
+        }
+
+        .pair-footer {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #90a4c1;
+        }
+
+        .task-block {
+            border: 1px solid #1f2a48;
+            border-radius: 8px;
+            background: rgba(17, 27, 45, 0.65);
+            margin-bottom: 12px;
+        }
+
+        .task-block summary {
+            cursor: pointer;
+            padding: 12px 14px;
+            padding-right: 40px;
+            outline: none;
+            position: relative;
+            display: block;
+        }
+
+        .task-block summary::after {
+            content: '⌄';
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8fa3bf;
+            transition: transform 0.2s;
+        }
+
+        .task-block[open] summary::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        .task-block summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .task-block summary:focus-visible {
+            box-shadow: 0 0 0 2px rgba(61, 139, 253, 0.4);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .task-header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px 24px;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .task-title {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .task-subtitle {
+            margin-top: 4px;
+            font-size: 13px;
+            color: #8fa3bf;
+        }
+
+        .task-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 20px;
+            align-items: flex-end;
+        }
+
+        .task-metric {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 140px;
+            align-items: flex-end;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #8fa3bf;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+        }
+
+        .metric-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .task-block-content {
+            padding: 0 14px 14px;
+        }
+
+        .trade-summary {
+            font-size: 13px;
+            color: #e0e6f1;
+        }
+
+        .trade-detail {
+            font-size: 12px;
+            color: #90a4c1;
+        }
+
+        .trade-detail + .trade-detail {
+            margin-top: 2px;
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 16px;
+            }
+
+            header h1 {
+                font-size: 24px;
+            }
+
+            table {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>网格订单统计面板</h1>
+    <div class="meta">
+        <span id="last-refresh">最后更新：-</span>
+        <span><a href="./home.html">返回分析平台</a></span>
+    </div>
+</header>
+<main>
+    <section class="card">
+        <h2>整体概览</h2>
+        <div class="summary-grid" id="summary"></div>
+        <p class="placeholder" hidden id="summary-empty">暂无订单数据。</p>
+    </section>
+    <section class="card">
+        <h2>利润概览</h2>
+        <div class="profit-overview-grid">
+            <div class="profit-metric">
+                <span class="profit-label">总盈亏 (USDT)</span>
+                <span class="profit-value" id="profit-total">-</span>
+            </div>
+            <div class="profit-metric">
+                <span class="profit-label">平均单套利盈亏</span>
+                <span class="profit-value" id="profit-average">-</span>
+            </div>
+            <div class="profit-metric">
+                <span class="profit-label">盈利双币任务</span>
+                <span class="profit-value" id="profit-positive-count">-</span>
+            </div>
+            <div class="profit-metric">
+                <span class="profit-label">亏损或未平任务</span>
+                <span class="profit-value" id="profit-negative-count">-</span>
+            </div>
+        </div>
+        <div class="profit-leaders">
+            <div class="leader-list">
+                <h3>利润领先</h3>
+                <ul class="leader-items" id="profit-winners"></ul>
+            </div>
+            <div class="leader-list">
+                <h3>利润落后</h3>
+                <ul class="leader-items" id="profit-losers"></ul>
+            </div>
+        </div>
+    </section>
+    <section class="card">
+        <h2>双币币对概览</h2>
+        <div class="pair-grid" id="pair-overview"></div>
+        <p class="placeholder" hidden id="pair-empty">暂无双币币对记录。</p>
+    </section>
+    <section class="card">
+        <h2>双币任务统计</h2>
+        <p class="section-indicator" id="task-filter-indicator">当前视图：全部任务</p>
+        <div id="task-hierarchy"></div>
+        <p class="placeholder" hidden id="task-empty">暂无任务统计。</p>
+    </section>
+    <section class="card">
+        <h2>最新成交</h2>
+        <p class="section-indicator" id="timeline-filter-indicator">当前视图：全部任务</p>
+        <div class="table-wrapper">
+            <table class="timeline-table">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>方向</th>
+                    <th>Symbol</th>
+                    <th class="text-right">数量</th>
+                    <th class="text-right">价格</th>
+                    <th class="text-right">金额</th>
+                    <th class="text-right">手续费</th>
+                    <th>Maker占比</th>
+                    <th>状态</th>
+                    <th>时间</th>
+                    <th>网格批次</th>
+                </tr>
+                </thead>
+                <tbody id="timeline-table"></tbody>
+            </table>
+            <p class="placeholder" hidden id="timeline-empty">暂无订单。</p>
+        </div>
+    </section>
+    <section class="card">
+        <h2>数据源</h2>
+        <p class="placeholder" id="source-meta">正在加载订单数据...</p>
+        <p class="placeholder error" hidden id="error-message"></p>
+    </section>
+</main>
+<script>
+    const SUMMARY_CONFIG = [
+        {label: '订单总数', key: 'totalOrders'},
+        {label: '网格任务数', key: 'taskCount'},
+        {label: '交易对数量', key: 'symbolCount'},
+        {label: '买入总量', key: 'totalBuyQty', format: value => formatNumber(value, 4)},
+        {label: '卖出总量', key: 'totalSellQty', format: value => formatNumber(value, 4)},
+        {label: '买入名义金额', key: 'totalBuyNotional', format: value => formatNumber(value, 2)},
+        {label: '卖出名义金额', key: 'totalSellNotional', format: value => formatNumber(value, 2)},
+        {
+            label: '名义盈亏',
+            key: 'netProfit',
+            format: value => formatNumber(value, 2),
+            getClass: value => getProfitClass(value)
+        },
+        {label: '手续费总额', key: 'totalFee', format: value => formatNumber(value, 6)},
+        {label: 'Maker手续费', key: 'makerFee', format: value => formatNumber(value, 6)},
+        {label: 'Taker手续费', key: 'takerFee', format: value => formatNumber(value, 6)},
+        {label: '平均单笔手续费', key: 'avgFeePerOrder', format: value => formatNumber(value, 6)},
+        {label: '平均Maker参与度', key: 'makerParticipation', format: value => formatPercent(value, 1)},
+        {label: 'Maker订单占比', key: 'makerOrderRatio', format: value => formatPercent(value, 1)},
+        {label: '最早成交', key: 'earliest', format: formatDate},
+        {label: '最新成交', key: 'latest', format: formatDate}
+    ];
+
+    const dashboardState = {
+        orders: [],
+        tasks: [],
+        selectedTaskId: null
+    };
+
+    async function loadOrders() {
+        const res = await fetch('../grid/data/orders.json', {cache: 'no-store'});
+        if (!res.ok) {
+            throw new Error(`无法加载订单数据：${res.status} ${res.statusText}`);
+        }
+        return res.json();
+    }
+
+    function normalizeOrders(rawOrders) {
+        return rawOrders.map(order => {
+            const price = safeNumber(order.price);
+            const quantity = safeNumber(order.origQty);
+            const updateTime = safeNumber(order.updateTime);
+            const txFee = safeNumber(order.txFee);
+            const makerParticipation = parseMakerFeeRate(order.makerFeeRate);
+            const makerFee = Number.isFinite(txFee) && makerParticipation !== null ? txFee * makerParticipation : 0;
+            const takerFee = Number.isFinite(txFee) ? Math.max(txFee - makerFee, 0) : 0;
+            const takerParticipation = makerParticipation !== null ? Math.max(1 - makerParticipation, 0) : null;
+            return {
+                ...order,
+                price,
+                quantity,
+                notional: price * quantity,
+                updateTime,
+                txFee,
+                makerFee,
+                takerFee,
+                makerParticipation,
+                takerParticipation
+            };
+        }).filter(order => Number.isFinite(order.updateTime));
+    }
+
+    function safeNumber(value) {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : 0;
+    }
+
+    function parseMakerFeeRate(value) {
+        if (value === undefined || value === null || value === '') {
+            return null;
+        }
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (!trimmed) {
+                return null;
+            }
+            const normalized = trimmed.endsWith('%') ? trimmed.slice(0, -1) : trimmed;
+            const num = Number(normalized);
+            if (Number.isFinite(num)) {
+                return clampPercent(num);
+            }
+        } else {
+            const num = Number(value);
+            if (Number.isFinite(num)) {
+                return clampPercent(num);
+            }
+        }
+        return null;
+    }
+
+    function clampPercent(value) {
+        const ratio = value > 1 ? value / 100 : value;
+        if (!Number.isFinite(ratio)) {
+            return null;
+        }
+        return Math.min(Math.max(ratio, 0), 1);
+    }
+
+    function computeSummary(orders) {
+        if (!orders.length) {
+            return null;
+        }
+
+        const totalOrders = orders.length;
+        const symbolSet = new Set();
+        const taskSet = new Set();
+
+        let totalBuyQty = 0;
+        let totalSellQty = 0;
+        let totalBuyNotional = 0;
+        let totalSellNotional = 0;
+
+        let earliest = Infinity;
+        let latest = -Infinity;
+        let totalFee = 0;
+        let makerFee = 0;
+        let takerFee = 0;
+        let makerParticipationSum = 0;
+        let makerParticipationCount = 0;
+        let makerNotional = 0;
+        let participationNotional = 0;
+
+        for (const order of orders) {
+            symbolSet.add(order.symbol);
+            if (order.taskId) {
+                taskSet.add(order.taskId);
+            }
+            if (order.side === 'BUY') {
+                totalBuyQty += order.quantity;
+                totalBuyNotional += order.notional;
+            } else if (order.side === 'SELL') {
+                totalSellQty += order.quantity;
+                totalSellNotional += order.notional;
+            }
+            earliest = Math.min(earliest, order.updateTime);
+            latest = Math.max(latest, order.updateTime);
+            if (Number.isFinite(order.txFee)) {
+                totalFee += order.txFee;
+            }
+            if (Number.isFinite(order.makerFee)) {
+                makerFee += order.makerFee;
+            }
+            if (Number.isFinite(order.takerFee)) {
+                takerFee += order.takerFee;
+            }
+            if (Number.isFinite(order.makerParticipation)) {
+                makerParticipationSum += order.makerParticipation;
+                makerParticipationCount += 1;
+                participationNotional += order.notional;
+                makerNotional += order.notional * order.makerParticipation;
+            }
+        }
+
+        const avgFeePerOrder = totalOrders ? totalFee / totalOrders : 0;
+        const makerParticipation = makerParticipationCount
+            ? makerParticipationSum / makerParticipationCount
+            : null;
+        const makerOrderRatio = participationNotional > 0
+            ? makerNotional / participationNotional
+            : null;
+
+        return {
+            totalOrders,
+            taskCount: taskSet.size,
+            symbolCount: symbolSet.size,
+            totalBuyQty,
+            totalSellQty,
+            totalBuyNotional,
+            totalSellNotional,
+            netProfit: totalSellNotional - totalBuyNotional,
+            totalFee,
+            makerFee,
+            takerFee,
+            avgFeePerOrder,
+            makerParticipation,
+            makerOrderRatio,
+            earliest,
+            latest
+        };
+    }
+
+    function buildTaskHierarchy(orders) {
+        const tasksById = new Map();
+        for (const order of orders) {
+            const taskId = order.taskId || '未命名任务';
+            if (!tasksById.has(taskId)) {
+                tasksById.set(taskId, {
+                    taskId,
+                    symbolSet: new Set(),
+                    symbolMap: new Map(),
+                    arbitrages: new Map(),
+                    totalOrders: 0,
+                    buyCount: 0,
+                    sellCount: 0,
+                    buyNotional: 0,
+                    sellNotional: 0,
+                    totalFee: 0,
+                    makerFee: 0,
+                    takerFee: 0,
+                    makerParticipationSum: 0,
+                    makerParticipationCount: 0,
+                    makerNotional: 0,
+                    participationNotional: 0,
+                    start: Number.POSITIVE_INFINITY,
+                    end: -Infinity
+                });
+            }
+            const task = tasksById.get(taskId);
+            task.symbolSet.add(order.symbol);
+            task.totalOrders += 1;
+            task.start = Math.min(task.start, order.updateTime);
+            task.end = Math.max(task.end, order.updateTime);
+            if (order.side === 'BUY') {
+                task.buyCount += 1;
+                task.buyNotional += order.notional;
+            } else if (order.side === 'SELL') {
+                task.sellCount += 1;
+                task.sellNotional += order.notional;
+            }
+
+            if (!task.symbolMap.has(order.symbol)) {
+                task.symbolMap.set(order.symbol, {
+                    symbol: order.symbol,
+                    orderCount: 0,
+                    buyQty: 0,
+                    sellQty: 0,
+                    buyNotional: 0,
+                    sellNotional: 0,
+                    fee: 0,
+                    makerFee: 0,
+                    takerFee: 0,
+                    makerParticipationSum: 0,
+                    makerParticipationCount: 0,
+                    makerNotional: 0,
+                    participationNotional: 0,
+                    lastUpdate: -Infinity
+                });
+            }
+            const symbolStats = task.symbolMap.get(order.symbol);
+            symbolStats.orderCount += 1;
+            symbolStats.lastUpdate = Math.max(symbolStats.lastUpdate, order.updateTime);
+            if (order.side === 'BUY') {
+                symbolStats.buyQty += order.quantity;
+                symbolStats.buyNotional += order.notional;
+            } else if (order.side === 'SELL') {
+                symbolStats.sellQty += order.quantity;
+                symbolStats.sellNotional += order.notional;
+            }
+            if (Number.isFinite(order.txFee)) {
+                task.totalFee += order.txFee;
+                symbolStats.fee += order.txFee;
+            }
+            if (Number.isFinite(order.makerFee)) {
+                task.makerFee += order.makerFee;
+                symbolStats.makerFee += order.makerFee;
+            }
+            if (Number.isFinite(order.takerFee)) {
+                task.takerFee += order.takerFee;
+                symbolStats.takerFee += order.takerFee;
+            }
+            const bindId = order.taskBindId || '未分组批次';
+            if (!task.arbitrages.has(bindId)) {
+                task.arbitrages.set(bindId, {
+                    taskBindId: bindId,
+                    synthPrice: safeNumber(order.synthPrice),
+                    orders: [],
+                    buyOrders: [],
+                    sellOrders: [],
+                    buyNotional: 0,
+                    sellNotional: 0,
+                    buyQty: 0,
+                    sellQty: 0,
+                    totalFee: 0,
+                    makerFee: 0,
+                    takerFee: 0,
+                    makerParticipationSum: 0,
+                    makerParticipationCount: 0,
+                    makerNotional: 0,
+                    participationNotional: 0,
+                    start: Number.POSITIVE_INFINITY,
+                    end: -Infinity
+                });
+            }
+            const arbitrage = task.arbitrages.get(bindId);
+            arbitrage.orders.push(order);
+            arbitrage.start = Math.min(arbitrage.start, order.updateTime);
+            arbitrage.end = Math.max(arbitrage.end, order.updateTime);
+            if (!arbitrage.synthPrice && order.synthPrice) {
+                arbitrage.synthPrice = safeNumber(order.synthPrice);
+            }
+            if (order.side === 'BUY') {
+                arbitrage.buyOrders.push(order);
+                arbitrage.buyNotional += order.notional;
+                arbitrage.buyQty += order.quantity;
+            } else if (order.side === 'SELL') {
+                arbitrage.sellOrders.push(order);
+                arbitrage.sellNotional += order.notional;
+                arbitrage.sellQty += order.quantity;
+            }
+            if (Number.isFinite(order.txFee)) {
+                arbitrage.totalFee += order.txFee;
+            }
+            if (Number.isFinite(order.makerFee)) {
+                arbitrage.makerFee += order.makerFee;
+            }
+            if (Number.isFinite(order.takerFee)) {
+                arbitrage.takerFee += order.takerFee;
+            }
+            if (Number.isFinite(order.makerParticipation)) {
+                const makerPart = order.makerParticipation;
+                const orderNotional = order.notional;
+                const makerNotionalShare = orderNotional * makerPart;
+                task.makerParticipationSum += makerPart;
+                task.makerParticipationCount += 1;
+                task.makerNotional += makerNotionalShare;
+                task.participationNotional += orderNotional;
+                symbolStats.makerParticipationSum += makerPart;
+                symbolStats.makerParticipationCount += 1;
+                symbolStats.makerNotional += makerNotionalShare;
+                symbolStats.participationNotional += orderNotional;
+                arbitrage.makerParticipationSum += makerPart;
+                arbitrage.makerParticipationCount += 1;
+                arbitrage.makerNotional += makerNotionalShare;
+                arbitrage.participationNotional += orderNotional;
+            }
+        }
+
+        return Array.from(tasksById.values())
+            .map(task => {
+                const arbitrages = Array.from(task.arbitrages.values())
+                    .map(arbitrage => ({
+                        ...arbitrage,
+                        profit: arbitrage.sellNotional - arbitrage.buyNotional,
+                        status: determineArbitrageStatus(arbitrage),
+                        avgBuyPrice: arbitrage.buyQty ? arbitrage.buyNotional / arbitrage.buyQty : 0,
+                        avgSellPrice: arbitrage.sellQty ? arbitrage.sellNotional / arbitrage.sellQty : 0,
+                        makerParticipation: arbitrage.makerParticipationCount
+                            ? arbitrage.makerParticipationSum / arbitrage.makerParticipationCount
+                            : null,
+                        makerOrderRatio: arbitrage.participationNotional
+                            ? arbitrage.makerNotional / arbitrage.participationNotional
+                            : null
+                    }))
+                    .sort((a, b) => b.end - a.end);
+                const symbolStats = Array.from(task.symbolMap.values())
+                    .map(symbol => ({
+                        ...symbol,
+                        avgBuyPrice: symbol.buyQty ? symbol.buyNotional / symbol.buyQty : 0,
+                        avgSellPrice: symbol.sellQty ? symbol.sellNotional / symbol.sellQty : 0,
+                        profit: symbol.sellNotional - symbol.buyNotional,
+                        openQty: symbol.buyQty - symbol.sellQty,
+                        openNotional: symbol.buyNotional - symbol.sellNotional,
+                        totalFee: symbol.fee,
+                        makerFeeTotal: symbol.makerFee,
+                        takerFeeTotal: symbol.takerFee,
+                        makerParticipation: symbol.makerParticipationCount
+                            ? symbol.makerParticipationSum / symbol.makerParticipationCount
+                            : null,
+                        makerOrderRatio: symbol.participationNotional
+                            ? symbol.makerNotional / symbol.participationNotional
+                            : null
+                    }))
+                    .sort((a, b) => a.symbol.localeCompare(b.symbol));
+                const completedCount = arbitrages.filter(item => item.status === '已完成').length;
+                const openCount = arbitrages.length - completedCount;
+                const netExposureQty = symbolStats.reduce((sum, item) => sum + item.openQty, 0);
+                const netExposureNotional = symbolStats.reduce((sum, item) => sum + item.openNotional, 0);
+                const latestTrade = arbitrages.length ? arbitrages[0].end : (Number.isFinite(task.end) ? task.end : NaN);
+                return {
+                    taskId: task.taskId,
+                    symbols: Array.from(task.symbolSet).sort(),
+                    arbitrages,
+                    arbitrageCount: arbitrages.length,
+                    completedCount,
+                    openCount,
+                    totalOrders: task.totalOrders,
+                    buyCount: task.buyCount,
+                    sellCount: task.sellCount,
+                    buyNotional: task.buyNotional,
+                    sellNotional: task.sellNotional,
+                    profit: task.sellNotional - task.buyNotional,
+                    netExposureQty,
+                    netExposureNotional,
+                    symbolStats,
+                    latestTrade,
+                    totalFee: task.totalFee,
+                    makerFee: task.makerFee,
+                    takerFee: task.takerFee,
+                    makerParticipation: task.makerParticipationCount
+                        ? task.makerParticipationSum / task.makerParticipationCount
+                        : null,
+                    makerOrderRatio: task.participationNotional
+                        ? task.makerNotional / task.participationNotional
+                        : null,
+                    makerParticipationSum: task.makerParticipationSum,
+                    makerParticipationCount: task.makerParticipationCount,
+                    makerNotional: task.makerNotional,
+                    participationNotional: task.participationNotional,
+                    start: Number.isFinite(task.start) ? task.start : NaN,
+                    end: Number.isFinite(task.end) ? task.end : NaN
+                };
+            })
+            .sort((a, b) => b.end - a.end);
+    }
+
+    function renderSummary(summary) {
+        const summaryContainer = document.getElementById('summary');
+        const emptyHint = document.getElementById('summary-empty');
+        summaryContainer.innerHTML = '';
+
+        if (!summary) {
+            emptyHint.hidden = false;
+            return;
+        }
+
+        emptyHint.hidden = true;
+        SUMMARY_CONFIG.forEach(item => {
+            const value = summary[item.key];
+            const formatter = item.format || (val => formatNumber(val, 0));
+            const extraClass = item.getClass ? item.getClass(value) : '';
+            const card = document.createElement('div');
+            card.className = 'summary-item';
+            card.innerHTML = `
+                <span class="summary-label">${item.label}</span>
+                <span class="summary-value ${extraClass}">${formatter(value)}</span>
+            `;
+            summaryContainer.appendChild(card);
+        });
+    }
+
+    function renderPairOverview(tasks, selectedTaskId) {
+        const container = document.getElementById('pair-overview');
+        const emptyHint = document.getElementById('pair-empty');
+        container.innerHTML = '';
+
+        if (!tasks.length) {
+            emptyHint.hidden = false;
+            return;
+        }
+
+        emptyHint.hidden = true;
+        const aggregate = aggregateTaskMetrics(tasks);
+        const cards = aggregate ? [aggregate, ...tasks] : tasks;
+        cards.forEach(task => {
+            const card = document.createElement('div');
+            const isAggregate = Boolean(task.isAggregate);
+            const isActive = (selectedTaskId === null && isAggregate) || (selectedTaskId === task.taskId);
+            card.className = `pair-card${isActive ? ' active' : ''}`;
+            card.dataset.taskId = isAggregate ? '' : task.taskId;
+            const metrics = [];
+            if (isAggregate) {
+                metrics.push(renderPairMetric('任务数量', task.taskCount));
+            }
+            metrics.push(
+                renderPairMetric('完成套利', task.completedCount),
+                renderPairMetric('未平仓批次', task.openCount),
+                renderPairMetric('订单总数', task.totalOrders),
+                renderPairMetric('净持仓(数量)', task.netExposureQty, 4),
+                renderPairMetric('净名义金额', task.netExposureNotional, 2, true),
+                renderPairMetric('手续费总额', task.totalFee, 6),
+                renderPairMetric('Maker订单占比', task.makerOrderRatio, 1, false, false, true),
+                renderPairMetric('平均Maker参与度', task.makerParticipation, 1, false, false, true),
+                renderPairMetric('最新成交', task.latestTrade, null, false, true)
+            );
+            card.innerHTML = `
+                <div class="pair-header">
+                    <span class="pair-title">${task.taskId}</span>
+                    <span class="pair-title ${getProfitClass(task.profit)}">${formatNumber(task.profit, 2)}</span>
+                </div>
+                <div class="pair-subtitle">
+                    ${renderPairSubtitle(task)}
+                </div>
+                <div class="pair-metrics">
+                    ${metrics.join('')}
+                </div>
+                <div class="pair-footer">时间范围：${formatDate(task.start)} ~ ${formatDate(task.end)}</div>
+            `;
+            card.addEventListener('click', () => {
+                const nextTaskId = isAggregate ? null : task.taskId;
+                updateSelectedTaskId(nextTaskId);
+            });
+            container.appendChild(card);
+        });
+    }
+
+    function aggregateTaskMetrics(tasks) {
+        if (!tasks.length || tasks.length <= 1) {
+            return null;
+        }
+        const symbols = new Set();
+        let arbitrageCount = 0;
+        let completedCount = 0;
+        let openCount = 0;
+        let totalOrders = 0;
+        let netExposureQty = 0;
+        let netExposureNotional = 0;
+        let profit = 0;
+        let start = Infinity;
+        let end = -Infinity;
+        let latestTrade = -Infinity;
+        let totalFee = 0;
+        let makerFee = 0;
+        let takerFee = 0;
+        let makerParticipationSum = 0;
+        let makerParticipationCount = 0;
+        let makerNotional = 0;
+        let participationNotional = 0;
+
+        tasks.forEach(task => {
+            task.symbols.forEach(symbol => symbols.add(symbol));
+            arbitrageCount += task.arbitrageCount;
+            completedCount += task.completedCount;
+            openCount += task.openCount;
+            totalOrders += task.totalOrders;
+            netExposureQty += task.netExposureQty;
+            netExposureNotional += task.netExposureNotional;
+            profit += task.profit;
+            totalFee += Number.isFinite(task.totalFee) ? task.totalFee : 0;
+            makerFee += Number.isFinite(task.makerFee) ? task.makerFee : 0;
+            takerFee += Number.isFinite(task.takerFee) ? task.takerFee : 0;
+            makerParticipationSum += Number.isFinite(task.makerParticipationSum) ? task.makerParticipationSum : 0;
+            makerParticipationCount += Number.isFinite(task.makerParticipationCount) ? task.makerParticipationCount : 0;
+            makerNotional += Number.isFinite(task.makerNotional) ? task.makerNotional : 0;
+            participationNotional += Number.isFinite(task.participationNotional) ? task.participationNotional : 0;
+            if (Number.isFinite(task.start)) {
+                start = Math.min(start, task.start);
+            }
+            if (Number.isFinite(task.end)) {
+                end = Math.max(end, task.end);
+            }
+            if (Number.isFinite(task.latestTrade)) {
+                latestTrade = Math.max(latestTrade, task.latestTrade);
+            }
+        });
+
+        return {
+            taskId: '全部任务',
+            isAggregate: true,
+            taskCount: tasks.length,
+            symbols: Array.from(symbols).sort(),
+            arbitrageCount,
+            completedCount,
+            openCount,
+            totalOrders,
+            netExposureQty,
+            netExposureNotional,
+            profit,
+            totalFee,
+            makerFee,
+            takerFee,
+            makerParticipation: makerParticipationCount ? makerParticipationSum / makerParticipationCount : null,
+            makerOrderRatio: participationNotional ? makerNotional / participationNotional : null,
+            makerParticipationSum,
+            makerParticipationCount,
+            makerNotional,
+            participationNotional,
+            latestTrade: latestTrade > 0 ? latestTrade : NaN,
+            start: start < Infinity ? start : NaN,
+            end: end > -Infinity ? end : NaN
+        };
+    }
+
+    function renderPairSubtitle(task) {
+        if (task.isAggregate) {
+            const symbolText = task.symbols.length ? task.symbols.join(' / ') : '-';
+            return `任务数：${formatNumber(task.taskCount, 0)} · 涵盖符号：${symbolText}`;
+        }
+        return `符号：${task.symbols.join(' / ')} · 套利批次 ${formatNumber(task.arbitrageCount, 0)}`;
+    }
+
+    function updateSectionIndicators(taskId) {
+        const text = taskId ? `当前视图：${taskId}` : '当前视图：全部任务';
+        const taskIndicator = document.getElementById('task-filter-indicator');
+        const timelineIndicator = document.getElementById('timeline-filter-indicator');
+        if (taskIndicator) {
+            taskIndicator.textContent = text;
+        }
+        if (timelineIndicator) {
+            timelineIndicator.textContent = text;
+        }
+    }
+
+    function updateSelectedTaskId(taskId) {
+        if (dashboardState.selectedTaskId === taskId) {
+            taskId = null;
+        }
+        dashboardState.selectedTaskId = taskId;
+        renderPairOverview(dashboardState.tasks, dashboardState.selectedTaskId);
+        renderTaskHierarchy(dashboardState.tasks, dashboardState.selectedTaskId);
+        renderTimeline(dashboardState.orders, dashboardState.selectedTaskId);
+        updateSectionIndicators(dashboardState.selectedTaskId);
+        if (taskId) {
+            requestAnimationFrame(() => {
+                const target = document.querySelector(`details[data-task-id="${taskId}"]`);
+                if (target) {
+                    target.open = true;
+                    target.scrollIntoView({behavior: 'smooth', block: 'start'});
+                }
+            });
+        }
+    }
+
+    function renderPairMetric(label, value, decimals = 0, isProfitMetric = false, isTime = false, isPercent = false) {
+        let displayValue = '-';
+        let valueClass = 'pair-metric-value';
+        if (isTime) {
+            displayValue = formatDate(value);
+        } else if (Number.isFinite(value)) {
+            const fixedDecimals = typeof decimals === 'number' ? decimals : 0;
+            displayValue = isPercent
+                ? formatPercent(value, fixedDecimals)
+                : formatNumber(value, fixedDecimals);
+        }
+        if (isProfitMetric) {
+            valueClass += ` ${getProfitClass(value)}`;
+        }
+        return `
+            <div class="pair-metric">
+                <span>${label}</span>
+                <span class="${valueClass}">${displayValue}</span>
+            </div>
+        `;
+    }
+
+    function renderTaskHierarchy(tasks, selectedTaskId) {
+        const container = document.getElementById('task-hierarchy');
+        const emptyHint = document.getElementById('task-empty');
+        container.innerHTML = '';
+
+        const filtered = selectedTaskId ? tasks.filter(task => task.taskId === selectedTaskId) : tasks;
+
+        if (!filtered.length) {
+            emptyHint.hidden = false;
+            return;
+        }
+
+        emptyHint.hidden = true;
+        filtered.forEach((task, index) => {
+            const details = document.createElement('details');
+            details.className = 'task-block';
+            details.dataset.taskId = task.taskId;
+            if (index === 0) {
+                details.open = true;
+            }
+
+            const summary = document.createElement('summary');
+            summary.innerHTML = createTaskSummary(task);
+            details.appendChild(summary);
+
+            const content = document.createElement('div');
+            content.className = 'task-block-content';
+
+            if (task.symbolStats && task.symbolStats.length) {
+                const symbolSection = document.createElement('div');
+                symbolSection.className = 'symbol-summary';
+                symbolSection.innerHTML = createSymbolSummaryTable(task.symbolStats);
+                content.appendChild(symbolSection);
+            }
+
+            const table = document.createElement('table');
+            table.className = 'arbitrage-table';
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>套利批次</th>
+                        <th>买入</th>
+                        <th>卖出</th>
+                        <th class="text-right">名义盈亏</th>
+                        <th>状态</th>
+                        <th>时间</th>
+                    </tr>
+                </thead>
+            `;
+            const tbody = document.createElement('tbody');
+            task.arbitrages.forEach(arbitrage => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = createArbitrageRow(arbitrage);
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            content.appendChild(table);
+            details.appendChild(content);
+            container.appendChild(details);
+        });
+    }
+
+    function createSymbolSummaryTable(symbolStats) {
+        if (!symbolStats.length) {
+            return '<p class="placeholder">暂无交易对统计</p>';
+        }
+        const rows = symbolStats.map(symbol => {
+            const avgBuy = symbol.buyQty > 0 ? formatNumber(symbol.avgBuyPrice, 6) : '-';
+            const avgSell = symbol.sellQty > 0 ? formatNumber(symbol.avgSellPrice, 6) : '-';
+            const profitClass = getProfitClass(symbol.profit);
+            const makerRatio = symbol.makerOrderRatio;
+            return `
+                <tr>
+                    <td>${symbol.symbol}</td>
+                    <td class="text-right">${formatNumber(symbol.buyQty, 4)}</td>
+                    <td class="text-right">${avgBuy}</td>
+                    <td class="text-right">${formatNumber(symbol.sellQty, 4)}</td>
+                    <td class="text-right">${avgSell}</td>
+                    <td class="text-right"><span class="${profitClass}">${formatNumber(symbol.profit, 2)}</span></td>
+                    <td class="text-right">${formatNumber(symbol.openQty, 4)}</td>
+                    <td class="text-right">${formatNumber(symbol.totalFee, 6)}</td>
+                    <td class="text-right">${formatPercent(makerRatio, 1)}</td>
+                    <td>${formatDate(symbol.lastUpdate)}</td>
+                </tr>
+            `;
+        }).join('');
+        return `
+            <h3 class="symbol-summary-title">交易币对概览</h3>
+            <table class="symbol-summary-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th class="text-right">买入量</th>
+                        <th class="text-right">平均买价</th>
+                        <th class="text-right">卖出量</th>
+                        <th class="text-right">平均卖价</th>
+                        <th class="text-right">名义盈亏</th>
+                        <th class="text-right">未平仓量</th>
+                        <th class="text-right">手续费</th>
+                        <th class="text-right">Maker占比</th>
+                        <th>最近成交</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+    }
+
+    function createTaskSummary(task) {
+        const symbolsText = task.symbols.length ? task.symbols.join('、') : '-';
+        const arbitrageSummary = `套利批次 ${formatNumber(task.arbitrageCount, 0)}（完成 ${formatNumber(task.completedCount, 0)} / 未平 ${formatNumber(task.openCount, 0)}）`;
+        const orderSummary = `订单 ${formatNumber(task.totalOrders, 0)}（买 ${formatNumber(task.buyCount, 0)} / 卖 ${formatNumber(task.sellCount, 0)}）`;
+        const timeRange = `${formatDate(task.start)} ~ ${formatDate(task.end)}`;
+        return `
+            <div class="task-header">
+                <div>
+                    <div class="task-title">${task.taskId}</div>
+                    <div class="task-subtitle">符号：${symbolsText} · ${arbitrageSummary} · ${orderSummary}</div>
+                </div>
+                <div class="task-metrics">
+                    <div class="task-metric">
+                        <span class="metric-label">名义盈亏</span>
+                        <span class="metric-value ${getProfitClass(task.profit)}">${formatNumber(task.profit, 2)}</span>
+                    </div>
+                    <div class="task-metric">
+                        <span class="metric-label">手续费总额</span>
+                        <span class="metric-value">${formatNumber(task.totalFee, 6)}</span>
+                    </div>
+                    <div class="task-metric">
+                        <span class="metric-label">Maker订单占比</span>
+                        <span class="metric-value">${formatPercent(task.makerOrderRatio, 1)}</span>
+                    </div>
+                    <div class="task-metric">
+                        <span class="metric-label">平均Maker参与度</span>
+                        <span class="metric-value">${formatPercent(task.makerParticipation, 1)}</span>
+                    </div>
+                    <div class="task-metric">
+                        <span class="metric-label">时间范围</span>
+                        <span class="metric-value">${timeRange}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function createArbitrageRow(arbitrage) {
+        const synthLine = arbitrage.synthPrice
+            ? `<br><small>合成价 ${formatNumber(arbitrage.synthPrice, 6)}</small>`
+            : '';
+        return `
+            <td>${arbitrage.taskBindId}${synthLine}</td>
+            <td>${renderArbitrageLeg(arbitrage.buyOrders, {
+            qty: arbitrage.buyQty,
+            avgPrice: arbitrage.avgBuyPrice,
+            notional: arbitrage.buyNotional
+        }, '买入')}</td>
+            <td>${renderArbitrageLeg(arbitrage.sellOrders, {
+            qty: arbitrage.sellQty,
+            avgPrice: arbitrage.avgSellPrice,
+            notional: arbitrage.sellNotional
+        }, '卖出')}</td>
+            <td class="text-right"><span class="${getProfitClass(arbitrage.profit)}">${formatNumber(arbitrage.profit, 2)}</span></td>
+            <td>${arbitrage.status}</td>
+            <td>${formatDate(arbitrage.start)}<br><small>${formatDate(arbitrage.end)}</small></td>
+        `;
+    }
+
+    function renderArbitrageLeg(orders, totals, label) {
+        if (!orders.length) {
+            return '<span class="placeholder">-</span>';
+        }
+        const totalFee = orders.reduce((sum, order) => {
+            return sum + (Number.isFinite(order.txFee) ? order.txFee : 0);
+        }, 0);
+        const makerNotional = orders.reduce((sum, order) => {
+            return sum + (Number.isFinite(order.makerParticipation) ? order.notional * order.makerParticipation : 0);
+        }, 0);
+        const totalNotional = Number.isFinite(totals.notional) ? totals.notional : orders.reduce((sum, order) => sum + order.notional, 0);
+        const makerParticipation = totalNotional ? makerNotional / totalNotional : null;
+        const feeSegment = Number.isFinite(totalFee) ? ` · 手续费 ${formatNumber(totalFee, 6)}` : '';
+        const makerSegment = makerParticipation !== null ? ` · Maker ${formatPercent(makerParticipation, 1)}` : '';
+        const summaryLine = `
+            <div class="trade-summary">
+                ${label} ${formatNumber(totals.qty, 4)} @ ${formatNumber(totals.avgPrice, 4)} · ${formatNumber(totals.notional, 2)} USDT${feeSegment}${makerSegment}
+            </div>
+        `;
+        const details = orders
+            .slice()
+            .sort((a, b) => a.updateTime - b.updateTime)
+            .map(order => `
+                <div class="trade-detail">
+                    ${formatDate(order.updateTime)} · ${order.symbol} ${formatNumber(order.quantity, 4)} @ ${formatNumber(order.price, 6)}
+                    <br><small>手续费 ${formatNumber(order.txFee, 6)} · Maker ${order.makerFeeRate || formatPercent(order.makerParticipation, 1)}</small>
+                </div>
+            `)
+            .join('');
+        return summaryLine + details;
+    }
+
+    function determineArbitrageStatus(arbitrage) {
+        const hasBuy = arbitrage.buyOrders.length > 0;
+        const hasSell = arbitrage.sellOrders.length > 0;
+        if (hasBuy && hasSell) {
+            return '已完成';
+        }
+        if (hasBuy) {
+            return '待卖出';
+        }
+        if (hasSell) {
+            return '待买入';
+        }
+        return '待交易';
+    }
+
+    function renderTimeline(orders, selectedTaskId) {
+        const tbody = document.getElementById('timeline-table');
+        const emptyHint = document.getElementById('timeline-empty');
+        tbody.innerHTML = '';
+
+        const filtered = selectedTaskId ? orders.filter(order => order.taskId === selectedTaskId) : orders;
+
+        if (!filtered.length) {
+            emptyHint.hidden = false;
+            return;
+        }
+
+        emptyHint.hidden = true;
+        filtered.slice().reverse().slice(0, 30).forEach(order => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${order.orderId}</td>
+                <td><span class="badge ${order.side === 'BUY' ? 'badge-buy' : 'badge-sell'}">${order.side}</span></td>
+                <td>${order.symbol}</td>
+                <td class="text-right">${formatNumber(order.quantity, 4)}</td>
+                <td class="text-right">${formatNumber(order.price, 6)}</td>
+                <td class="text-right">${formatNumber(order.notional, 2)}</td>
+                <td class="text-right">${formatNumber(order.txFee, 6)}</td>
+                <td>${order.makerFeeRate || formatPercent(order.makerParticipation, 1)}</td>
+                <td>${order.status || '-'}</td>
+                <td>${formatDate(order.updateTime)}</td>
+                <td>${order.taskBindId || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function formatNumber(value, decimals) {
+        if (!Number.isFinite(value)) {
+            return '-';
+        }
+        return value.toLocaleString('en-US', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        });
+    }
+
+    function formatPercent(value, decimals = 1) {
+        if (!Number.isFinite(value)) {
+            return '-';
+        }
+        return `${formatNumber(value * 100, decimals)}%`;
+    }
+
+    function formatDate(timestamp) {
+        if (!Number.isFinite(timestamp) || timestamp <= 0) {
+            return '-';
+        }
+        const date = new Date(timestamp);
+        if (Number.isNaN(date.getTime())) {
+            return '-';
+        }
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        const hh = String(date.getHours()).padStart(2, '0');
+        const min = String(date.getMinutes()).padStart(2, '0');
+        const ss = String(date.getSeconds()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+    }
+
+    function updateMeta(text) {
+        document.getElementById('source-meta').textContent = text;
+        document.getElementById('last-refresh').textContent = `最后更新：${formatDate(Date.now())}`;
+    }
+
+    function showError(message) {
+        const errorEl = document.getElementById('error-message');
+        errorEl.textContent = message;
+        errorEl.hidden = false;
+    }
+
+    function renderProfitOverview(summary, taskStats) {
+        const totalEl = document.getElementById('profit-total');
+        const avgEl = document.getElementById('profit-average');
+        const positiveEl = document.getElementById('profit-positive-count');
+        const negativeEl = document.getElementById('profit-negative-count');
+        const winnersList = document.getElementById('profit-winners');
+        const losersList = document.getElementById('profit-losers');
+
+        const hasData = Boolean(summary && taskStats.length);
+
+        const totalProfit = hasData ? summary.netProfit : 0;
+        const totalCompletedArbs = hasData ? taskStats.reduce((sum, item) => sum + item.completedCount, 0) : 0;
+        const avgProfit = hasData && totalCompletedArbs ? totalProfit / totalCompletedArbs : null;
+        const profitableTasks = hasData ? taskStats.filter(item => item.profit > 0).length : 0;
+        const riskyTasks = hasData ? taskStats.filter(item => item.profit < 0 || item.openCount > 0).length : 0;
+
+        totalEl.textContent = hasData ? formatNumber(totalProfit, 2) : '-';
+        totalEl.className = `profit-value ${getProfitClass(totalProfit)}`;
+        avgEl.textContent = avgProfit !== null ? formatNumber(avgProfit, 2) : '-';
+        avgEl.className = avgProfit !== null
+            ? `profit-value ${getProfitClass(avgProfit)}`
+            : 'profit-value profit-neutral';
+        positiveEl.textContent = hasData ? formatNumber(profitableTasks, 0) : '-';
+        positiveEl.className = hasData ? 'profit-value profit-positive' : 'profit-value profit-neutral';
+        negativeEl.textContent = hasData ? formatNumber(riskyTasks, 0) : '-';
+        negativeEl.className = hasData
+            ? `profit-value ${riskyTasks ? 'profit-negative' : 'profit-neutral'}`
+            : 'profit-value profit-neutral';
+
+        winnersList.innerHTML = '';
+        losersList.innerHTML = '';
+
+        if (!hasData) {
+            winnersList.innerHTML = `<li class="leader-empty">暂无数据</li>`;
+            losersList.innerHTML = `<li class="leader-empty">暂无数据</li>`;
+            return;
+        }
+
+        const winners = taskStats
+            .filter(item => item.profit > 0)
+            .sort((a, b) => b.profit - a.profit)
+            .slice(0, 5);
+        const losers = taskStats
+            .filter(item => item.profit < 0)
+            .sort((a, b) => a.profit - b.profit)
+            .slice(0, 5);
+
+        if (!winners.length) {
+            winnersList.innerHTML = `<li class="leader-empty">暂无盈利任务</li>`;
+        } else {
+            winners.forEach(entry => {
+                const li = document.createElement('li');
+                li.className = 'leader-entry';
+                li.innerHTML = `
+                    <span>${entry.taskId}</span>
+                    <span class="${getProfitClass(entry.profit)}">${formatNumber(entry.profit, 2)}</span>
+                `;
+                winnersList.appendChild(li);
+            });
+        }
+
+        if (!losers.length) {
+            losersList.innerHTML = `<li class="leader-empty">暂无亏损任务</li>`;
+        } else {
+            losers.forEach(entry => {
+                const li = document.createElement('li');
+                li.className = 'leader-entry';
+                li.innerHTML = `
+                    <span>${entry.taskId}</span>
+                    <span class="${getProfitClass(entry.profit)}">${formatNumber(entry.profit, 2)}</span>
+                `;
+                losersList.appendChild(li);
+            });
+        }
+    }
+
+    function getProfitClass(value) {
+        if (!Number.isFinite(value) || Math.abs(value) < 1e-12) {
+            return 'profit-neutral';
+        }
+        return value > 0 ? 'profit-positive' : 'profit-negative';
+    }
+
+    async function init() {
+        try {
+            updateMeta('正在读取 ../grid/data/orders.json ...');
+            const payload = await loadOrders();
+            const normalized = normalizeOrders(payload.orders || []);
+            if (!normalized.length) {
+                dashboardState.orders = [];
+                dashboardState.tasks = [];
+                dashboardState.selectedTaskId = null;
+                renderSummary(null);
+                renderPairOverview([], null);
+                renderTaskHierarchy([], null);
+                renderTimeline([], null);
+                renderProfitOverview(null, []);
+                updateSectionIndicators(null);
+                updateMeta('数据源：暂无订单记录');
+                return;
+            }
+            normalized.sort((a, b) => a.updateTime - b.updateTime);
+            const summary = computeSummary(normalized);
+            const taskHierarchy = buildTaskHierarchy(normalized);
+
+            dashboardState.orders = normalized;
+            dashboardState.tasks = taskHierarchy;
+            dashboardState.selectedTaskId = null;
+
+            renderSummary(summary);
+            renderPairOverview(taskHierarchy, dashboardState.selectedTaskId);
+            renderTaskHierarchy(taskHierarchy, dashboardState.selectedTaskId);
+            renderTimeline(normalized, dashboardState.selectedTaskId);
+            renderProfitOverview(summary, taskHierarchy);
+            updateSectionIndicators(dashboardState.selectedTaskId);
+
+            updateMeta(`数据源：共 ${normalized.length} 条订单，文件路径 ../grid/data/orders.json`);
+        } catch (err) {
+            showError(err.message);
+            updateMeta('加载订单数据失败');
+            dashboardState.orders = [];
+            dashboardState.tasks = [];
+            dashboardState.selectedTaskId = null;
+            renderSummary(null);
+            renderPairOverview([], null);
+            renderTaskHierarchy([], null);
+            renderTimeline([], null);
+            renderProfitOverview(null, []);
+            updateSectionIndicators(null);
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>

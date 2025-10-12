@@ -216,6 +216,10 @@ class CzClient {
             return res.data;
         } catch (error) {
             console.error('修改失败：', error.response ? error.response.data : error.message);
+            if (error?.response?.data?.code === -2013) {
+                // 订单已成交、
+                return this.getFuturesOrder(symbol, orderId);
+            }
             return null;
         }
     }
@@ -308,8 +312,7 @@ class CzClient {
         const trades = await this.listTrades(symbol, {'orderId': orderId});
         if (!trades || trades.length === 0) {
             return {
-                'txFee': 0,
-                'makerFeeRate': '0%'
+                'txFee': 0, 'makerFeeRate': '0%'
             };
         }
 
@@ -342,11 +345,7 @@ class CzClient {
             if (stableAssets.has(normalizedAsset)) {
                 return amount;
             }
-            const priceSymbol = normalizedAsset === 'BNB'
-                ? 'BNBUSDT'
-                : normalizedAsset.endsWith('USDT')
-                    ? normalizedAsset
-                    : `${normalizedAsset}USDT`;
+            const priceSymbol = normalizedAsset === 'BNB' ? 'BNBUSDT' : normalizedAsset.endsWith('USDT') ? normalizedAsset : `${normalizedAsset}USDT`;
             try {
                 if (!priceCache[priceSymbol]) {
                     priceCache[priceSymbol] = await this.getFuturesPrice(priceSymbol);
@@ -361,17 +360,16 @@ class CzClient {
             return amount;
         };
 
-        const feeParts = await Promise.all(
-            Object.entries(commissionMap).map(([asset, amount]) => convertAssetToUsdt(asset, amount))
-        );
+        const feeParts = await Promise.all(Object.entries(commissionMap).map(([asset, amount]) => convertAssetToUsdt(asset, amount)));
         const totalFee = feeParts.reduce((sum, val) => sum + val, 0);
 
         const makerRate = totalQuoteQty === 0 ? 0 : Number(((makerQuoteQty / totalQuoteQty) * 100).toFixed(1));
 
         return {
-            'txFee': +totalFee.toFixed(8),
-            'makerFeeRate': `${makerRate}%`
+            'txFee': +totalFee.toFixed(8), 'makerFeeRate': `${makerRate}%`
         };
     }
 }
+
+// new CzClient().getTxFee('taousdt', 7383401456).then(e => console.log(e))
 export default new CzClient();

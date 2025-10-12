@@ -51,6 +51,35 @@
             color: #90a4c1;
         }
 
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-actions label {
+            font-size: 14px;
+            color: #90a4c1;
+        }
+
+        .header-actions select {
+            appearance: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #1f2a48;
+            background: #111b2d;
+            color: #e0e6f1;
+            font-size: 14px;
+            min-width: 220px;
+        }
+
+        .header-actions select:focus {
+            outline: none;
+            border-color: #3d8bfd;
+            box-shadow: 0 0 0 2px rgba(61, 139, 253, 0.25);
+        }
+
         main {
             display: flex;
             flex-direction: column;
@@ -79,6 +108,124 @@
             border-radius: 8px;
             background: rgba(36, 45, 68, 0.55);
             border: 1px solid rgba(63, 81, 128, 0.45);
+        }
+
+        .asset-overview {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .asset-overview-header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+            align-items: baseline;
+            font-size: 13px;
+            color: #8fa3bf;
+        }
+
+        .asset-overview-header strong {
+            font-size: 15px;
+            color: #e0e6f1;
+        }
+
+        .asset-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .asset-metric {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: rgba(36, 45, 68, 0.55);
+            border: 1px solid rgba(63, 81, 128, 0.45);
+        }
+
+        .asset-metric-label {
+            font-size: 12px;
+            letter-spacing: 0.6px;
+            color: #8fa3bf;
+            text-transform: uppercase;
+        }
+
+        .asset-metric-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e0e6f1;
+        }
+
+        .asset-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .asset-card {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            background: rgba(27, 37, 59, 0.75);
+            border: 1px solid rgba(47, 65, 102, 0.6);
+        }
+
+        .asset-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .asset-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .asset-card-profit {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .asset-card-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px 12px;
+        }
+
+        .asset-card-metric {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .asset-card-metric-label {
+            font-size: 11px;
+            letter-spacing: 0.4px;
+            color: #8fa3bf;
+            text-transform: uppercase;
+        }
+
+        .asset-card-metric-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #e0e6f1;
+        }
+
+        .asset-card-footer {
+            font-size: 12px;
+            color: #90a4c1;
+        }
+
+        .asset-overview-footer {
+            font-size: 12px;
+            color: #90a4c1;
         }
 
         .summary-label {
@@ -173,6 +320,61 @@
             white-space: nowrap;
         }
 
+        .arbitrage-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        .arbitrage-table th,
+        .arbitrage-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(47, 65, 102, 0.6);
+            white-space: nowrap;
+            text-align: left;
+        }
+
+        .arbitrage-table .text-right {
+            text-align: right;
+        }
+
+        .arbitrage-summary-row {
+            cursor: pointer;
+            background: rgba(20, 30, 48, 0.45);
+            transition: background 0.2s, border 0.2s;
+        }
+
+        .arbitrage-summary-row:hover,
+        .arbitrage-summary-row:focus-visible {
+            background: rgba(40, 60, 96, 0.55);
+        }
+
+        .arbitrage-summary-row:focus-visible {
+            outline: 2px solid rgba(61, 139, 253, 0.5);
+            outline-offset: -2px;
+        }
+
+        .arbitrage-summary-row .arbitrage-summary-profit-cell {
+            font-weight: 600;
+        }
+
+        .arbitrage-summary-row .arbitrage-id-cell {
+            font-weight: 600;
+            color: #e0e6f1;
+        }
+
+        .arbitrage-summary-row small {
+            display: block;
+            font-size: 11px;
+            color: #8fa3bf;
+        }
+
+        .arbitrage-detail-row td {
+            padding: 0;
+            border-bottom: 1px solid rgba(47, 65, 102, 0.6);
+            background: rgba(12, 18, 32, 0.75);
+        }
+
         .section-indicator {
             margin: 0 0 12px;
             font-size: 13px;
@@ -264,78 +466,6 @@
             color: #90a4c1;
         }
 
-        .pair-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 16px;
-        }
-
-        .pair-card {
-            padding: 14px 16px;
-            border-radius: 10px;
-            background: rgba(27, 37, 59, 0.75);
-            border: 1px solid rgba(47, 65, 102, 0.6);
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            cursor: pointer;
-            transition: background 0.2s, border 0.2s;
-        }
-
-        .pair-card:hover {
-            border-color: rgba(100, 181, 246, 0.7);
-            background: rgba(33, 47, 75, 0.85);
-        }
-
-        .pair-card.active {
-            border-color: #3d8bfd;
-            box-shadow: 0 0 16px rgba(61, 139, 253, 0.35);
-            background: rgba(40, 60, 96, 0.9);
-        }
-
-        .pair-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: 8px;
-        }
-
-        .pair-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .pair-subtitle {
-            font-size: 13px;
-            color: #8fa3bf;
-        }
-
-        .pair-metrics {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px 12px;
-        }
-
-        .pair-metric {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            font-size: 12px;
-            color: #8fa3bf;
-        }
-
-        .pair-metric-value {
-            font-size: 16px;
-            font-weight: 600;
-            color: #e0e6f1;
-        }
-
-        .pair-footer {
-            margin-top: 4px;
-            font-size: 12px;
-            color: #90a4c1;
-        }
-
         .task-block {
             border: 1px solid #1f2a48;
             border-radius: 8px;
@@ -375,6 +505,26 @@
             border-radius: 8px 8px 0 0;
         }
 
+        .arbitrage-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .arbitrage-detail-legs {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .arbitrage-detail-rates {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 12px;
+            color: #90a4c1;
+        }
+
         .task-header {
             display: flex;
             flex-wrap: wrap;
@@ -390,9 +540,166 @@
         }
 
         .task-subtitle {
-            margin-top: 4px;
+            margin: 2px 0 0;
             font-size: 13px;
             color: #8fa3bf;
+            line-height: 1.4;
+        }
+
+        .task-title-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            background: rgba(61, 139, 253, 0.25);
+            color: #90caf9;
+            text-transform: uppercase;
+        }
+
+        .status-running {
+            background: rgba(56, 142, 60, 0.28);
+            color: #9cdf7c;
+        }
+
+        .status-paused,
+        .status-idle {
+            background: rgba(255, 193, 7, 0.25);
+            color: #ffe082;
+        }
+
+        .status-stopped,
+        .status-finished {
+            background: rgba(244, 67, 54, 0.28);
+            color: #ffa4a2;
+        }
+
+        .status-error {
+            background: rgba(236, 64, 122, 0.28);
+            color: #f48fb1;
+        }
+
+        .status-unknown {
+            background: rgba(100, 181, 246, 0.22);
+            color: #bbdefb;
+        }
+
+        .grid-task-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .grid-task-chip {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(47, 65, 102, 0.6);
+            background: rgba(27, 37, 59, 0.75);
+            color: inherit;
+            cursor: pointer;
+            text-align: left;
+            font: inherit;
+            transition: border 0.2s, background 0.2s, transform 0.2s;
+        }
+
+        .grid-task-chip:hover {
+            border-color: rgba(100, 181, 246, 0.7);
+            background: rgba(33, 47, 75, 0.85);
+        }
+
+        .grid-task-chip.active {
+            border-color: #3d8bfd;
+            box-shadow: 0 0 16px rgba(61, 139, 253, 0.35);
+            background: rgba(40, 60, 96, 0.9);
+        }
+
+        .grid-task-chip:focus-visible {
+            outline: none;
+            border-color: #3d8bfd;
+            box-shadow: 0 0 0 2px rgba(61, 139, 253, 0.35);
+        }
+
+        .grid-chip-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .grid-chip-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .grid-chip-line {
+            font-size: 12px;
+            color: #8fa3bf;
+        }
+
+        .grid-chip-profit {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .grid-task-chip.grid-task-chip--no-config .grid-chip-line {
+            color: #b0bec5;
+        }
+
+        .grid-config {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .grid-config-section {
+            background: rgba(20, 30, 48, 0.4);
+            border: 1px solid rgba(47, 65, 102, 0.6);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .grid-config-title {
+            margin: 0 0 8px;
+            font-size: 13px;
+            color: #8fa3bf;
+            letter-spacing: 0.4px;
+        }
+
+        .grid-config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px 16px;
+        }
+
+        .grid-config-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .config-label {
+            font-size: 12px;
+            color: #8fa3bf;
+        }
+
+        .config-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #e0e6f1;
         }
 
         .task-metrics {
@@ -426,18 +733,48 @@
             padding: 0 14px 14px;
         }
 
-        .trade-summary {
-            font-size: 13px;
-            color: #e0e6f1;
-        }
-
-        .trade-detail {
+        .rate-line {
             font-size: 12px;
             color: #90a4c1;
         }
 
-        .trade-detail + .trade-detail {
+        .rate-line + .rate-line {
             margin-top: 2px;
+        }
+
+        .arbitrage-orders-table-wrapper {
+            overflow-x: auto;
+        }
+
+        .arbitrage-orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            background: rgba(27, 37, 59, 0.55);
+            border: 1px solid rgba(47, 65, 102, 0.6);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .arbitrage-orders-table thead {
+            background: rgba(13, 20, 36, 0.8);
+        }
+
+        .arbitrage-orders-table th,
+        .arbitrage-orders-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(47, 65, 102, 0.6);
+            white-space: nowrap;
+            text-align: left;
+        }
+
+        .arbitrage-orders-table th.text-right,
+        .arbitrage-orders-table td.text-right {
+            text-align: right;
+        }
+
+        .arbitrage-orders-table tbody tr:last-child td {
+            border-bottom: none;
         }
 
         @media (max-width: 720px) {
@@ -462,8 +799,20 @@
         <span id="last-refresh">最后更新：-</span>
         <span><a href="./home.html">返回分析平台</a></span>
     </div>
+    <div class="header-actions">
+        <label for="grid-task-selector">选择网格任务</label>
+        <select id="grid-task-selector"></select>
+    </div>
 </header>
 <main>
+    <section class="card">
+        <h2>网格任务概览</h2>
+        <div class="selected-task-overview" id="selected-task-overview"></div>
+        <p class="placeholder" hidden id="grid-task-empty">暂无网格任务。</p>
+        <p class="section-indicator" id="task-filter-indicator">当前任务：-</p>
+        <div id="task-hierarchy"></div>
+        <p class="placeholder" hidden id="task-empty">暂无任务统计。</p>
+    </section>
     <section class="card">
         <h2>整体概览</h2>
         <div class="summary-grid" id="summary"></div>
@@ -501,24 +850,13 @@
         </div>
     </section>
     <section class="card">
-        <h2>双币币对概览</h2>
-        <div class="pair-grid" id="pair-overview"></div>
-        <p class="placeholder" hidden id="pair-empty">暂无双币币对记录。</p>
-    </section>
-    <section class="card">
-        <h2>双币任务统计</h2>
-        <p class="section-indicator" id="task-filter-indicator">当前视图：全部任务</p>
-        <div id="task-hierarchy"></div>
-        <p class="placeholder" hidden id="task-empty">暂无任务统计。</p>
-    </section>
-    <section class="card">
         <h2>最新成交</h2>
-        <p class="section-indicator" id="timeline-filter-indicator">当前视图：全部任务</p>
+        <p class="section-indicator" id="timeline-filter-indicator">当前任务：-</p>
         <div class="table-wrapper">
             <table class="timeline-table">
                 <thead>
                 <tr>
-                    <th>#</th>
+                    <th>订单ID</th>
                     <th>方向</th>
                     <th>Symbol</th>
                     <th class="text-right">数量</th>
@@ -570,13 +908,29 @@
     const dashboardState = {
         orders: [],
         tasks: [],
+        gridTasks: [],
         selectedTaskId: null
     };
+
+    const taskSelectorEl = document.getElementById('grid-task-selector');
+    if (taskSelectorEl) {
+        taskSelectorEl.addEventListener('change', event => {
+            updateSelectedTaskId(event.target.value);
+        });
+    }
 
     async function loadOrders() {
         const res = await fetch('../grid/data/orders.json', {cache: 'no-store'});
         if (!res.ok) {
             throw new Error(`无法加载订单数据：${res.status} ${res.statusText}`);
+        }
+        return res.json();
+    }
+
+    async function loadGridTasks() {
+        const res = await fetch('../grid/data/grid_tasks.json', {cache: 'no-store'});
+        if (!res.ok) {
+            throw new Error(`无法加载网格任务数据：${res.status} ${res.statusText}`);
         }
         return res.json();
     }
@@ -604,6 +958,46 @@
                 takerParticipation
             };
         }).filter(order => Number.isFinite(order.updateTime));
+    }
+
+    function toNumberOrNull(value) {
+        if (value === undefined || value === null) {
+            return null;
+        }
+        if (typeof value === 'string' && value.trim() === '') {
+            return null;
+        }
+        const num = Number(value);
+        return Number.isFinite(num) ? num : null;
+    }
+
+    function normalizeGridTasks(rawTasks) {
+        if (!Array.isArray(rawTasks)) {
+            return [];
+        }
+        return rawTasks.map(task => {
+            const runtime = task && typeof task === 'object' ? task.runtime || {} : {};
+            const id = String(task?.id ?? task?.taskId ?? '未命名任务').trim() || '未命名任务';
+            const status = task?.status ? String(task.status).toUpperCase() : 'UNKNOWN';
+            return {
+                id,
+                baseAsset: task?.baseAsset ?? task?.baseAssert ?? '',
+                quoteAsset: task?.quoteAsset ?? task?.quoteAssert ?? '',
+                doubled: Boolean(task?.doubled),
+                reversed: Boolean(task?.reversed),
+                startPrice: toNumberOrNull(task?.startPrice),
+                gridRate: toNumberOrNull(task?.gridRate),
+                gridValue: toNumberOrNull(task?.gridValue),
+                status,
+                runtime: {
+                    baseQty: toNumberOrNull(runtime.baseQty),
+                    quoteQty: toNumberOrNull(runtime.quoteQty),
+                    buyPrice: toNumberOrNull(runtime.buyPrice),
+                    sellPrice: toNumberOrNull(runtime.sellPrice),
+                    lastTradePrice: toNumberOrNull(runtime.lastTradePrice)
+                }
+            };
+        });
     }
 
     function safeNumber(value) {
@@ -640,6 +1034,92 @@
             return null;
         }
         return Math.min(Math.max(ratio, 0), 1);
+    }
+
+    function computeRealizedMetrics(buyQty, sellQty, avgBuyPrice, avgSellPrice) {
+        const matchedQty = Math.min(buyQty || 0, sellQty || 0);
+        const hasBothSides = matchedQty > 0
+            && Number.isFinite(avgBuyPrice)
+            && Number.isFinite(avgSellPrice)
+            && avgBuyPrice > 0
+            && avgSellPrice > 0;
+        const priceSpread = hasBothSides ? (avgSellPrice - avgBuyPrice) : 0;
+        const realizedProfit = hasBothSides ? matchedQty * priceSpread : 0;
+        return {
+            matchedQty,
+            priceSpread,
+            realizedProfit
+        };
+    }
+
+    function aggregateOrdersBySymbol(orders, side) {
+        const map = new Map();
+        (orders || []).forEach(order => {
+            const symbol = order.symbol || 'UNKNOWN';
+            if (!map.has(symbol)) {
+                map.set(symbol, {
+                    symbol,
+                    side,
+                    quantity: 0,
+                    notional: 0,
+                    totalFee: 0,
+                    makerParticipationSum: 0,
+                    makerParticipationCount: 0,
+                    makerNotional: 0,
+                    participationNotional: 0,
+                    orderCount: 0,
+                    earliest: Number.POSITIVE_INFINITY,
+                    latest: Number.NEGATIVE_INFINITY,
+                    orders: []
+                });
+            }
+            const entry = map.get(symbol);
+            const quantity = Number.isFinite(order.quantity) ? order.quantity : 0;
+            const notional = Number.isFinite(order.notional) ? order.notional : 0;
+            entry.quantity += quantity;
+            entry.notional += notional;
+            if (Number.isFinite(order.txFee)) {
+                entry.totalFee += order.txFee;
+            }
+            if (Number.isFinite(order.makerParticipation)) {
+                entry.makerParticipationSum += order.makerParticipation;
+                entry.makerParticipationCount += 1;
+                entry.participationNotional += notional;
+                entry.makerNotional += notional * order.makerParticipation;
+            }
+            entry.orderCount += 1;
+            if (Number.isFinite(order.updateTime)) {
+                entry.earliest = Math.min(entry.earliest, order.updateTime);
+                entry.latest = Math.max(entry.latest, order.updateTime);
+            }
+            entry.orders.push(order);
+        });
+        return Array.from(map.values()).map(entry => ({
+            ...entry,
+            avgPrice: entry.quantity ? entry.notional / entry.quantity : 0,
+            avgMakerParticipation: entry.makerParticipationCount
+                ? entry.makerParticipationSum / entry.makerParticipationCount
+                : null,
+            makerOrderRatio: entry.participationNotional
+                ? entry.makerNotional / entry.participationNotional
+                : null,
+            earliest: Number.isFinite(entry.earliest) ? entry.earliest : NaN,
+            latest: Number.isFinite(entry.latest) ? entry.latest : NaN
+        }));
+    }
+
+    function buildArbitrageSymbolLegs(arbitrage) {
+        const buyLegs = aggregateOrdersBySymbol(arbitrage.buyOrders || [], 'BUY');
+        const sellLegs = aggregateOrdersBySymbol(arbitrage.sellOrders || [], 'SELL');
+        return [...buyLegs, ...sellLegs].sort((a, b) => {
+            if (a.symbol === b.symbol) {
+                if (a.side === b.side) {
+                    return 0;
+                }
+                return a.side.localeCompare(b.side);
+            }
+            return a.symbol.localeCompare(b.symbol);
+        });
     }
 
     function computeSummary(orders) {
@@ -874,39 +1354,68 @@
         return Array.from(tasksById.values())
             .map(task => {
                 const arbitrages = Array.from(task.arbitrages.values())
-                    .map(arbitrage => ({
-                        ...arbitrage,
-                        profit: arbitrage.sellNotional - arbitrage.buyNotional,
-                        status: determineArbitrageStatus(arbitrage),
-                        avgBuyPrice: arbitrage.buyQty ? arbitrage.buyNotional / arbitrage.buyQty : 0,
-                        avgSellPrice: arbitrage.sellQty ? arbitrage.sellNotional / arbitrage.sellQty : 0,
-                        makerParticipation: arbitrage.makerParticipationCount
-                            ? arbitrage.makerParticipationSum / arbitrage.makerParticipationCount
-                            : null,
-                        makerOrderRatio: arbitrage.participationNotional
-                            ? arbitrage.makerNotional / arbitrage.participationNotional
-                            : null
-                    }))
+                    .map(arbitrage => {
+                        const avgBuyPrice = arbitrage.buyQty ? arbitrage.buyNotional / arbitrage.buyQty : 0;
+                        const avgSellPrice = arbitrage.sellQty ? arbitrage.sellNotional / arbitrage.sellQty : 0;
+                        const {matchedQty, priceSpread, realizedProfit} = computeRealizedMetrics(
+                            arbitrage.buyQty,
+                            arbitrage.sellQty,
+                            avgBuyPrice,
+                            avgSellPrice
+                        );
+                        const symbolLegs = buildArbitrageSymbolLegs(arbitrage);
+                        return {
+                            ...arbitrage,
+                            profit: arbitrage.sellNotional - arbitrage.buyNotional,
+                            status: determineArbitrageStatus(arbitrage),
+                            avgBuyPrice,
+                            avgSellPrice,
+                            matchedQty,
+                            priceSpread,
+                            realizedProfit,
+                            symbolLegs,
+                            makerParticipation: arbitrage.makerParticipationCount
+                                ? arbitrage.makerParticipationSum / arbitrage.makerParticipationCount
+                                : null,
+                            makerOrderRatio: arbitrage.participationNotional
+                                ? arbitrage.makerNotional / arbitrage.participationNotional
+                                : null
+                        };
+                    })
                     .sort((a, b) => b.end - a.end);
                 const symbolStats = Array.from(task.symbolMap.values())
-                    .map(symbol => ({
-                        ...symbol,
-                        avgBuyPrice: symbol.buyQty ? symbol.buyNotional / symbol.buyQty : 0,
-                        avgSellPrice: symbol.sellQty ? symbol.sellNotional / symbol.sellQty : 0,
-                        profit: symbol.sellNotional - symbol.buyNotional,
-                        openQty: symbol.buyQty - symbol.sellQty,
-                        openNotional: symbol.buyNotional - symbol.sellNotional,
-                        totalFee: symbol.fee,
-                        makerFeeTotal: symbol.makerFee,
-                        takerFeeTotal: symbol.takerFee,
-                        makerParticipation: symbol.makerParticipationCount
-                            ? symbol.makerParticipationSum / symbol.makerParticipationCount
-                            : null,
-                        makerOrderRatio: symbol.participationNotional
-                            ? symbol.makerNotional / symbol.participationNotional
-                            : null
-                    }))
+                    .map(symbol => {
+                        const avgBuyPrice = symbol.buyQty ? symbol.buyNotional / symbol.buyQty : 0;
+                        const avgSellPrice = symbol.sellQty ? symbol.sellNotional / symbol.sellQty : 0;
+                        const {matchedQty, priceSpread, realizedProfit} = computeRealizedMetrics(
+                            symbol.buyQty,
+                            symbol.sellQty,
+                            avgBuyPrice,
+                            avgSellPrice
+                        );
+                        return {
+                            ...symbol,
+                            avgBuyPrice,
+                            avgSellPrice,
+                            profit: symbol.sellNotional - symbol.buyNotional,
+                            priceSpread,
+                            matchedQty,
+                            realizedProfit,
+                            openQty: symbol.buyQty - symbol.sellQty,
+                            openNotional: symbol.buyNotional - symbol.sellNotional,
+                            totalFee: symbol.fee,
+                            makerFeeTotal: symbol.makerFee,
+                            takerFeeTotal: symbol.takerFee,
+                            makerParticipation: symbol.makerParticipationCount
+                                ? symbol.makerParticipationSum / symbol.makerParticipationCount
+                                : null,
+                            makerOrderRatio: symbol.participationNotional
+                                ? symbol.makerNotional / symbol.participationNotional
+                                : null
+                        };
+                    })
                     .sort((a, b) => a.symbol.localeCompare(b.symbol));
+                const totalRealizedProfit = symbolStats.reduce((sum, item) => sum + item.realizedProfit, 0);
                 const completedCount = arbitrages.filter(item => item.status === '已完成').length;
                 const openCount = arbitrages.length - completedCount;
                 const netExposureQty = symbolStats.reduce((sum, item) => sum + item.openQty, 0);
@@ -925,6 +1434,7 @@
                     buyNotional: task.buyNotional,
                     sellNotional: task.sellNotional,
                     profit: task.sellNotional - task.buyNotional,
+                    realizedProfit: totalRealizedProfit,
                     netExposureQty,
                     netExposureNotional,
                     symbolStats,
@@ -947,6 +1457,556 @@
                 };
             })
             .sort((a, b) => b.end - a.end);
+    }
+
+    function createEmptyTaskStats(gridTask) {
+        const symbols = [];
+        if (gridTask?.baseAsset) {
+            symbols.push(String(gridTask.baseAsset));
+        }
+        if (gridTask?.quoteAsset) {
+            symbols.push(String(gridTask.quoteAsset));
+        }
+        return {
+            taskId: gridTask?.id ?? '未命名任务',
+            symbols,
+            arbitrages: [],
+            arbitrageCount: 0,
+            completedCount: 0,
+            openCount: 0,
+            totalOrders: 0,
+            buyCount: 0,
+            sellCount: 0,
+            buyNotional: 0,
+            sellNotional: 0,
+            profit: 0,
+            realizedProfit: 0,
+            netExposureQty: 0,
+            netExposureNotional: 0,
+            symbolStats: [],
+            latestTrade: NaN,
+            totalFee: 0,
+            makerFee: 0,
+            takerFee: 0,
+            makerParticipation: null,
+            makerOrderRatio: null,
+            makerParticipationSum: 0,
+            makerParticipationCount: 0,
+            makerNotional: 0,
+            participationNotional: 0,
+            start: NaN,
+            end: NaN,
+            gridTask,
+            hasOrders: false
+        };
+    }
+
+    function createPlaceholderSymbolStats(symbol) {
+        return {
+            symbol,
+            orderCount: 0,
+            buyQty: 0,
+            sellQty: 0,
+            buyNotional: 0,
+            sellNotional: 0,
+            avgBuyPrice: 0,
+            avgSellPrice: 0,
+            profit: 0,
+            priceSpread: 0,
+            matchedQty: 0,
+            realizedProfit: 0,
+            openQty: 0,
+            openNotional: 0,
+            totalFee: 0,
+            makerFeeTotal: 0,
+            takerFeeTotal: 0,
+            makerParticipation: null,
+            makerOrderRatio: null,
+            lastUpdate: NaN
+        };
+    }
+
+    function composeAssetStats(symbolStats, gridTask) {
+        const statsArray = Array.isArray(symbolStats) ? symbolStats : [];
+        const statsMap = new Map(statsArray.map(stat => [stat.symbol, stat]));
+        const desiredOrder = [];
+        if (gridTask?.baseAsset) {
+            desiredOrder.push(String(gridTask.baseAsset));
+        }
+        if (gridTask?.quoteAsset && gridTask.quoteAsset !== gridTask.baseAsset) {
+            desiredOrder.push(String(gridTask.quoteAsset));
+        }
+        const seen = new Set();
+        const ordered = [];
+        desiredOrder.forEach(symbol => {
+            if (!symbol || seen.has(symbol)) {
+                return;
+            }
+            const stats = statsMap.get(symbol);
+            ordered.push(stats ? {...stats} : createPlaceholderSymbolStats(symbol));
+            seen.add(symbol);
+        });
+        statsArray.forEach(stat => {
+            if (seen.has(stat.symbol)) {
+                return;
+            }
+            ordered.push({...stat});
+            seen.add(stat.symbol);
+        });
+        return ordered;
+    }
+
+    function findLegBySymbol(legs, symbol) {
+        if (!symbol || !Array.isArray(legs)) {
+            return null;
+        }
+        const normalized = String(symbol).toUpperCase();
+        return legs.find(leg => String(leg.symbol).toUpperCase() === normalized) || null;
+    }
+
+    function enhanceArbitrageWithGrid(arbitrage, gridTask) {
+        const legs = Array.isArray(arbitrage.symbolLegs) ? arbitrage.symbolLegs : [];
+        const baseSymbol = gridTask?.baseAsset || gridTask?.baseAssert || null;
+        const quoteSymbol = gridTask?.quoteAsset || gridTask?.quoteAssert || null;
+        let baseLeg = baseSymbol ? findLegBySymbol(legs, baseSymbol) : null;
+        let quoteLeg = quoteSymbol ? findLegBySymbol(legs, quoteSymbol) : null;
+        if (!baseLeg && legs.length) {
+            baseLeg = legs[0];
+        }
+        if ((!quoteLeg && legs.length > 1) || (quoteLeg && baseLeg && quoteLeg === baseLeg && legs.length > 1)) {
+            quoteLeg = legs.find(leg => leg !== baseLeg) || quoteLeg;
+        }
+        const baseAvgPrice = baseLeg && Number.isFinite(baseLeg.avgPrice) && baseLeg.avgPrice > 0
+            ? baseLeg.avgPrice
+            : null;
+        const quoteAvgPrice = quoteLeg && Number.isFinite(quoteLeg.avgPrice) && quoteLeg.avgPrice > 0
+            ? quoteLeg.avgPrice
+            : null;
+        let averageCrossRate = null;
+        let averageBuyRate = null;
+        let averageSellRate = null;
+        if (baseAvgPrice && quoteAvgPrice) {
+            const rate = baseAvgPrice / quoteAvgPrice;
+            averageCrossRate = rate;
+            if (baseLeg?.side === 'BUY' && quoteLeg?.side === 'SELL') {
+                averageBuyRate = rate;
+            } else if (baseLeg?.side === 'SELL' && quoteLeg?.side === 'BUY') {
+                averageSellRate = rate;
+            }
+        }
+        return {
+            ...arbitrage,
+            symbolLegs: legs,
+            baseLeg,
+            quoteLeg,
+            averageCrossRate,
+            averageBuyRate,
+            averageSellRate
+        };
+    }
+
+    function mergeGridTasksWithStats(gridTasks, taskStats) {
+        const statsById = new Map(taskStats.map(task => [task.taskId, task]));
+        const used = new Set();
+        const merged = gridTasks.map((gridTask, index) => {
+            const stats = statsById.get(gridTask.id);
+            if (stats) {
+                used.add(gridTask.id);
+                return {
+                    ...stats,
+                    gridTask,
+                    hasOrders: stats.totalOrders > 0,
+                    gridIndex: index
+                };
+            }
+            return {
+                ...createEmptyTaskStats(gridTask),
+                gridIndex: index
+            };
+        });
+
+        const leftovers = taskStats
+            .filter(task => !used.has(task.taskId))
+            .map(task => ({
+                ...task,
+                gridTask: null,
+                hasOrders: task.totalOrders > 0,
+                gridIndex: Number.POSITIVE_INFINITY
+            }))
+            .sort((a, b) => {
+                const aTime = Number.isFinite(a.end) ? a.end : Number.isFinite(a.latestTrade) ? a.latestTrade : 0;
+                const bTime = Number.isFinite(b.end) ? b.end : Number.isFinite(b.latestTrade) ? b.latestTrade : 0;
+                if (bTime !== aTime) {
+                    return bTime - aTime;
+                }
+                return a.taskId.localeCompare(b.taskId);
+            });
+
+        return [...merged, ...leftovers].map(item => {
+            const {gridIndex, ...rest} = item;
+            const assetStats = composeAssetStats(rest.symbolStats, rest.gridTask);
+            const arbitrages = Array.isArray(rest.arbitrages)
+                ? rest.arbitrages.map(arbitrage => enhanceArbitrageWithGrid(arbitrage, rest.gridTask))
+                : [];
+            return {
+                ...rest,
+                assetStats,
+                arbitrages
+            };
+        });
+    }
+
+    function determineDefaultTaskId(tasks) {
+        if (!Array.isArray(tasks) || !tasks.length) {
+            return null;
+        }
+        const withOrders = tasks.filter(task => task.totalOrders > 0);
+        return (withOrders[0] || tasks[0]).taskId;
+    }
+
+    function getTaskById(taskId) {
+        if (!taskId) {
+            return null;
+        }
+        return dashboardState.tasks.find(task => task.taskId === taskId) || null;
+    }
+
+    function getOrdersByTaskId(taskId) {
+        if (!taskId) {
+            return [];
+        }
+        return dashboardState.orders.filter(order => order.taskId === taskId);
+    }
+
+    function populateTaskSelector(tasks, selectedTaskId) {
+        const selector = document.getElementById('grid-task-selector');
+        if (!selector) {
+            return;
+        }
+
+        selector.innerHTML = '';
+
+        if (!Array.isArray(tasks) || !tasks.length) {
+            selector.disabled = true;
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '暂无网格任务';
+            selector.appendChild(option);
+            selector.value = '';
+            return;
+        }
+
+        selector.disabled = false;
+        tasks.forEach(task => {
+            const option = document.createElement('option');
+            option.value = task.taskId;
+            const pairText = task.gridTask
+                ? [task.gridTask.baseAsset, task.gridTask.quoteAsset].filter(Boolean).join('/')
+                : (task.symbols && task.symbols.length ? task.symbols.join('/') : '');
+            option.textContent = pairText ? `${task.taskId} · ${pairText}` : task.taskId;
+            selector.appendChild(option);
+        });
+
+        const fallbackId = determineDefaultTaskId(tasks);
+        const targetValue = tasks.some(task => task.taskId === selectedTaskId)
+            ? selectedTaskId
+            : fallbackId;
+        selector.value = targetValue || '';
+    }
+
+    function renderSelectedTaskOverview(task) {
+        const container = document.getElementById('selected-task-overview');
+        const emptyHint = document.getElementById('grid-task-empty');
+        if (!container || !emptyHint) {
+            return;
+        }
+
+        container.innerHTML = '';
+
+        if (!task) {
+            emptyHint.hidden = false;
+            return;
+        }
+
+        emptyHint.hidden = true;
+        const assetStats = Array.isArray(task.assetStats) ? task.assetStats : [];
+        const metrics = [
+            {label: '累计已套利利润', value: task.realizedProfit, decimals: 2, isProfit: true},
+            {label: '累计名义盈亏', value: task.profit, decimals: 2, isProfit: true},
+            {label: '累计手续费', value: task.totalFee, decimals: 6},
+            {label: '净持仓名义', value: task.netExposureNotional, decimals: 2, isProfit: true},
+            {label: '订单总数', value: task.totalOrders, decimals: 0},
+            {label: '套利批次', value: task.arbitrageCount, decimals: 0}
+        ];
+
+        const gridTask = task.gridTask || null;
+        const pairText = gridTask
+            ? [gridTask.baseAsset, gridTask.quoteAsset].filter(Boolean).join(' / ')
+            : (task.symbols && task.symbols.length ? task.symbols.join(' / ') : '-');
+        const statusLabel = gridTask ? formatGridStatus(gridTask.status) : '未知';
+        const gridInfoParts = [];
+        if (gridTask && Number.isFinite(gridTask.gridRate)) {
+            gridInfoParts.push(`网格间距 ${formatPercent(gridTask.gridRate, 2)}`);
+        }
+        if (gridTask && Number.isFinite(gridTask.gridValue)) {
+            gridInfoParts.push(`单格金额 ${formatNumber(gridTask.gridValue, 2)}`);
+        }
+        const timeRange = `时间范围：${formatDate(task.start)} ~ ${formatDate(task.end)}`;
+
+        container.innerHTML = `
+            <div class="asset-overview">
+                <div class="asset-overview-header">
+                    <span>任务 <strong>${task.taskId}</strong></span>
+                    <span>币对 <strong>${pairText || '-'}</strong></span>
+                    <span>状态 <strong>${statusLabel}</strong></span>
+                    ${gridInfoParts.length ? `<span>${gridInfoParts.join(' · ')}</span>` : ''}
+                </div>
+                <div class="asset-metrics-grid">
+                    ${metrics.map(renderOverviewMetric).join('')}
+                </div>
+                ${
+            assetStats.length
+                ? `<div class="asset-card-grid">${assetStats.map(renderAssetCard).join('')}</div>`
+                : '<p class="placeholder">暂无资产成交记录</p>'
+        }
+                <div class="asset-overview-footer">${timeRange}</div>
+            </div>
+        `;
+    }
+
+    function renderOverviewMetric(metric) {
+        const label = metric.label || '-';
+        const value = metric.value;
+        const decimals = typeof metric.decimals === 'number' ? metric.decimals : 2;
+        const isProfit = Boolean(metric.isProfit);
+        const isPercent = Boolean(metric.isPercent);
+        let displayValue = '-';
+        if (isPercent) {
+            displayValue = Number.isFinite(value) ? formatPercent(value, decimals) : '-';
+        } else if (Number.isFinite(value)) {
+            displayValue = formatNumber(value, decimals);
+        }
+        let valueClass = 'asset-metric-value';
+        if (isProfit && Number.isFinite(value)) {
+            valueClass += ` ${getProfitClass(value)}`;
+        }
+        return `
+            <div class="asset-metric">
+                <span class="asset-metric-label">${label}</span>
+                <span class="${valueClass}">${displayValue}</span>
+            </div>
+        `;
+    }
+
+    function renderAssetCard(asset) {
+        const metrics = [
+            {label: '总买入量', value: asset.buyQty, decimals: 4},
+            {label: '总买入金额', value: asset.buyNotional, decimals: 2},
+            {label: '平均买入价', value: asset.avgBuyPrice, decimals: 6},
+            {label: '总卖出量', value: asset.sellQty, decimals: 4},
+            {label: '总卖出金额', value: asset.sellNotional, decimals: 2},
+            {label: '平均卖出价', value: asset.avgSellPrice, decimals: 6},
+            {label: '价差', value: asset.priceSpread, decimals: 6, isProfit: true},
+            {label: '已套利匹配量', value: asset.matchedQty, decimals: 4},
+            {label: '已套利利润', value: asset.realizedProfit, decimals: 2, isProfit: true},
+            {label: '名义盈亏', value: asset.profit, decimals: 2, isProfit: true},
+            {label: '总手续费', value: asset.totalFee, decimals: 6},
+            {label: '当前持仓数量', value: asset.openQty, decimals: 4, isProfit: true},
+            {label: '当前持仓名义', value: asset.openNotional, decimals: 2, isProfit: true},
+            {label: 'Maker订单占比', value: asset.makerOrderRatio, decimals: 1, isPercent: true}
+        ];
+        const profitValue = Number.isFinite(asset.realizedProfit)
+            ? formatNumber(asset.realizedProfit, 2)
+            : '-';
+        const profitClass = Number.isFinite(asset.realizedProfit)
+            ? `asset-card-profit ${getProfitClass(asset.realizedProfit)}`
+            : 'asset-card-profit profit-neutral';
+        return `
+            <div class="asset-card">
+                <div class="asset-card-header">
+                    <span class="asset-card-title">${asset.symbol || '-'}</span>
+                    <span class="${profitClass}">${profitValue}</span>
+                </div>
+                <div class="asset-card-metrics">
+                    ${metrics.map(renderAssetMetric).join('')}
+                </div>
+                <div class="asset-card-footer">最新成交：${formatDate(asset.lastUpdate)}</div>
+            </div>
+        `;
+    }
+
+    function renderAssetMetric(metric) {
+        const label = metric.label || '-';
+        const value = metric.value;
+        const decimals = typeof metric.decimals === 'number' ? metric.decimals : 2;
+        const isProfit = Boolean(metric.isProfit);
+        const isPercent = Boolean(metric.isPercent);
+        let displayValue = '-';
+        if (isPercent) {
+            displayValue = Number.isFinite(value) ? formatPercent(value, decimals) : '-';
+        } else if (Number.isFinite(value)) {
+            displayValue = formatNumber(value, decimals);
+        }
+        let valueClass = 'asset-card-metric-value';
+        if (isProfit && Number.isFinite(value)) {
+            valueClass += ` ${getProfitClass(value)}`;
+        }
+        return `
+            <div class="asset-card-metric">
+                <span class="asset-card-metric-label">${label}</span>
+                <span class="${valueClass}">${displayValue}</span>
+            </div>
+        `;
+    }
+
+    function renderDashboard() {
+        const taskId = dashboardState.selectedTaskId;
+        const selectedTask = getTaskById(taskId);
+        const filteredOrders = getOrdersByTaskId(taskId);
+        const summary = filteredOrders.length ? computeSummary(filteredOrders) : null;
+
+        renderSelectedTaskOverview(selectedTask);
+        renderSummary(summary);
+        renderTaskHierarchy(dashboardState.tasks, taskId);
+        renderTimeline(filteredOrders);
+        renderProfitOverview(summary, selectedTask);
+        updateSectionIndicators(taskId);
+    }
+
+    const GRID_STATUS_LABELS = {
+        RUNNING: '运行中',
+        ACTIVE: '运行中',
+        PAUSED: '已暂停',
+        IDLE: '待启动',
+        STOPPED: '已停止',
+        FINISHED: '已结束',
+        COMPLETED: '已结束',
+        ERROR: '异常',
+        FAILED: '异常',
+        WAITING: '待启动',
+        UNKNOWN: '未知'
+    };
+
+    function formatGridStatus(status) {
+        if (!status) {
+            return GRID_STATUS_LABELS.UNKNOWN;
+        }
+        const normalized = String(status).toUpperCase();
+        return GRID_STATUS_LABELS[normalized] || normalized;
+    }
+
+    function getStatusClass(status) {
+        if (!status) {
+            return 'status-unknown';
+        }
+        const normalized = String(status).toUpperCase();
+        if (normalized === 'RUNNING' || normalized === 'ACTIVE') {
+            return 'status-running';
+        }
+        if (normalized === 'PAUSED' || normalized === 'WAITING' || normalized === 'IDLE') {
+            return 'status-idle';
+        }
+        if (normalized === 'STOPPED') {
+            return 'status-stopped';
+        }
+        if (normalized === 'FINISHED' || normalized === 'COMPLETED') {
+            return 'status-finished';
+        }
+        if (normalized === 'ERROR' || normalized === 'FAILED') {
+            return 'status-error';
+        }
+        return 'status-unknown';
+    }
+
+    function formatBoolean(value) {
+        if (value === undefined || value === null) {
+            return '-';
+        }
+        return value ? '是' : '否';
+    }
+
+    function formatValueWithUnit(value, unit = '', decimals = 2) {
+        if (!Number.isFinite(value)) {
+            return '-';
+        }
+        const formatted = formatNumber(value, decimals);
+        return unit ? `${formatted} ${unit}` : formatted;
+    }
+
+    function hasRuntimeData(runtime) {
+        if (!runtime || typeof runtime !== 'object') {
+            return false;
+        }
+        return ['baseQty', 'quoteQty', 'buyPrice', 'sellPrice', 'lastTradePrice'].some(key => Number.isFinite(runtime[key]));
+    }
+
+    function renderConfigItem(label, value) {
+        return `
+            <div class="grid-config-item">
+                <span class="config-label">${label}</span>
+                <span class="config-value">${value}</span>
+            </div>
+        `;
+    }
+
+    function createGridConfig(gridTask) {
+        if (!gridTask) {
+            return '';
+        }
+        const pair = [gridTask.baseAsset, gridTask.quoteAsset].filter(Boolean).join(' / ') || '-';
+        const sections = [];
+        sections.push(`
+            <div class="grid-config-section">
+                <div class="grid-config-title">任务参数</div>
+                <div class="grid-config-grid">
+                    ${renderConfigItem('网格任务', gridTask.id)}
+                    ${renderConfigItem('基础资产', gridTask.baseAsset || '-')}
+                    ${renderConfigItem('报价资产', gridTask.quoteAsset || '-')}
+                    ${renderConfigItem('标的组合', pair)}
+                    ${renderConfigItem('起始价', formatNumber(gridTask.startPrice, 6))}
+                    ${renderConfigItem('网格间距', formatPercent(gridTask.gridRate, 2))}
+                    ${renderConfigItem('单格金额', formatValueWithUnit(gridTask.gridValue, 'USDT', 2))}
+                    ${renderConfigItem('双向执行', formatBoolean(gridTask.doubled))}
+                    ${renderConfigItem('反向套利', formatBoolean(gridTask.reversed))}
+                </div>
+            </div>
+        `);
+
+        if (hasRuntimeData(gridTask.runtime)) {
+            const runtime = gridTask.runtime || {};
+            sections.push(`
+                <div class="grid-config-section">
+                    <div class="grid-config-title">运行状态</div>
+                    <div class="grid-config-grid">
+                        ${renderConfigItem('基础资产持仓', formatNumber(runtime.baseQty, 4))}
+                        ${renderConfigItem('报价资产持仓', formatNumber(runtime.quoteQty, 4))}
+                        ${renderConfigItem('当前买入价', formatNumber(runtime.buyPrice, 6))}
+                        ${renderConfigItem('当前卖出价', formatNumber(runtime.sellPrice, 6))}
+                        ${renderConfigItem('最新成交价', formatNumber(runtime.lastTradePrice, 6))}
+                    </div>
+                </div>
+            `);
+        }
+
+        return `<div class="grid-config">${sections.join('')}</div>`;
+    }
+
+    function createRuntimeSummary(gridTask) {
+        if (!gridTask) {
+            return '';
+        }
+        const runtime = gridTask.runtime || {};
+        const segments = [];
+        if (Number.isFinite(runtime.baseQty) || Number.isFinite(runtime.quoteQty)) {
+            segments.push(`持仓 ${formatNumber(runtime.baseQty, 4)} / ${formatNumber(runtime.quoteQty, 4)}`);
+        }
+        if (Number.isFinite(runtime.buyPrice) || Number.isFinite(runtime.sellPrice)) {
+            segments.push(`挂单 买 ${formatNumber(runtime.buyPrice, 6)} / 卖 ${formatNumber(runtime.sellPrice, 6)}`);
+        }
+        if (Number.isFinite(runtime.lastTradePrice)) {
+            segments.push(`最新成交 ${formatNumber(runtime.lastTradePrice, 6)}`);
+        }
+        return segments.join(' · ');
     }
 
     function renderSummary(summary) {
@@ -974,148 +2034,8 @@
         });
     }
 
-    function renderPairOverview(tasks, selectedTaskId) {
-        const container = document.getElementById('pair-overview');
-        const emptyHint = document.getElementById('pair-empty');
-        container.innerHTML = '';
-
-        if (!tasks.length) {
-            emptyHint.hidden = false;
-            return;
-        }
-
-        emptyHint.hidden = true;
-        const aggregate = aggregateTaskMetrics(tasks);
-        const cards = aggregate ? [aggregate, ...tasks] : tasks;
-        cards.forEach(task => {
-            const card = document.createElement('div');
-            const isAggregate = Boolean(task.isAggregate);
-            const isActive = (selectedTaskId === null && isAggregate) || (selectedTaskId === task.taskId);
-            card.className = `pair-card${isActive ? ' active' : ''}`;
-            card.dataset.taskId = isAggregate ? '' : task.taskId;
-            const metrics = [];
-            if (isAggregate) {
-                metrics.push(renderPairMetric('任务数量', task.taskCount));
-            }
-            metrics.push(
-                renderPairMetric('完成套利', task.completedCount),
-                renderPairMetric('未平仓批次', task.openCount),
-                renderPairMetric('订单总数', task.totalOrders),
-                renderPairMetric('净持仓(数量)', task.netExposureQty, 4),
-                renderPairMetric('净名义金额', task.netExposureNotional, 2, true),
-                renderPairMetric('手续费总额', task.totalFee, 6),
-                renderPairMetric('Maker订单占比', task.makerOrderRatio, 1, false, false, true),
-                renderPairMetric('平均Maker参与度', task.makerParticipation, 1, false, false, true),
-                renderPairMetric('最新成交', task.latestTrade, null, false, true)
-            );
-            card.innerHTML = `
-                <div class="pair-header">
-                    <span class="pair-title">${task.taskId}</span>
-                    <span class="pair-title ${getProfitClass(task.profit)}">${formatNumber(task.profit, 2)}</span>
-                </div>
-                <div class="pair-subtitle">
-                    ${renderPairSubtitle(task)}
-                </div>
-                <div class="pair-metrics">
-                    ${metrics.join('')}
-                </div>
-                <div class="pair-footer">时间范围：${formatDate(task.start)} ~ ${formatDate(task.end)}</div>
-            `;
-            card.addEventListener('click', () => {
-                const nextTaskId = isAggregate ? null : task.taskId;
-                updateSelectedTaskId(nextTaskId);
-            });
-            container.appendChild(card);
-        });
-    }
-
-    function aggregateTaskMetrics(tasks) {
-        if (!tasks.length || tasks.length <= 1) {
-            return null;
-        }
-        const symbols = new Set();
-        let arbitrageCount = 0;
-        let completedCount = 0;
-        let openCount = 0;
-        let totalOrders = 0;
-        let netExposureQty = 0;
-        let netExposureNotional = 0;
-        let profit = 0;
-        let start = Infinity;
-        let end = -Infinity;
-        let latestTrade = -Infinity;
-        let totalFee = 0;
-        let makerFee = 0;
-        let takerFee = 0;
-        let makerParticipationSum = 0;
-        let makerParticipationCount = 0;
-        let makerNotional = 0;
-        let participationNotional = 0;
-
-        tasks.forEach(task => {
-            task.symbols.forEach(symbol => symbols.add(symbol));
-            arbitrageCount += task.arbitrageCount;
-            completedCount += task.completedCount;
-            openCount += task.openCount;
-            totalOrders += task.totalOrders;
-            netExposureQty += task.netExposureQty;
-            netExposureNotional += task.netExposureNotional;
-            profit += task.profit;
-            totalFee += Number.isFinite(task.totalFee) ? task.totalFee : 0;
-            makerFee += Number.isFinite(task.makerFee) ? task.makerFee : 0;
-            takerFee += Number.isFinite(task.takerFee) ? task.takerFee : 0;
-            makerParticipationSum += Number.isFinite(task.makerParticipationSum) ? task.makerParticipationSum : 0;
-            makerParticipationCount += Number.isFinite(task.makerParticipationCount) ? task.makerParticipationCount : 0;
-            makerNotional += Number.isFinite(task.makerNotional) ? task.makerNotional : 0;
-            participationNotional += Number.isFinite(task.participationNotional) ? task.participationNotional : 0;
-            if (Number.isFinite(task.start)) {
-                start = Math.min(start, task.start);
-            }
-            if (Number.isFinite(task.end)) {
-                end = Math.max(end, task.end);
-            }
-            if (Number.isFinite(task.latestTrade)) {
-                latestTrade = Math.max(latestTrade, task.latestTrade);
-            }
-        });
-
-        return {
-            taskId: '全部任务',
-            isAggregate: true,
-            taskCount: tasks.length,
-            symbols: Array.from(symbols).sort(),
-            arbitrageCount,
-            completedCount,
-            openCount,
-            totalOrders,
-            netExposureQty,
-            netExposureNotional,
-            profit,
-            totalFee,
-            makerFee,
-            takerFee,
-            makerParticipation: makerParticipationCount ? makerParticipationSum / makerParticipationCount : null,
-            makerOrderRatio: participationNotional ? makerNotional / participationNotional : null,
-            makerParticipationSum,
-            makerParticipationCount,
-            makerNotional,
-            participationNotional,
-            latestTrade: latestTrade > 0 ? latestTrade : NaN,
-            start: start < Infinity ? start : NaN,
-            end: end > -Infinity ? end : NaN
-        };
-    }
-
-    function renderPairSubtitle(task) {
-        if (task.isAggregate) {
-            const symbolText = task.symbols.length ? task.symbols.join(' / ') : '-';
-            return `任务数：${formatNumber(task.taskCount, 0)} · 涵盖符号：${symbolText}`;
-        }
-        return `符号：${task.symbols.join(' / ')} · 套利批次 ${formatNumber(task.arbitrageCount, 0)}`;
-    }
-
     function updateSectionIndicators(taskId) {
-        const text = taskId ? `当前视图：${taskId}` : '当前视图：全部任务';
+        const text = taskId ? `当前任务：${taskId}` : '当前任务：-';
         const taskIndicator = document.getElementById('task-filter-indicator');
         const timelineIndicator = document.getElementById('timeline-filter-indicator');
         if (taskIndicator) {
@@ -1127,45 +2047,33 @@
     }
 
     function updateSelectedTaskId(taskId) {
-        if (dashboardState.selectedTaskId === taskId) {
-            taskId = null;
+        const tasks = dashboardState.tasks;
+        if (!tasks.length) {
+            dashboardState.selectedTaskId = null;
+        } else {
+            const exists = tasks.some(task => task.taskId === taskId);
+            dashboardState.selectedTaskId = exists ? taskId : determineDefaultTaskId(tasks);
         }
-        dashboardState.selectedTaskId = taskId;
-        renderPairOverview(dashboardState.tasks, dashboardState.selectedTaskId);
-        renderTaskHierarchy(dashboardState.tasks, dashboardState.selectedTaskId);
-        renderTimeline(dashboardState.orders, dashboardState.selectedTaskId);
-        updateSectionIndicators(dashboardState.selectedTaskId);
-        if (taskId) {
+
+        const selector = document.getElementById('grid-task-selector');
+        if (selector) {
+            const desiredValue = dashboardState.selectedTaskId || '';
+            if (selector.value !== desiredValue) {
+                selector.value = desiredValue;
+            }
+        }
+
+        renderDashboard();
+
+        if (dashboardState.selectedTaskId) {
             requestAnimationFrame(() => {
-                const target = document.querySelector(`details[data-task-id="${taskId}"]`);
+                const target = document.querySelector(`details[data-task-id="${dashboardState.selectedTaskId}"]`);
                 if (target) {
                     target.open = true;
                     target.scrollIntoView({behavior: 'smooth', block: 'start'});
                 }
             });
         }
-    }
-
-    function renderPairMetric(label, value, decimals = 0, isProfitMetric = false, isTime = false, isPercent = false) {
-        let displayValue = '-';
-        let valueClass = 'pair-metric-value';
-        if (isTime) {
-            displayValue = formatDate(value);
-        } else if (Number.isFinite(value)) {
-            const fixedDecimals = typeof decimals === 'number' ? decimals : 0;
-            displayValue = isPercent
-                ? formatPercent(value, fixedDecimals)
-                : formatNumber(value, fixedDecimals);
-        }
-        if (isProfitMetric) {
-            valueClass += ` ${getProfitClass(value)}`;
-        }
-        return `
-            <div class="pair-metric">
-                <span>${label}</span>
-                <span class="${valueClass}">${displayValue}</span>
-            </div>
-        `;
     }
 
     function renderTaskHierarchy(tasks, selectedTaskId) {
@@ -1196,35 +2104,82 @@
             const content = document.createElement('div');
             content.className = 'task-block-content';
 
-            if (task.symbolStats && task.symbolStats.length) {
-                const symbolSection = document.createElement('div');
-                symbolSection.className = 'symbol-summary';
-                symbolSection.innerHTML = createSymbolSummaryTable(task.symbolStats);
-                content.appendChild(symbolSection);
+            if (task.gridTask) {
+                content.insertAdjacentHTML('beforeend', createGridConfig(task.gridTask));
             }
 
-            const table = document.createElement('table');
-            table.className = 'arbitrage-table';
-            table.innerHTML = `
-                <thead>
-                    <tr>
-                        <th>套利批次</th>
-                        <th>买入</th>
-                        <th>卖出</th>
-                        <th class="text-right">名义盈亏</th>
-                        <th>状态</th>
-                        <th>时间</th>
-                    </tr>
-                </thead>
-            `;
-            const tbody = document.createElement('tbody');
-            task.arbitrages.forEach(arbitrage => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = createArbitrageRow(arbitrage);
-                tbody.appendChild(tr);
-            });
-            table.appendChild(tbody);
-            content.appendChild(table);
+            const symbolSection = document.createElement('div');
+            symbolSection.className = 'symbol-summary';
+            symbolSection.innerHTML = createSymbolSummaryTable(task.symbolStats || []);
+            content.appendChild(symbolSection);
+
+            if (task.arbitrages && task.arbitrages.length) {
+                const table = document.createElement('table');
+                table.className = 'arbitrage-table';
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>批次ID</th>
+                            <th>交易汇率</th>
+                            <th>交易方向</th>
+                            <th class="text-right">交易金额 (USDT)</th>
+                            <th class="text-right">交易总手续费</th>
+                            <th class="text-right">已套利利润</th>
+                            <th>状态</th>
+                            <th>时间</th>
+                        </tr>
+                    </thead>
+                `;
+                const tbody = document.createElement('tbody');
+                const arbitrageRows = task.arbitrages.slice(0, 5);
+                const columnCount = table.querySelector('thead tr').children.length || 1;
+                arbitrageRows.forEach((arbitrage, index) => {
+                    const summaryRow = document.createElement('tr');
+                    summaryRow.className = 'arbitrage-summary-row';
+                    summaryRow.innerHTML = createArbitrageSummaryCells(arbitrage, task);
+                    summaryRow.tabIndex = 0;
+                    summaryRow.setAttribute('role', 'button');
+                    summaryRow.setAttribute('aria-expanded', index === 0 ? 'true' : 'false');
+
+                    const detailRow = document.createElement('tr');
+                    detailRow.className = 'arbitrage-detail-row';
+                    if (index !== 0) {
+                        detailRow.hidden = true;
+                    }
+                    const detailCell = document.createElement('td');
+                    detailCell.colSpan = columnCount;
+                    detailCell.innerHTML = createArbitrageDetail(arbitrage, task);
+                    detailRow.appendChild(detailCell);
+
+                    summaryRow.addEventListener('click', () => {
+                        toggleArbitrageDetail(summaryRow, detailRow, tbody);
+                    });
+                    summaryRow.addEventListener('keydown', event => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            toggleArbitrageDetail(summaryRow, detailRow, tbody);
+                        }
+                    });
+
+                    tbody.appendChild(summaryRow);
+                    tbody.appendChild(detailRow);
+                });
+                table.appendChild(tbody);
+                content.appendChild(table);
+                if (task.arbitrages.length > arbitrageRows.length) {
+                    const note = document.createElement('p');
+                    note.className = 'placeholder';
+                    note.textContent = `仅显示最新 ${arbitrageRows.length} 个批次`;
+                    content.appendChild(note);
+                }
+            } else {
+                const placeholder = document.createElement('p');
+                placeholder.className = 'placeholder';
+                placeholder.textContent = task.hasOrders
+                    ? '暂无套利批次统计。'
+                    : '暂无成交记录，等待订单数据。';
+                content.appendChild(placeholder);
+            }
             details.appendChild(content);
             container.appendChild(details);
         });
@@ -1280,12 +2235,32 @@
         const symbolsText = task.symbols.length ? task.symbols.join('、') : '-';
         const arbitrageSummary = `套利批次 ${formatNumber(task.arbitrageCount, 0)}（完成 ${formatNumber(task.completedCount, 0)} / 未平 ${formatNumber(task.openCount, 0)}）`;
         const orderSummary = `订单 ${formatNumber(task.totalOrders, 0)}（买 ${formatNumber(task.buyCount, 0)} / 卖 ${formatNumber(task.sellCount, 0)}）`;
-        const timeRange = `${formatDate(task.start)} ~ ${formatDate(task.end)}`;
+        const exposureLine = `未平仓量 ${formatNumber(task.netExposureQty, 4)} · 名义 ${formatNumber(task.netExposureNotional, 2)}`;
+        const timeRange = (Number.isFinite(task.start) || Number.isFinite(task.end))
+            ? `${formatDate(task.start)} ~ ${formatDate(task.end)}`
+            : '暂无成交时间';
+        const statusBadge = task.gridTask
+            ? `<span class="status-badge ${getStatusClass(task.gridTask.status)}">${formatGridStatus(task.gridTask.status)}</span>`
+            : `<span class="status-badge status-unknown">未登记</span>`;
+        const gridLine = task.gridTask
+            ? `网格间距 ${formatPercent(task.gridTask.gridRate, 2)} · 单格 ${formatValueWithUnit(task.gridTask.gridValue, 'USDT', 2)}`
+            : '未在 grid_tasks.json 中找到该任务配置';
+        const runtimeLine = task.gridTask ? createRuntimeSummary(task.gridTask) : '';
+
         return `
             <div class="task-header">
                 <div>
-                    <div class="task-title">${task.taskId}</div>
-                    <div class="task-subtitle">符号：${symbolsText} · ${arbitrageSummary} · ${orderSummary}</div>
+                    <div class="task-title-row">
+                        ${statusBadge}
+                        <span class="task-title">${task.taskId}</span>
+                    </div>
+                    <div class="task-subtitle">符号：${symbolsText}</div>
+                    <div class="task-subtitle">${gridLine}</div>
+                    ${runtimeLine ? `<div class="task-subtitle">${runtimeLine}</div>` : ''}
+                    <div class="task-subtitle">${arbitrageSummary}</div>
+                    <div class="task-subtitle">${orderSummary}</div>
+                    <div class="task-subtitle">${exposureLine}</div>
+                    <div class="task-subtitle">时间：${timeRange}</div>
                 </div>
                 <div class="task-metrics">
                     <div class="task-metric">
@@ -1305,66 +2280,163 @@
                         <span class="metric-value">${formatPercent(task.makerParticipation, 1)}</span>
                     </div>
                     <div class="task-metric">
-                        <span class="metric-label">时间范围</span>
-                        <span class="metric-value">${timeRange}</span>
+                        <span class="metric-label">最新成交</span>
+                        <span class="metric-value">${formatDate(task.latestTrade)}</span>
                     </div>
                 </div>
             </div>
         `;
     }
 
-    function createArbitrageRow(arbitrage) {
-        const synthLine = arbitrage.synthPrice
-            ? `<br><small>合成价 ${formatNumber(arbitrage.synthPrice, 6)}</small>`
-            : '';
+    function createArbitrageSummaryCells(arbitrage, task) {
+        const totalFee = (Number.isFinite(arbitrage.baseLeg?.totalFee) ? arbitrage.baseLeg.totalFee : 0)
+            + (Number.isFinite(arbitrage.quoteLeg?.totalFee) ? arbitrage.quoteLeg.totalFee : 0);
+        const synthRate = Number.isFinite(arbitrage.synthPrice) ? formatNumber(arbitrage.synthPrice, 6) : '-';
+        const realizedProfit = Number.isFinite(arbitrage.realizedProfit) ? formatNumber(arbitrage.realizedProfit, 2) : '-';
+        const baseDirection = arbitrage.baseLeg?.side === 'BUY' ? '买入' : arbitrage.baseLeg?.side === 'SELL' ? '卖出' : '-';
+        const baseAmountValue = Number.isFinite(arbitrage.baseLeg?.notional)
+            ? formatNumber(arbitrage.baseLeg.notional, 2)
+            : '-';
+        const totalFeeText = Number.isFinite(totalFee) ? formatNumber(totalFee, 6) : '-';
+        const statusText = arbitrage.status || '-';
+        const profitClass = getProfitClass(arbitrage.realizedProfit);
+        const realizedProfitText = Number.isFinite(arbitrage.realizedProfit) ? realizedProfit : '-';
+        const baseTimeStart = Number.isFinite(arbitrage.baseLeg?.earliest) ? formatDate(arbitrage.baseLeg.earliest) : formatDate(arbitrage.start);
+        const baseTimeEnd = Number.isFinite(arbitrage.baseLeg?.latest) ? formatDate(arbitrage.baseLeg.latest) : formatDate(arbitrage.end);
+        const timeLabel = `${baseTimeStart}<br><small>${baseTimeEnd}</small>`;
         return `
-            <td>${arbitrage.taskBindId}${synthLine}</td>
-            <td>${renderArbitrageLeg(arbitrage.buyOrders, {
-            qty: arbitrage.buyQty,
-            avgPrice: arbitrage.avgBuyPrice,
-            notional: arbitrage.buyNotional
-        }, '买入')}</td>
-            <td>${renderArbitrageLeg(arbitrage.sellOrders, {
-            qty: arbitrage.sellQty,
-            avgPrice: arbitrage.avgSellPrice,
-            notional: arbitrage.sellNotional
-        }, '卖出')}</td>
-            <td class="text-right"><span class="${getProfitClass(arbitrage.profit)}">${formatNumber(arbitrage.profit, 2)}</span></td>
-            <td>${arbitrage.status}</td>
-            <td>${formatDate(arbitrage.start)}<br><small>${formatDate(arbitrage.end)}</small></td>
+            <td class="arbitrage-id-cell">${arbitrage.taskBindId}</td>
+            <td>${synthRate}</td>
+            <td>${baseDirection}</td>
+            <td class="text-right">${baseAmountValue}</td>
+            <td class="text-right">${totalFeeText}</td>
+            <td class="text-right arbitrage-summary-profit-cell"><span class="${profitClass}">${realizedProfitText}</span></td>
+            <td>${statusText}</td>
+            <td>${timeLabel}</td>
         `;
     }
 
-    function renderArbitrageLeg(orders, totals, label) {
-        if (!orders.length) {
-            return '<span class="placeholder">-</span>';
-        }
-        const totalFee = orders.reduce((sum, order) => {
-            return sum + (Number.isFinite(order.txFee) ? order.txFee : 0);
-        }, 0);
-        const makerNotional = orders.reduce((sum, order) => {
-            return sum + (Number.isFinite(order.makerParticipation) ? order.notional * order.makerParticipation : 0);
-        }, 0);
-        const totalNotional = Number.isFinite(totals.notional) ? totals.notional : orders.reduce((sum, order) => sum + order.notional, 0);
-        const makerParticipation = totalNotional ? makerNotional / totalNotional : null;
-        const feeSegment = Number.isFinite(totalFee) ? ` · 手续费 ${formatNumber(totalFee, 6)}` : '';
-        const makerSegment = makerParticipation !== null ? ` · Maker ${formatPercent(makerParticipation, 1)}` : '';
-        const summaryLine = `
-            <div class="trade-summary">
-                ${label} ${formatNumber(totals.qty, 4)} @ ${formatNumber(totals.avgPrice, 4)} · ${formatNumber(totals.notional, 2)} USDT${feeSegment}${makerSegment}
+    function createArbitrageDetail(arbitrage, task) {
+        const baseLabel = task?.gridTask?.baseAsset || task?.gridTask?.baseAssert || arbitrage.baseLeg?.symbol || 'Base';
+        const quoteLabel = task?.gridTask?.quoteAsset || task?.gridTask?.quoteAssert || arbitrage.quoteLeg?.symbol || 'Quote';
+        const baseOrders = renderArbitrageOrderRows(arbitrage.baseLeg, 'Base');
+        const quoteOrders = renderArbitrageOrderRows(arbitrage.quoteLeg, 'Quote');
+        return `
+            <div class="arbitrage-detail">
+                <div class="arbitrage-detail-legs">
+                    <div class="arbitrage-orders-table-wrapper">
+                        <table class="arbitrage-orders-table">
+                            <thead>
+                                <tr>
+                                    <th>腿</th>
+                                    <th>订单ID</th>
+                                    <th>方向</th>
+                                    <th>Symbol</th>
+                                    <th class="text-right">数量</th>
+                                    <th class="text-right">价格</th>
+                                    <th class="text-right">金额</th>
+                                    <th class="text-right">手续费</th>
+                                    <th class="text-right">Maker占比</th>
+                                    <th>时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${baseOrders}
+                                ${quoteOrders}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         `;
-        const details = orders
+    }
+
+    function renderArbitrageOrderRows(leg, label) {
+        if (!leg || !Array.isArray(leg.orders) || !leg.orders.length) {
+            return `
+                <tr>
+                    <td>${label}</td>
+                    <td colspan="9"><span class="placeholder">暂无订单</span></td>
+                </tr>
+            `;
+        }
+        const rows = leg.orders
             .slice()
             .sort((a, b) => a.updateTime - b.updateTime)
-            .map(order => `
-                <div class="trade-detail">
-                    ${formatDate(order.updateTime)} · ${order.symbol} ${formatNumber(order.quantity, 4)} @ ${formatNumber(order.price, 6)}
-                    <br><small>手续费 ${formatNumber(order.txFee, 6)} · Maker ${order.makerFeeRate || formatPercent(order.makerParticipation, 1)}</small>
-                </div>
-            `)
+            .map(order => {
+                const orderId = order.orderId || order.clientOrderId || '-';
+                const maker = order.makerFeeRate
+                    || (Number.isFinite(order.makerParticipation) ? formatPercent(order.makerParticipation, 1) : '-');
+                return `
+                    <tr>
+                        <td>${label}</td>
+                        <td>${orderId}</td>
+                        <td>${order.side || '-'}</td>
+                        <td>${order.symbol || '-'}</td>
+                        <td class="text-right">${formatNumber(order.quantity, 4)}</td>
+                        <td class="text-right">${formatNumber(order.price, 6)}</td>
+                        <td class="text-right">${formatNumber(order.notional, 2)}</td>
+                        <td class="text-right">${formatNumber(order.txFee, 6)}</td>
+                        <td class="text-right">${maker}</td>
+                        <td>${formatDate(order.updateTime)}</td>
+                    </tr>
+                `;
+            })
             .join('');
-        return summaryLine + details;
+        return rows;
+    }
+
+    function renderLegSummaryLine(leg, label, symbolLabel) {
+        if (!leg) {
+            return '';
+        }
+        const direction = leg.side === 'BUY' ? '买入' : leg.side === 'SELL' ? '卖出' : '-';
+        const quantity = Number.isFinite(leg.quantity) ? formatNumber(leg.quantity, 6) : '-';
+        const avgPrice = Number.isFinite(leg.avgPrice) ? formatNumber(leg.avgPrice, 6) : '-';
+        const notional = Number.isFinite(leg.notional) ? formatNumber(leg.notional, 2) : '-';
+        const fee = Number.isFinite(leg.totalFee) ? formatNumber(leg.totalFee, 6) : '-';
+        const maker = Number.isFinite(leg.makerOrderRatio) ? formatPercent(leg.makerOrderRatio, 1) : '-';
+        const symbol = symbolLabel || leg.symbol || label;
+        return `
+            <div class="rate-line">${label} ${symbol} · ${direction} 数量 ${quantity} · 均价 ${avgPrice} · 金额 ${notional} USDT · 手续费 ${fee} · Maker ${maker}</div>
+        `;
+    }
+
+    function toggleArbitrageDetail(summaryRow, detailRow, tbody) {
+        const isHidden = detailRow.hidden;
+        const summaryRows = Array.from(tbody.querySelectorAll('tr.arbitrage-summary-row'));
+        const detailRows = Array.from(tbody.querySelectorAll('tr.arbitrage-detail-row'));
+        detailRows.forEach((row, index) => {
+            const summary = summaryRows[index];
+            if (row === detailRow) {
+                const shouldOpen = isHidden;
+                row.hidden = !shouldOpen;
+                summary.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+            } else {
+                row.hidden = true;
+                summary.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
+    function renderArbitrageRates(arbitrage, baseLabel, quoteLabel) {
+        const lines = [];
+        if (Number.isFinite(arbitrage.averageBuyRate)) {
+            lines.push(`买入 ${baseLabel}/${quoteLabel} ${formatNumber(arbitrage.averageBuyRate, 6)}`);
+        }
+        if (Number.isFinite(arbitrage.averageSellRate)) {
+            lines.push(`卖出 ${baseLabel}/${quoteLabel} ${formatNumber(arbitrage.averageSellRate, 6)}`);
+        }
+        if (!lines.length && Number.isFinite(arbitrage.averageCrossRate)) {
+            lines.push(`平均 ${baseLabel}/${quoteLabel} ${formatNumber(arbitrage.averageCrossRate, 6)}`);
+        }
+        if (Number.isFinite(arbitrage.synthPrice)) {
+            lines.push(`合成 ${formatNumber(arbitrage.synthPrice, 6)}`);
+        }
+        if (!lines.length) {
+            return '<span class="placeholder">-</span>';
+        }
+        return lines.map(line => `<div class="rate-line">${line}</div>`).join('');
     }
 
     function determineArbitrageStatus(arbitrage) {
@@ -1382,23 +2454,22 @@
         return '待交易';
     }
 
-    function renderTimeline(orders, selectedTaskId) {
+    function renderTimeline(orders) {
         const tbody = document.getElementById('timeline-table');
         const emptyHint = document.getElementById('timeline-empty');
         tbody.innerHTML = '';
 
-        const filtered = selectedTaskId ? orders.filter(order => order.taskId === selectedTaskId) : orders;
-
-        if (!filtered.length) {
+        if (!orders.length) {
             emptyHint.hidden = false;
             return;
         }
 
         emptyHint.hidden = true;
-        filtered.slice().reverse().slice(0, 30).forEach(order => {
+        orders.slice().reverse().slice(0, 10).forEach(order => {
+            const orderIdDisplay = order.orderId || order.clientOrderId || '-';
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${order.orderId}</td>
+                <td>${orderIdDisplay}</td>
                 <td><span class="badge ${order.side === 'BUY' ? 'badge-buy' : 'badge-sell'}">${order.side}</span></td>
                 <td>${order.symbol}</td>
                 <td class="text-right">${formatNumber(order.quantity, 4)}</td>
@@ -1459,7 +2530,7 @@
         errorEl.hidden = false;
     }
 
-    function renderProfitOverview(summary, taskStats) {
+    function renderProfitOverview(summary, selectedTask) {
         const totalEl = document.getElementById('profit-total');
         const avgEl = document.getElementById('profit-average');
         const positiveEl = document.getElementById('profit-positive-count');
@@ -1467,13 +2538,13 @@
         const winnersList = document.getElementById('profit-winners');
         const losersList = document.getElementById('profit-losers');
 
-        const hasData = Boolean(summary && taskStats.length);
+        const hasData = Boolean(summary && selectedTask);
 
         const totalProfit = hasData ? summary.netProfit : 0;
-        const totalCompletedArbs = hasData ? taskStats.reduce((sum, item) => sum + item.completedCount, 0) : 0;
+        const totalCompletedArbs = hasData ? selectedTask.completedCount : 0;
         const avgProfit = hasData && totalCompletedArbs ? totalProfit / totalCompletedArbs : null;
-        const profitableTasks = hasData ? taskStats.filter(item => item.profit > 0).length : 0;
-        const riskyTasks = hasData ? taskStats.filter(item => item.profit < 0 || item.openCount > 0).length : 0;
+        const profitableTasks = hasData && totalProfit > 0 ? 1 : 0;
+        const riskyTasks = hasData && (totalProfit < 0 || selectedTask.openCount > 0) ? 1 : 0;
 
         totalEl.textContent = hasData ? formatNumber(totalProfit, 2) : '-';
         totalEl.className = `profit-value ${getProfitClass(totalProfit)}`;
@@ -1497,41 +2568,36 @@
             return;
         }
 
-        const winners = taskStats
-            .filter(item => item.profit > 0)
-            .sort((a, b) => b.profit - a.profit)
-            .slice(0, 5);
-        const losers = taskStats
-            .filter(item => item.profit < 0)
-            .sort((a, b) => a.profit - b.profit)
-            .slice(0, 5);
-
-        if (!winners.length) {
-            winnersList.innerHTML = `<li class="leader-empty">暂无盈利任务</li>`;
+        if (totalProfit > 0) {
+            const li = document.createElement('li');
+            li.className = 'leader-entry';
+            li.innerHTML = `
+                <span>${selectedTask.taskId}</span>
+                <span class="${getProfitClass(totalProfit)}">${formatNumber(totalProfit, 2)}</span>
+            `;
+            winnersList.appendChild(li);
         } else {
-            winners.forEach(entry => {
-                const li = document.createElement('li');
-                li.className = 'leader-entry';
-                li.innerHTML = `
-                    <span>${entry.taskId}</span>
-                    <span class="${getProfitClass(entry.profit)}">${formatNumber(entry.profit, 2)}</span>
-                `;
-                winnersList.appendChild(li);
-            });
+            winnersList.innerHTML = `<li class="leader-empty">暂无盈利任务</li>`;
         }
 
-        if (!losers.length) {
-            losersList.innerHTML = `<li class="leader-empty">暂无亏损任务</li>`;
+        if (totalProfit < 0) {
+            const li = document.createElement('li');
+            li.className = 'leader-entry';
+            li.innerHTML = `
+                <span>${selectedTask.taskId}</span>
+                <span class="${getProfitClass(totalProfit)}">${formatNumber(totalProfit, 2)}</span>
+            `;
+            losersList.appendChild(li);
+        } else if (selectedTask.openCount > 0) {
+            const li = document.createElement('li');
+            li.className = 'leader-entry';
+            li.innerHTML = `
+                <span>${selectedTask.taskId}</span>
+                <span class="profit-neutral">存在未平批次</span>
+            `;
+            losersList.appendChild(li);
         } else {
-            losers.forEach(entry => {
-                const li = document.createElement('li');
-                li.className = 'leader-entry';
-                li.innerHTML = `
-                    <span>${entry.taskId}</span>
-                    <span class="${getProfitClass(entry.profit)}">${formatNumber(entry.profit, 2)}</span>
-                `;
-                losersList.appendChild(li);
-            });
+            losersList.innerHTML = `<li class="leader-empty">暂无亏损任务</li>`;
         }
     }
 
@@ -1543,52 +2609,51 @@
     }
 
     async function init() {
-        try {
-            updateMeta('正在读取 ../grid/data/orders.json ...');
-            const payload = await loadOrders();
-            const normalized = normalizeOrders(payload.orders || []);
-            if (!normalized.length) {
-                dashboardState.orders = [];
-                dashboardState.tasks = [];
-                dashboardState.selectedTaskId = null;
-                renderSummary(null);
-                renderPairOverview([], null);
-                renderTaskHierarchy([], null);
-                renderTimeline([], null);
-                renderProfitOverview(null, []);
-                updateSectionIndicators(null);
-                updateMeta('数据源：暂无订单记录');
-                return;
-            }
-            normalized.sort((a, b) => a.updateTime - b.updateTime);
-            const summary = computeSummary(normalized);
-            const taskHierarchy = buildTaskHierarchy(normalized);
-
-            dashboardState.orders = normalized;
-            dashboardState.tasks = taskHierarchy;
-            dashboardState.selectedTaskId = null;
-
-            renderSummary(summary);
-            renderPairOverview(taskHierarchy, dashboardState.selectedTaskId);
-            renderTaskHierarchy(taskHierarchy, dashboardState.selectedTaskId);
-            renderTimeline(normalized, dashboardState.selectedTaskId);
-            renderProfitOverview(summary, taskHierarchy);
-            updateSectionIndicators(dashboardState.selectedTaskId);
-
-            updateMeta(`数据源：共 ${normalized.length} 条订单，文件路径 ../grid/data/orders.json`);
-        } catch (err) {
-            showError(err.message);
-            updateMeta('加载订单数据失败');
-            dashboardState.orders = [];
-            dashboardState.tasks = [];
-            dashboardState.selectedTaskId = null;
-            renderSummary(null);
-            renderPairOverview([], null);
-            renderTaskHierarchy([], null);
-            renderTimeline([], null);
-            renderProfitOverview(null, []);
-            updateSectionIndicators(null);
+        updateMeta('正在加载网格任务与订单数据...');
+        const errorEl = document.getElementById('error-message');
+        if (errorEl) {
+            errorEl.hidden = true;
+            errorEl.textContent = '';
         }
+        const [gridResult, orderResult] = await Promise.allSettled([
+            loadGridTasks(),
+            loadOrders()
+        ]);
+
+        let gridTasksRaw = [];
+        if (gridResult.status === 'fulfilled') {
+            gridTasksRaw = Array.isArray(gridResult.value) ? gridResult.value : [];
+        } else {
+            const error = gridResult.reason instanceof Error ? gridResult.reason.message : '加载网格任务数据失败';
+            showError(error);
+        }
+
+        let normalizedOrders = [];
+        if (orderResult.status === 'fulfilled') {
+            const payload = orderResult.value || {};
+            normalizedOrders = normalizeOrders(payload.orders || []);
+            normalizedOrders.sort((a, b) => a.updateTime - b.updateTime);
+        } else {
+            const error = orderResult.reason instanceof Error ? orderResult.reason.message : '加载订单数据失败';
+            showError(error);
+        }
+
+        const normalizedGridTasks = normalizeGridTasks(gridTasksRaw);
+        const taskHierarchy = buildTaskHierarchy(normalizedOrders);
+        const mergedTasks = mergeGridTasksWithStats(normalizedGridTasks, taskHierarchy);
+        dashboardState.orders = normalizedOrders;
+        dashboardState.tasks = mergedTasks;
+        dashboardState.gridTasks = normalizedGridTasks;
+        dashboardState.selectedTaskId = determineDefaultTaskId(mergedTasks);
+
+        populateTaskSelector(mergedTasks, dashboardState.selectedTaskId);
+        renderDashboard();
+
+        const gridMeta = `${normalizedGridTasks.length} 个网格任务（../grid/data/grid_tasks.json）`;
+        const orderMeta = normalizedOrders.length
+            ? `${normalizedOrders.length} 条订单（../grid/data/orders.json）`
+            : '暂无订单数据';
+        updateMeta(`数据源：${gridMeta} · ${orderMeta}`);
     }
 
     init();

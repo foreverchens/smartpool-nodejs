@@ -2,7 +2,6 @@ import config from "./common/Config.js";
 import czClient from "./service/CzClient.js";
 import Piscina from "piscina";
 import path from "path";
-import fs from "fs";
 import {writeLatestBatch} from "./common/db.js";
 
 const threadPool = new Piscina({
@@ -147,7 +146,6 @@ async function run() {
         prevHighScorePairs = new Set(pairResults
             .filter(item => item && item.symbol && item.score > 20000)
             .map(item => item.symbol));
-        fs.writeFileSync('./other/outlog/smartpool.json', JSON.stringify(data));
     } catch (err) {
         console.error('运行批次失败:', err);
         hasMore = true;

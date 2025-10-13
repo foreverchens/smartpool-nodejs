@@ -33,7 +33,6 @@ const reversed = false
 
 async function bootstrap() {
     await updateConfig();
-    fs.writeFileSync('../other/outlog/target.pid', process.pid.toString());
     console.table({
         'baseAssert': baseAssert,
         'quotaAssert': quotaAssert,

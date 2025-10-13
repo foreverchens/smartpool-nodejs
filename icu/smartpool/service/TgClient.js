@@ -1,5 +1,4 @@
 import TelegramBot from 'node-telegram-bot-api'
-import fs from 'fs';
 
 const bot = new TelegramBot('6322218866:AAE11lydYjiRA5ll982O-L-U0D340rbTA-8', {polling: true});
 const chatId = '-1001900319185';
@@ -34,37 +33,13 @@ bot.on('callback_query', (callbackQuery) => {
     bot.answerCallbackQuery(callbackQuery.id);
     let response = '';
     switch (key) {
-        case 'smartpool':
-            response = smartPoolRltView();
-            break;
-        case 'gridInterrupt':
-            response = gridInterrupt();
-            break;
+
     }
     bot.sendMessage(message.chat.id, response);
 });
 
-function gridInterrupt() {
-    try {
-        let pid = fs.readFileSync('./outlog/target.pid', 'utf-8');
-        if (pid) {
-            process.kill(+pid, 'SIGTERM');
-            return '中断成功：' + pid;
-        }
-    } catch (err) {
-    }
-    return '无任务'
-}
 
 
-/**
- * 汇率网格
- * @returns {*}
- */
-function smartPoolRltView() {
-    let rlt = fs.readFileSync('./outlog/smartpool.json', 'utf-8');
-    return formatFancyTable(JSON.parse(rlt));
-}
 
 function formatFancyTable(data) {
     const headers = Object.keys(data[0]);

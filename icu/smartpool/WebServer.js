@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import {fileURLToPath} from 'url';
-import {readLatestBatch} from './common/db.js';
+import {readLatestBatch} from './service/SmartPoolMapper.js';
 
 const app = express();
 const PORT = 3000;

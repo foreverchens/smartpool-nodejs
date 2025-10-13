@@ -1,6 +1,6 @@
 import path from 'path';
 import {fileURLToPath} from 'url';
-import {mkdir, readFile, readdir, unlink, writeFile} from 'fs/promises';
+import {mkdir, readdir, readFile, unlink, writeFile} from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

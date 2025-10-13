@@ -1,9 +1,9 @@
 import Queue from "../common/CircularQueue.js";
 import {
+    readAllSymbols as readAllKlineSymbols,
     readSymbol as readKlineSymbol,
-    writeSymbol as writeKlineSymbol,
-    readAllSymbols as readAllKlineSymbols
-} from "../common/klineDb.js";
+    writeSymbol as writeKlineSymbol
+} from "./KlineMapper.js";
 
 class KlineCacheManager {
     constructor(capacity) {

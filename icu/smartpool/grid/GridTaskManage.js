@@ -191,7 +191,7 @@ async function loop() {
  *  - 立即执行一次 tick()
  *  - 每隔 TICK_MS 周期性执行
  */
-function start() {
+export function start() {
     console.log('[Manager] Starting grid task loop...');
 
     // 先订阅报价
@@ -214,4 +214,4 @@ function start() {
     setInterval(run, TICK_MS);
 }
 
-start();
+// start();

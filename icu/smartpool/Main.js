@@ -2,7 +2,7 @@ import config from "./common/Config.js";
 import czClient from "./service/CzClient.js";
 import Piscina from "piscina";
 import path from "path";
-import {writeLatestBatch} from "./common/db.js";
+import {writeLatestBatch} from "./service/SmartPoolMapper.js";
 
 const threadPool = new Piscina({
     filename: path.resolve('./service/worker.js'), maxThreads: config.MAX_THREADS

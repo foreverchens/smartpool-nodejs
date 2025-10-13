@@ -12,7 +12,8 @@
 
 # 双币网格震荡分析平台（Codex 辅助说明）
 
-本项目围绕 **Main.js**、**Server.js** 与 **view/home.html** 三个核心模块构建，实现了数据抓取、批次持久化，以及面向浏览器的直观可视化体验 。以下按角色说明它们的职责与相互协作方式，帮助快速理解项目结构与扩展点。
+本项目围绕 **Main.js**、**WebServer.js** 与 **view/home.html** 三个核心模块构建，实现了数据抓取、批次持久化，以及面向浏览器的直观可视化体验
+。以下按角色说明它们的职责与相互协作方式，帮助快速理解项目结构与扩展点。
 <img src="https://raw.githubusercontent.com/foreverchens/smartpool-nodejs/e526552b49bc1e406970625ce056bfcafc952495/icu/smartpool/common/home.png">
 
 ## Main.js — 批次调度与数据写入
@@ -22,7 +23,7 @@
 - **线程池驱动**：通过 `Piscina` 将每个 symbol 投递给 `service/worker.js`，并在多个阶段（`symbolList`、`rltArr`、`centerList`、`highList`、`lowList`、`highLowList`、`data`）保存中间结果。
 - **量化周期持久化**：将 `config.CYCLE` 转换为 `cycleHours` 与 `cycleDays` 写入 `latest.json`，所有后端/前端组件即可一致引用该关键参数。
 
-## Server.js — 数据服务层
+## WebServer.js — 数据服务层
 
 - **统一读取**：`loadBatch()` 解析 `data/latest.json`，兼容直接写入阶段对象与历史结构，自动补齐 `lastSavedAt`、`cycleHours`、`cycleDays` 等字段。
 - **REST 接口**：
@@ -46,7 +47,7 @@
 ```bash
 npm install
 node icu/smartpool/Main.js      # 触发批次抓取并生成 latest.json
-node icu/smartpool/Server.js    # 启动本地服务：http://localhost:3000
+node icu/smartpool/WebServer.js    # 启动本地服务：http://localhost:3000
 ```
 
 当 `Main.js` 正常运行时，可在浏览器访问 `http://localhost:3000/` 查看最新的双币震荡分析结果，并在顶部概览中确认量化周期（默认 28 天 / 672 小时）。若需调整批次周期或展示策略，可直接在 `common/Config.js` 与上述三个文件中扩展逻辑。

@@ -11,7 +11,7 @@ const DATA_FILE = path.join(DATA_DIR, 'latest.json');
 
 const adapter = new JSONFile(DATA_FILE);
 const defaultData = {};
-const db = new Low(adapter, defaultData);
+const smartPoolMapper = new Low(adapter, defaultData);
 
 async function ensureDataDir() {
     await mkdir(DATA_DIR, {recursive: true});
@@ -28,9 +28,9 @@ async function fileExists() {
 
 export async function writeLatestBatch(batch) {
     await ensureDataDir();
-    db.data = batch ?? {};
-    await db.write();
-    return db.data;
+    smartPoolMapper.data = batch ?? {};
+    await smartPoolMapper.write();
+    return smartPoolMapper.data;
 }
 
 export async function readLatestBatch() {
@@ -39,11 +39,11 @@ export async function readLatestBatch() {
         err.code = 'ENOENT';
         throw err;
     }
-    await db.read();
-    if (!db.data) {
-        db.data = {};
+    await smartPoolMapper.read();
+    if (!smartPoolMapper.data) {
+        smartPoolMapper.data = {};
     }
-    return db.data;
+    return smartPoolMapper.data;
 }
 
 export {DATA_FILE};

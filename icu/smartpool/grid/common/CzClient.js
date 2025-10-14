@@ -1,6 +1,6 @@
-import Binance from "node-binance-api";
 import axios from "axios";
 import crypto from "crypto";
+import Binance from "node-binance-api";
 
 const APIKEY = 'qbc5djgYcospWpt5RNwBUgVesnzAP0jj68ZXeciXuBSRQGPVbExQomZKjYenuZ1Q';
 const APISECRET = '40pOBNmUndKuGY33nqNi8SMMuC3GsWTA8aRP7rb4fHZDpUE4CDEKhVKoSFkqqTqx';
@@ -49,11 +49,11 @@ class CzClient {
     }
 
     async futureBuy(symbol, qty, price) {
-        return await client.futuresBuy(symbol, qty, price, {'timeInForce': 'GTC'});
+        return await client.futuresBuy(symbol, qty, price, {'timeInForce': 'GTX'});
     }
 
     async futureSell(symbol, qty, price) {
-        return await client.futuresSell(symbol, qty, price, {'timeInForce': 'GTC'});
+        return await client.futuresSell(symbol, qty, price, {'timeInForce': 'GTX'});
     }
 
     /**
@@ -150,6 +150,27 @@ class CzClient {
     }
 
     /**
+     * gtx订单无法maker被拒单
+     * https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/error-code#-5022-gtx_order_reject
+     * @param symbol
+     * @param isAsk
+     * @param qty
+     * @param price
+     * @returns {Promise<{msg}|*>}
+     */
+    async placeOrder(symbol, isAsk, qty, price = null) {
+        price = price ?? await this.getFuturesPrice(symbol);
+        try {
+            return isAsk ? await this.futureSell(symbol, qty, price) : await this.futureBuy(symbol, qty, price);
+        } catch (err) {
+            if (err.message.includes('-5022')) {
+                return await this.placeOrder(symbol, isAsk, qty);
+            }
+            return {'msg': err.message};
+        }
+    }
+
+    /**
      * 获取合成价格、汇率价格
      */
     async getSynPrice(baseSymbol, quotaSymbol) {
@@ -196,6 +217,13 @@ class CzClient {
 
     /**
      * 修改订单
+     * @param symbol
+     * @param side
+     * @param orderId
+     * @param quantity
+     * @param price
+     * @param timestamp
+     * @returns {order}
      */
     async futureModifyOrder(symbol, side, orderId, quantity, price, timestamp = Date.now()) {
         const endpoint = 'https://fapi.binance.com/fapi/v1/order';
@@ -213,14 +241,21 @@ class CzClient {
                     'X-MBX-APIKEY': APIKEY
                 }
             });
-            return res.data;
+            let order = res.data;
+            // 返回的GTX订单需检查是否为cancel状态
+            if (order.status === 'CANCELED' && order.timeInForce === 'GTX') {
+                // gtx的订单、价格被修改后、若无法继续成为maker、则会被取消、需重新下单
+                // https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/trade/rest-api/Modify-Order
+                return await this.placeOrder(symbol, side === 'SELL', quantity);
+            }
+            return order;
         } catch (error) {
             console.error('修改失败：', error.response ? error.response.data : error.message);
             if (error?.response?.data?.code === -2013) {
                 // 订单已成交、
                 return this.getFuturesOrder(symbol, orderId);
             }
-            return null;
+            return {'msg': error.message};
         }
     }
 
@@ -371,5 +406,5 @@ class CzClient {
     }
 }
 
-// new CzClient().getTxFee('solusdc', 8671665878).then(e => console.log(e))
+// new CzClient().getFuturesOrder('ethusdc', 31355256942).then(e => console.log(e))
 export default new CzClient();

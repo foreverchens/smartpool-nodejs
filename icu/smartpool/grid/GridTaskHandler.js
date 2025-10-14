@@ -1,8 +1,8 @@
+import {Snowflake} from '@theinternetfolks/snowflake';
 import dayjs from 'dayjs';
+import {getTicker} from "./common/BockTickerManage.js"
 import czClient from "./common/CzClient.js";
 import {saveOrder, updateOrderStatus} from "./OrderMapper.js";
-import {getTicker} from "./common/BockTickerManage.js"
-import {Snowflake} from '@theinternetfolks/snowflake';
 
 const STATUS = {
     RUNNING: 'RUNNING',
@@ -84,11 +84,11 @@ export async function dealTask(task) {
 
     // 获取最新汇率
     let [baseBidPrice, baseAskPrice] = getTicker(baseAssert);
-    let curBidPrice, curAskPrice;
-    curBidPrice = baseBidPrice;
-    curAskPrice = baseAskPrice;
+    let [quoteBidPrice, quoteAskPrice] = getTicker(quoteAssert);
+
+    let curBidPrice = baseBidPrice;
+    let curAskPrice = baseAskPrice;
     if (task.doubled) {
-        let [quoteBidPrice, quoteAskPrice] = getTicker(quoteAssert);
         curBidPrice = (baseBidPrice / quoteAskPrice).toPrecision(8);
         curAskPrice = (baseAskPrice / quoteBidPrice).toPrecision(8);
     }
@@ -99,12 +99,7 @@ export async function dealTask(task) {
         return [];
     }
     // 进入交易价格
-    let baseOrderBook, quoteOrderBook;
-    baseOrderBook = await czClient.futuresDepth(baseAssert);
 
-    if (task.doubled) {
-        quoteOrderBook = await czClient.futuresDepth(quoteAssert);
-    }
 
     let [baseAssertPosit] = await czClient.getFuturesPositionRisk(baseAssert);
     let baseOrder = null;
@@ -122,8 +117,14 @@ export async function dealTask(task) {
             }
         }
         // 先下远单在修改、防止maker变taker
-        baseOrder = await czClient.futureBuy(baseAssert, baseQty, baseOrderBook.bids[9].price);
-        baseOrder = await czClient.futureModifyOrder(baseAssert, baseOrder.side, baseOrder.orderId, baseQty, baseOrderBook.bids[0].price);
+        baseOrder = await czClient.placeOrder(baseAssert, 0, baseQty, baseBidPrice);
+        // baseOrder = await czClient.futureBuy(baseAssert, baseQty, baseOrderBook.bids[9].price);
+        // baseOrder = await czClient.futureModifyOrder(baseAssert, baseOrder.side, baseOrder.orderId, baseQty, baseOrderBook.bids[0].price);
+        if (baseOrder.msg) {
+            // 下单失败
+            console.error(`[TASK ${task.id}] 买入失败 msg:${baseOrder.msg}`)
+            return [];
+        }
         const taskBindId = Snowflake.generate();
 
         baseOrder.taskId = task.id;
@@ -133,8 +134,14 @@ export async function dealTask(task) {
         await saveOrder(baseOrder);
         console.log(`[TASK ${task.id}] ${baseAssert} 触发买入 买入汇率:${curBidPrice} 数量:${baseQty} , 订单Id:${baseOrder.orderId}`);
         if (task.doubled) {
-            quoteOrder = await czClient.futureSell(quoteAssert, quoteQty, quoteOrderBook.asks[9].price);
-            quoteOrder = await czClient.futureModifyOrder(quoteAssert, quoteOrder.side, quoteOrder.orderId, quoteQty, quoteOrderBook.asks[0].price);
+            quoteOrder = await czClient.placeOrder(quoteAssert, 1, quoteQty, quoteAskPrice);
+            if (quoteOrder.msg) {
+                // 下单失败
+                console.error(`[TASK ${task.id}] 卖出失败 msg:${quoteOrder.msg}`)
+                return [];
+            }
+            // quoteOrder = await czClient.futureSell(quoteAssert, quoteQty, quoteOrderBook.asks[9].price);
+            // quoteOrder = await czClient.futureModifyOrder(quoteAssert, quoteOrder.side, quoteOrder.orderId, quoteQty, quoteOrderBook.asks[0].price);
             quoteOrder.taskId = task.id;
             quoteOrder.taskBindId = taskBindId;
             quoteOrder.synthPrice = curBidPrice;
@@ -156,9 +163,14 @@ export async function dealTask(task) {
                 return [];
             }
         }
-
-        baseOrder = await czClient.futureSell(baseAssert, baseQty, baseOrderBook.asks[9].price);
-        baseOrder = await czClient.futureModifyOrder(baseAssert, baseOrder.side, baseOrder.orderId, baseQty, baseOrderBook.asks[0].price);
+        baseOrder = await czClient.placeOrder(baseAssert, 1, baseQty, baseAskPrice);
+        if (baseOrder.msg) {
+            // 下单失败
+            console.error(`[TASK ${task.id}] 卖出失败 msg:${baseOrder.msg}`)
+            return [];
+        }
+        // baseOrder = await czClient.futureSell(baseAssert, baseQty, baseOrderBook.asks[9].price);
+        // baseOrder = await czClient.futureModifyOrder(baseAssert, baseOrder.side, baseOrder.orderId, baseQty, baseOrderBook.asks[0].price);
         const taskBindId = Snowflake.generate();
         baseOrder.taskId = task.id;
         baseOrder.taskBindId = taskBindId;
@@ -167,8 +179,14 @@ export async function dealTask(task) {
         await saveOrder(baseOrder);
         console.log(`[TASK ${task.id}] ${baseAssert} 触发卖出 卖出汇率:${curAskPrice} 数量:${baseQty} , 订单:${baseOrder.orderId}`);
         if (task.doubled) {
-            quoteOrder = await czClient.futureBuy(quoteAssert, quoteQty, quoteOrderBook.bids[9].price);
-            quoteOrder = await czClient.futureModifyOrder(quoteAssert, quoteOrder.side, quoteOrder.orderId, quoteQty, quoteOrderBook.bids[0].price);
+            quoteOrder = await czClient.placeOrder(quoteAssert, 0, quoteQty, quoteBidPrice);
+            if (quoteOrder.msg) {
+                // 下单失败
+                console.error(`[TASK ${task.id}] 买入失败 msg:${quoteOrder.msg}`)
+                return [];
+            }
+            // quoteOrder = await czClient.futureBuy(quoteAssert, quoteQty, quoteOrderBook.bids[9].price);
+            // quoteOrder = await czClient.futureModifyOrder(quoteAssert, quoteOrder.side, quoteOrder.orderId, quoteQty, quoteOrderBook.bids[0].price);
             quoteOrder.taskId = task.id;
             quoteOrder.taskBindId = taskBindId;
             quoteOrder.synthPrice = curAskPrice;

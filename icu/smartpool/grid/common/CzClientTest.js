@@ -1,6 +1,8 @@
-let symbol = 'XRPUSDT';
+import czClient from "./CzClient.js";
 
-// // getSpotAccount test
+let symbol = 'SUIUSDC';
+
+// getSpotAccount test
 // czClient.getSpotAccount().then(e => console.table(e))
 // // futuresPrices test
 // czClient.getFuturesPrice(symbol).then(e => console.table(e));
@@ -40,3 +42,33 @@ let symbol = 'XRPUSDT';
 //
 // // getFuturesOpenOrders test
 // czClient.getFuturesOpenOrders('TRXUSDT').then(e => console.table(e))
+
+
+// GTX策略测试
+async function placeOrder(symbol, isAsk, qty, price) {
+    let p = await czClient.getFuturesPrice(symbol);
+    try {
+        return isAsk
+            ? await czClient.futureSell(symbol, qty, price ?? p)
+            : await czClient.futureBuy(symbol, qty, price ?? p);
+    } catch (err) {
+        if (err.message.includes('-5022')) {
+            // gtx订单无法maker被拒单
+            console.log('gxc failed')
+            // https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/error-code#-5022-gtx_order_reject
+            return placeOrder(symbol, isAsk, qty);
+        }
+        return {'msg': err.message};
+    }
+}
+
+placeOrder('ethusdc', 0, 0.005, 4000)
+    .then(rlt => {
+        if (rlt.msg) {
+            console.log(rlt.msg)
+        } else {
+            console.log(rlt);
+            console.log('place order suc ')
+            czClient.futuresCancel('ethusdc', rlt.orderId).then(r => console.log('cancel suc'))
+        }
+    })

@@ -45,30 +45,42 @@ let symbol = 'SUIUSDC';
 
 
 // GTX策略测试
-async function placeOrder(symbol, isAsk, qty, price) {
-    let p = await czClient.getFuturesPrice(symbol);
-    try {
-        return isAsk
-            ? await czClient.futureSell(symbol, qty, price ?? p)
-            : await czClient.futureBuy(symbol, qty, price ?? p);
-    } catch (err) {
-        if (err.message.includes('-5022')) {
-            // gtx订单无法maker被拒单
-            console.log('gxc failed')
-            // https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/error-code#-5022-gtx_order_reject
-            return placeOrder(symbol, isAsk, qty);
-        }
-        return {'msg': err.message};
-    }
-}
+// async function placeOrder(symbol, isAsk, qty, price) {
+//     let p = await czClient.getFuturesPrice(symbol);
+//     try {
+//         return isAsk
+//             ? await czClient.futureSell(symbol, qty, price ?? p)
+//             : await czClient.futureBuy(symbol, qty, price ?? p);
+//     } catch (err) {
+//         if (err.message.includes('-5022')) {
+//             // gtx订单无法maker被拒单
+//             console.log('gxc failed')
+//             // https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/error-code#-5022-gtx_order_reject
+//             return placeOrder(symbol, isAsk, qty);
+//         }
+//         return {'msg': err.message};
+//     }
+// }
 
-placeOrder('ethusdc', 0, 0.005, 4000)
-    .then(rlt => {
-        if (rlt.msg) {
-            console.log(rlt.msg)
-        } else {
-            console.log(rlt);
-            console.log('place order suc ')
-            czClient.futuresCancel('ethusdc', rlt.orderId).then(r => console.log('cancel suc'))
-        }
-    })
+// placeOrder('ethusdc', 0, 0.005, 4000)
+//     .then(rlt => {
+//         if (rlt.msg) {
+//             console.log(rlt.msg)
+//         } else {
+//             console.log(rlt);
+//             console.log('place order suc ')
+//             czClient.futuresCancel('ethusdc', rlt.orderId).then(r => console.log('cancel suc'))
+//         }
+//     })
+
+// place->modify->get->replace
+let test1 = async () => {
+    let order = await czClient.placeOrder('ethusdc', 0, 0.005);
+    console.log(order);
+    setTimeout(async () => {
+        order = await czClient.futureModifyOrder(order.symbol, order.side, order.orderId, order.origQty, 4100);
+        console.log(order);
+    }, 2000)
+
+}
+test1().then(e => console.log(e));

@@ -33,8 +33,9 @@
 import fs from 'fs';
 import path from 'path';
 import {fileURLToPath} from 'url';
-import {dealOrder, dealTask, tryStart} from './GridTaskHandler.js';
 import {subscribe, unsubscribe} from "./common/BockTickerManage.js"
+import logger from './common/logger.js';
+import {dealOrder, dealTask, tryStart} from './GridTaskHandler.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -53,7 +54,7 @@ let orderList = [];
 // 订单异步处理指针
 let orderBackTask;
 // 定时循环周期（毫秒）
-const TICK_MS = 1000 * 10;
+const TICK_MS = 1000 * 5;
 
 
 /**
@@ -65,7 +66,7 @@ function listGridTask() {
         const txt = fs.readFileSync(TASKS_FILE, 'utf8');
         taskListRaw = JSON.parse(txt);
     } catch (err) {
-        console.error('[Manager] 读取 grid_tasks.json 失败:', err?.message ?? err);
+        logger.error('[Manager] 读取 grid_tasks.json 失败:', err?.message ?? err);
         return [];
     }
 
@@ -73,7 +74,7 @@ function listGridTask() {
         .filter(task => {
             let rlt = validateParams(task);
             if (rlt.errors.length) {
-                console.warn(`id:${task.id ?? 'UNKNOWN'} 校验失败: ${rlt.errors.join(', ')}`);
+                logger.error(`id:${task.id ?? 'UNKNOWN'} 校验失败: ${rlt.errors.join(', ')}`);
             }
             return rlt.valid;
         })
@@ -128,7 +129,7 @@ function updateTasks(tasks) {
     try {
         fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 4));
     } catch (err) {
-        console.error('[Manager] 写入 grid_tasks.json 失败:', err?.message ?? err);
+        logger.error('[Manager] 写入 grid_tasks.json 失败:', err?.message ?? err);
     }
 }
 
@@ -142,7 +143,7 @@ async function loop() {
     const gridTaskList = listGridTask();
 
     if (!gridTaskList.length) {
-        console.warn('[Manager] 未读取到有效的网格任务配置');
+        logger.error('[Manager] 未读取到有效的网格任务配置');
         return;
     }
     // 2.遍历网格任务列表
@@ -180,7 +181,7 @@ async function loop() {
             try {
                 await dealOrder(orderList);
             } catch (err) {
-                console.error('[Manager] 定时检查订单异常:', err?.message ?? err);
+                logger.error('[Manager] 定时检查订单异常:', err?.message ?? err);
             }
         }, 1000);
     }
@@ -208,7 +209,7 @@ export function start() {
     // 注册定时任务
     const run = () => {
         loop().catch((err) => {
-            console.error('[ERR] Tick loop 异常:', err?.message ?? err);
+            logger.error('[ERR] Tick loop 异常:', err?.message ?? err)
         });
     };
     setInterval(run, TICK_MS);

@@ -1,7 +1,7 @@
-import path from 'path';
-import {fileURLToPath} from 'url';
 import {Low} from 'lowdb';
 import {JSONFile} from 'lowdb/node';
+import path from 'path';
+import {fileURLToPath} from 'url';
 import czClient from "./common/CzClient.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -95,6 +95,7 @@ class OrderMapper {
     async list() {
         await this._init();
         const {orders} = this.db.data;
+        let cnt = 0;
         for (const element of orders) {
             let order = element;
             if (order.makerFeeRate === '0%' && order.txFee === 0) {
@@ -105,10 +106,11 @@ class OrderMapper {
                 console.log(order.orderId);
                 console.log(txFee);
                 console.log(makerFeeRate);
+                cnt++;
             }
         }
         await this.db.write();
-        return 1;
+        return cnt;
     }
 }
 

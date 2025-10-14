@@ -1,6 +1,7 @@
 import axios from "axios";
 import crypto from "crypto";
 import Binance from "node-binance-api";
+import logger from './logger.js';
 
 const APIKEY = 'qbc5djgYcospWpt5RNwBUgVesnzAP0jj68ZXeciXuBSRQGPVbExQomZKjYenuZ1Q';
 const APISECRET = '40pOBNmUndKuGY33nqNi8SMMuC3GsWTA8aRP7rb4fHZDpUE4CDEKhVKoSFkqqTqx';
@@ -95,6 +96,7 @@ class CzClient {
      * @param {string} symbol
      */
     async getFuturesPrice(symbol) {
+        symbol = symbol?.toUpperCase();
         let rlt = await client.futuresPrices(symbol);
         return Number(rlt[symbol]);
     }
@@ -250,54 +252,14 @@ class CzClient {
             }
             return order;
         } catch (error) {
-            console.error('修改失败：', error.response ? error.response.data : error.message);
+            let msg = `${symbol}-${orderId} 修改失败: + ${error.response ? JSON.stringify(error.response.data) : JSON.stringify(error.message)}`;
+            logger.error(msg)
             if (error?.response?.data?.code === -2013) {
                 // 订单已成交、
-                return this.getFuturesOrder(symbol, orderId);
+                logger.error(`${symbol}-${orderId} 订单已成交 直接查询返回`)
+                return await this.getFuturesOrder(symbol, orderId);
             }
             return {'msg': error.message};
-        }
-    }
-
-
-    getFuturesTickerStream(baseAssert, quotaAssert, callback) {
-        client.futuresMiniTickerStream(null, async tickers => {
-            let baseP, quotaP;
-            tickers.forEach(ele => {
-                if (ele.symbol === baseAssert) {
-                    baseP = ele.close
-                }
-                if (quotaAssert === ele.symbol) {
-                    quotaP = ele.close
-                }
-            })
-            if (baseP && quotaP) {
-                await callback(baseP / quotaP)
-            }
-        })
-    }
-
-    async getTotalCommission(symbol) {
-        let totalQuotaVol = 0;
-        let limitQuotaVol = 0;
-        let price = await this.getFuturesPrice('BNBUSDT');
-        let trades = await client.futuresUserTrades(symbol, {startTime: 1748471000000});
-        let reduce = trades.reduce((rlt, ele) => {
-            let commission = ele.commission;
-            let commissionAsset = ele.commissionAsset;
-            if (!rlt[commissionAsset]) {
-                rlt[commissionAsset] = 0;
-            }
-            totalQuotaVol += +ele.quoteQty;
-            if ((commission * price) / (ele.quoteQty) * 100 <= 0.02) {
-                limitQuotaVol += +ele.quoteQty;
-            }
-            rlt[commissionAsset] += +commission;
-            return rlt;
-        }, {});
-        return {
-            totalTxFee: +((reduce.USDT ? reduce.USDT : 0) + (reduce.USDC ? reduce.USDC : 0) + (reduce.BNB ? reduce.BNB * price : 0)),
-            limitRate: (totalQuotaVol === 0 ? 0 : (limitQuotaVol * 100 / totalQuotaVol).toFixed(1)) + '%'
         }
     }
 
@@ -406,5 +368,5 @@ class CzClient {
     }
 }
 
-// new CzClient().getFuturesOrder('ethusdc', 31355256942).then(e => console.log(e))
+// new CzClient().getTxFee('ethusdc', 31435645980).then(e => console.log(e))
 export default new CzClient();

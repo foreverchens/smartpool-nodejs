@@ -1,6 +1,7 @@
 import axios from "axios";
 import crypto from "crypto";
 import Binance from "node-binance-api";
+import callRlt from "../../common/CallResult.js";
 import logger from './logger.js';
 
 const APIKEY = 'qbc5djgYcospWpt5RNwBUgVesnzAP0jj68ZXeciXuBSRQGPVbExQomZKjYenuZ1Q';
@@ -66,7 +67,15 @@ class CzClient {
 
     /**
      * 获取合约持仓核心数据
-     * @returns {Promise<Array>} [{ symbol, positionAmt, entryPrice, unrealizedProfit, leverage }]
+     *  {
+     *     symbol: '',
+     *     positionAmt: 持仓数量 带正负,
+     *     entryPrice: '持仓价格',
+     *     markPrice: '市价',
+     *     unrealizedProfit: '浮盈',
+     *     notional: '持仓价值'
+     *   }
+     * @returns {Promise<Array>} [{ symbol, positionAmt, entryPrice, unrealizedProfit, notional }]
      */
     async getFuturesPositionRisk(symbol = '') {
         const positions = await client.futuresPositionRisk();
@@ -225,7 +234,6 @@ class CzClient {
      * @param quantity
      * @param price
      * @param timestamp
-     * @returns {order}
      */
     async futureModifyOrder(symbol, side, orderId, quantity, price, timestamp = Date.now()) {
         const endpoint = 'https://fapi.binance.com/fapi/v1/order';
@@ -248,18 +256,18 @@ class CzClient {
             if (order.status === 'CANCELED' && order.timeInForce === 'GTX') {
                 // gtx的订单、价格被修改后、若无法继续成为maker、则会被取消、需重新下单
                 // https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/trade/rest-api/Modify-Order
-                return await this.placeOrder(symbol, side === 'SELL', quantity);
+                return callRlt.ok(await this.placeOrder(symbol, side === 'SELL', quantity));
             }
-            return order;
+            return callRlt.ok(order);
         } catch (error) {
             let msg = `${symbol}-${orderId} 修改失败: + ${error.response ? JSON.stringify(error.response.data) : JSON.stringify(error.message)}`;
             logger.error(msg)
             if (error?.response?.data?.code === -2013) {
                 // 订单已成交、
                 logger.error(`${symbol}-${orderId} 订单已成交 直接查询返回`)
-                return await this.getFuturesOrder(symbol, orderId);
+                return callRlt.ok(await this.getFuturesOrder(symbol, orderId));
             }
-            return {'msg': error.message};
+            return callRlt.fail(msg);
         }
     }
 

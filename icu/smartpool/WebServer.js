@@ -120,8 +120,8 @@ app.get('/', (req, res, next) => {
     });
 });
 
-app.get('/grid-dashboard', (req, res, next) => {
-    res.sendFile(path.join(VIEW_DIR, 'grid-dashboard.html'), err => {
+app.get('/dashboard', (req, res, next) => {
+    res.sendFile(path.join(VIEW_DIR, 'dashboard.html'), err => {
         if (err) {
             next(err);
         }
@@ -135,5 +135,6 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Express server listening on http://localhost:${PORT}`);
+    console.log(`首页 http://localhost:${PORT}`);
+    console.log(`双币网格任务数据面板 http://localhost:${PORT}/dashboard`);
 });

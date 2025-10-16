@@ -1,5 +1,3 @@
-import czClient from "./CzClient.js";
-
 let symbol = 'SUIUSDC';
 
 // getSpotAccount test
@@ -74,13 +72,18 @@ let symbol = 'SUIUSDC';
 //     })
 
 // place->modify->get->replace
-let test1 = async () => {
-    let order = await czClient.placeOrder('ethusdc', 0, 0.005);
-    console.log(order);
-    setTimeout(async () => {
-        order = await czClient.futureModifyOrder(order.symbol, order.side, order.orderId, order.origQty, 4100);
-        console.log(order);
-    }, 2000)
+// let test1 = async () => {
+//     let order = await czClient.placeOrder('ethusdc', 0, 0.005);
+//     console.log(order);
+//     setTimeout(async () => {
+//         order = await czClient.futureModifyOrder(order.symbol, order.side, order.orderId, order.origQty, 4100);
+//         console.log(order);
+//     }, 2000)
+//
+// }
+// test1().then(e => console.log(e));
 
-}
-test1().then(e => console.log(e));
+
+// getFuturesPositionRisk
+// let rlt = await czClient.getFuturesPositionRisk();
+// console.log(rlt);

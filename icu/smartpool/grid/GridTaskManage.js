@@ -160,11 +160,17 @@ async function loop() {
                 }
                 break
             case STATUS.RUNNING:
-                let newOrderList = await dealTask(task);
-                if (newOrderList.length) {
-                    for (let order of newOrderList) {
-                        orderList.push(order);
+                let callRlt = await dealTask(task);
+                if (callRlt.suc) {
+                    if (callRlt.data) {
+                        for (let order of callRlt.data) {
+                            orderList.push(order);
+                        }
                     }
+                } else {
+                    logger.error(callRlt.msg);
+                    // 运行时异常、失效任务
+                    task.status = STATUS.EXPIRED;
                 }
                 break
             default:

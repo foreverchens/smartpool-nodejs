@@ -881,6 +881,8 @@
                 doubled: Boolean(task?.doubled),
                 reversed: Boolean(task?.reversed),
                 startPrice: toNumberOrNull(task?.startPrice),
+                startBaseP: toNumberOrNull(task?.startBaseP),
+                startQuoteP: toNumberOrNull(task?.startQuoteP),
                 gridRate: toNumberOrNull(task?.gridRate),
                 gridValue: toNumberOrNull(task?.gridValue),
                 status,
@@ -2085,9 +2087,16 @@
             container.appendChild(details);
         });
     }
+
     function createTaskSummary(task) {
+        const runtime = task.gridTask && task.gridTask.runtime ? task.gridTask.runtime : {};
+
         const symbolsText = task.symbols.length ? task.symbols.join('、') : '-';
         const arbitrageSummary = `${formatNumber(task.arbitrageCount, 0)}（完成 ${formatNumber(task.completedCount, 0)} / 未平 ${formatNumber(task.openCount, 0)}）`;
+        const latestTradedPrice = `${formatNumber(runtime.lastTradePrice, 4)}`;
+        const nextBidPrice = `${formatNumber(runtime.buyPrice, 4)}`;
+        const nextAskPrice = `${formatNumber(runtime.sellPrice, 4)}`;
+
         const timeRange = (Number.isFinite(task.start) || Number.isFinite(task.end))
             ? `${formatDate(task.start)} ~ ${formatDate(task.end)}`
             : '暂无成交时间';
@@ -2104,29 +2113,31 @@
                 gridInfoChips.push(`单格金额 ${formatValueWithUnit(task.gridTask.gridValue, 'USDT', 4)}`);
             }
             if (Number.isFinite(task.gridTask.startPrice)) {
-                gridInfoChips.push(`启动汇率 ${formatValueWithUnit(task.gridTask.startPrice)}`);
+                gridInfoChips.push(`启动汇率 ${formatValueWithUnit(task.gridTask.startPrice)} (base ${task.gridTask.startBaseP} / quote ${task.gridTask.startQuoteP})`);
             }
         }
-        const runtime = task.gridTask && task.gridTask.runtime ? task.gridTask.runtime : {};
         if (Number.isFinite(runtime.baseQty) || Number.isFinite(runtime.quoteQty)) {
             const base = Number.isFinite(runtime.baseQty) ? formatNumber(runtime.baseQty, 4) : '-';
             const quote = Number.isFinite(runtime.quoteQty) ? formatNumber(runtime.quoteQty, 4) : '-';
-            gridInfoChips.push(`base ${base} / quote ${quote}`);
+            gridInfoChips.push(`单格数量 base ${base} / quote ${quote}`);
         }
         if (Number.isFinite(runtime.buyPrice)) {
-            gridInfoChips.push(`下一买入汇率 ${formatNumber(runtime.buyPrice, 4)}`);
+            // gridInfoChips.push(`下一买入汇率 ${formatNumber(runtime.buyPrice, 4)}`);
         }
         if (Number.isFinite(runtime.sellPrice)) {
-            gridInfoChips.push(`下一卖出汇率 ${formatNumber(runtime.sellPrice, 4)}`);
+            // gridInfoChips.push(`下一卖出汇率 ${formatNumber(runtime.sellPrice, 4)}`);
         }
         if (Number.isFinite(runtime.lastTradePrice)) {
-            gridInfoChips.push(`最新成交汇率 ${formatNumber(runtime.lastTradePrice, 4)}`);
+            // gridInfoChips.push(`最新成交汇率 ${formatNumber(runtime.lastTradePrice, 4)}`);
         }
         const chipHtml = gridInfoChips.map(chip => `<span class="task-chip">${chip}</span>`).join('');
 
         const latestTradeTime = formatDate(task.latestTrade);
         const summaryItems = [
             {label: '套利批次', value: arbitrageSummary},
+            {label: '最新成交汇率', value: latestTradedPrice},
+            {label: '下一买汇率', value: nextBidPrice},
+            {label: '下一卖汇率', value: nextAskPrice},
             {label: '最新成交时间', value: latestTradeTime},
             {label: '时间范围', value: timeRange}
         ];

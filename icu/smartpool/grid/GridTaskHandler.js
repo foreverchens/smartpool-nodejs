@@ -1,5 +1,6 @@
 import {Snowflake} from '@theinternetfolks/snowflake';
 import dayjs from 'dayjs';
+import callRlt from '../common/CallResult.js'
 import {getTicker} from "./common/BockTickerManage.js"
 import czClient from "./common/CzClient.js";
 import logger from './common/logger.js';
@@ -48,7 +49,10 @@ export async function tryStart(task) {
         console.log(`[TASK ${task.id}] 当前价格 ${synthPrice} 未触发启动价 ${task.startPrice}`);
         return false;
     }
+    // 启动
     task.startPrice = synthPrice;
+    task.startBaseP = basePrice;
+    task.startQuoteP = quotePrice;
     const baseQty = formatQtyByPrice(basePrice, task.gridValue / basePrice);
     let quoteQty = null;
     if (task.doubled && quotePrice) {
@@ -74,7 +78,7 @@ export async function tryStart(task) {
 export async function dealTask(task) {
     if (!task.runtime) {
         logger.error(`[TASK ${task.id}] runtime 未初始化, 跳过处理`);
-        return [];
+        return callRlt.ok();
     }
 
     const baseAssert = task.baseAssert;
@@ -97,10 +101,9 @@ export async function dealTask(task) {
     console.log(`[TASK ${task.id}] 当前汇率:${curBidPrice} 买入:${buyPrice} 卖出:${sellPrice} @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
     if (curBidPrice > buyPrice && curAskPrice < sellPrice) {
         // 仍在价格区间内
-        return [];
+        return callRlt.ok();
     }
     // 进入交易价格
-
 
     let [baseAssertPosit] = await czClient.getFuturesPositionRisk(baseAssert);
     let baseOrder = null;
@@ -109,12 +112,14 @@ export async function dealTask(task) {
         logger.info(`[TASK ${task.id}] curP[${curBidPrice}] < buyP[${buyPrice}] 执行买入`)
         // 汇率降低、
         // 买入gridValue等值base资产、卖出等值quote资产
-        if (!task.doubled && !task.reversed) {
-            // 单币网格、不支持反向、检查剩余仓位是否满足开单要求
-            // 当前为买入场合、持有空单时需检查、买前检查空单仓位、仓位不足则取消交易
-            if (baseAssertPosit && baseAssertPosit.positionAmt && Number(baseAssertPosit.positionAmt) < 0 && Number(baseAssertPosit.positionAmt) + Number(baseQty) > 0) {
-                logger.error(`[TASK ${task.id}] 仓位不足, 待买入:${baseQty}, 当前仓位:${baseAssertPosit.positionAmt}`);
-                return [];
+        if (!task.reversed) {
+            // 默认不支持订单反向、以base资产为准
+            // 不支持反向、检查剩余仓位是否满足开单要求
+            // 当前执行base资产买入、若当前持有空单、检查是否满足此次买入平仓
+            if (baseAssertPosit?.positionAmt && Number(baseAssertPosit.positionAmt) < 0 && Number(baseAssertPosit.positionAmt) + baseQty > 0) {
+                let msg = `[TASK ${task.id}] 仓位不足, 待买入:${baseQty}, 当前仓位:${baseAssertPosit.positionAmt}`;
+                logger.error(msg);
+                return callRlt.fail(msg);
             }
         }
         // 先下远单在修改、防止maker变taker
@@ -123,8 +128,9 @@ export async function dealTask(task) {
         // baseOrder = await czClient.futureModifyOrder(baseAssert, baseOrder.side, baseOrder.orderId, baseQty, baseOrderBook.bids[0].price);
         if (baseOrder.msg) {
             // 下单失败
-            logger.error(`[TASK ${task.id}] 买入失败 msg:${baseOrder.msg}`)
-            return [];
+            let msg = `[TASK ${task.id}] 买入失败 msg:${baseOrder.msg}`;
+            logger.error(msg)
+            return callRlt.fail(msg);
         }
         const taskBindId = Snowflake.generate();
 
@@ -138,8 +144,9 @@ export async function dealTask(task) {
             quoteOrder = await czClient.placeOrder(quoteAssert, 1, quoteQty, quoteAskPrice);
             if (quoteOrder.msg) {
                 // 下单失败
-                logger.error(`[TASK ${task.id}] 卖出失败 msg:${quoteOrder.msg}`)
-                return [];
+                let msg = `[TASK ${task.id}] 卖出失败 msg:${quoteOrder.msg}`;
+                logger.error(msg)
+                return callRlt.fail(msg);
             }
             // quoteOrder = await czClient.futureSell(quoteAssert, quoteQty, quoteOrderBook.asks[9].price);
             // quoteOrder = await czClient.futureModifyOrder(quoteAssert, quoteOrder.side, quoteOrder.orderId, quoteQty, quoteOrderBook.asks[0].price);
@@ -156,19 +163,22 @@ export async function dealTask(task) {
         // 汇率上涨
         // 卖出gridValue等值base资产、买入等值quote资产
 
-        if (!task.doubled && !task.reversed) {
-            // 单币网格、不支持反向、检查剩余仓位是否满足开单要求
+        if (!task.reversed) {
+            // 默认不支持订单反向、以base资产为准
+            // 不支持反向、检查剩余仓位是否满足开单要求
             // 当前为卖出场合、持有多单时需检查、买前检查多单仓位、仓位不足则取消交易
-            if (baseAssertPosit && baseAssertPosit.positionAmt && Number(baseAssertPosit.positionAmt) > 0 && Number(baseAssertPosit.positionAmt) - Number(baseQty) < 0) {
-                logger.error(`[TASK ${task.id}] 仓位不足, 待卖出:${baseQty}, 当前仓位:${baseAssertPosit.positionAmt}`);
-                return [];
+            if (baseAssertPosit?.positionAmt && Number(baseAssertPosit.positionAmt) > 0 && Number(baseAssertPosit.positionAmt) - baseQty < 0) {
+                let msg = `[TASK ${task.id}] 仓位不足, 待卖出:${baseQty}, 当前仓位:${baseAssertPosit.positionAmt}`;
+                logger.error(msg);
+                return callRlt.fail(msg);
             }
         }
         baseOrder = await czClient.placeOrder(baseAssert, 1, baseQty, baseAskPrice);
         if (baseOrder.msg) {
             // 下单失败
-            logger.error(`[TASK ${task.id}] 卖出失败 msg:${baseOrder.msg}`)
-            return [];
+            let msg = `[TASK ${task.id}] 卖出失败 msg:${baseOrder.msg}`;
+            logger.error(msg)
+            return callRlt.fail(msg);
         }
         // baseOrder = await czClient.futureSell(baseAssert, baseQty, baseOrderBook.asks[9].price);
         // baseOrder = await czClient.futureModifyOrder(baseAssert, baseOrder.side, baseOrder.orderId, baseQty, baseOrderBook.asks[0].price);
@@ -183,8 +193,9 @@ export async function dealTask(task) {
             quoteOrder = await czClient.placeOrder(quoteAssert, 0, quoteQty, quoteBidPrice);
             if (quoteOrder.msg) {
                 // 下单失败
-                logger.error(`[TASK ${task.id}] 买入失败 msg:${quoteOrder.msg}`)
-                return [];
+                let msg = `[TASK ${task.id}] 买入失败 msg:${quoteOrder.msg}`;
+                logger.error(msg)
+                return callRlt.fail(msg);
             }
             // quoteOrder = await czClient.futureBuy(quoteAssert, quoteQty, quoteOrderBook.bids[9].price);
             // quoteOrder = await czClient.futureModifyOrder(quoteAssert, quoteOrder.side, quoteOrder.orderId, quoteQty, quoteOrderBook.bids[0].price);
@@ -196,6 +207,8 @@ export async function dealTask(task) {
             logger.info(`[TASK ${task.id}] ${quoteAssert} 触发买入 买入汇率:${curAskPrice} 数量 ${quoteQty} , 订单:${quoteOrder.orderId}`);
         }
     }
+
+
     task.runtime.buyPrice = Number((curBidPrice * (1 - task.gridRate)).toPrecision(8));
     task.runtime.sellPrice = Number((curBidPrice * (1 + task.gridRate)).toPrecision(8));
     task.runtime.lastTradePrice = curBidPrice;
@@ -208,13 +221,12 @@ export async function dealTask(task) {
         orders.push(quoteOrder);
     }
 
-    return orders;
+    return callRlt.ok(orders);
 }
 
 /**
  * 处理订单列表
  * @param orderList
- * @returns {Promise<void>}
  */
 export async function dealOrder(orderList) {
     let idx = 0;
@@ -250,10 +262,10 @@ export async function dealOrder(orderList) {
         if (price !== Number(realOrder.price)) {
             logger.info(`[ORDER ${orderId}] 价格修改 ` + realOrder.side + '  ' + realOrder.price + '-->' + price);
             let rlt = await czClient.futureModifyOrder(realOrder.symbol, realOrder.side, realOrder.orderId, realOrder.origQty, price);
-            if (rlt.msg) {
-                logger.error(rlt.msg);
+            if (rlt.suc) {
+                order = rlt.data;
             } else {
-                order = rlt;
+                logger.error(rlt.msg);
             }
         }
     }

@@ -39,20 +39,19 @@ export async function tryStart(task) {
     if (task.doubled) {
         quotePrice = await czClient.getFuturesPrice(task.quoteAssert);
         if (!quotePrice) {
-            logger.error(`[TASK ${task.id}] quote price 获取失败, 暂停启动`);
-            return false;
+            let msg = `[TASK ${task.id}] quote price 获取失败, 暂停启动`;
+            logger.error(msg);
+            return callRlt.fail(msg);
         }
         synthPrice = Number((basePrice / quotePrice).toFixed(8));
     }
 
     if (task.startPrice != null && synthPrice >= Number(task.startPrice)) {
-        console.log(`[TASK ${task.id}] 当前价格 ${synthPrice} 未触发启动价 ${task.startPrice}`);
-        return false;
+        let msg = `[TASK ${task.id}] 当前价格 ${synthPrice} 未触发启动价 ${task.startPrice}`;
+        console.log(msg);
+        return callRlt.fail(msg);
     }
-    // 启动
-    task.startPrice = synthPrice;
-    task.startBaseP = basePrice;
-    task.startQuoteP = quotePrice;
+    // 启动过程
     const baseQty = formatQtyByPrice(basePrice, task.gridValue / basePrice);
     let quoteQty = null;
     if (task.doubled && quotePrice) {
@@ -63,12 +62,71 @@ export async function tryStart(task) {
     const sellPrice = Number((synthPrice * (1 + task.gridRate)).toPrecision(8));
     const lastTradePrice = synthPrice;
 
+    const initOrders = [];
+    const initPosition = task.initPosition;
+    if (initPosition && typeof initPosition === 'object') {
+        const rawBaseQty = Number(initPosition.baseQty);
+        const rawQuoteQty = Number(initPosition.quoteQty);
+
+        let taskBindId = null;
+
+        const initBaseQty = formatQtyByPrice(basePrice, rawBaseQty);
+        const baseOrder = await czClient.placeOrder(task.baseAssert, 0, initBaseQty, basePrice);
+        if (baseOrder.msg) {
+            let msg = `[TASK ${task.id}] 初始仓位买入失败 msg:${baseOrder.msg}`;
+            logger.error(msg);
+            callRlt.fail(msg);
+        } else {
+            taskBindId = taskBindId ?? Snowflake.generate();
+            baseOrder.taskId = task.id;
+            baseOrder.taskBindId = taskBindId;
+            baseOrder.synthPrice = synthPrice;
+            initOrders.push(baseOrder);
+            logger.info(`[TASK ${task.id}] 初始买入 ${task.baseAssert} 数量:${initBaseQty} 价格:${basePrice}`);
+        }
+
+        const initQuoteQty = formatQtyByPrice(quotePrice, rawQuoteQty);
+        const quoteOrder = await czClient.placeOrder(task.quoteAssert, 1, initQuoteQty, quotePrice);
+        if (quoteOrder.msg) {
+            let msg = `[TASK ${task.id}] 初始仓位卖出失败 msg:${quoteOrder.msg}`;
+            logger.error(msg);
+            callRlt.fail(msg)
+        } else {
+            taskBindId = taskBindId ?? Snowflake.generate();
+            quoteOrder.taskId = task.id;
+            quoteOrder.taskBindId = taskBindId;
+            quoteOrder.synthPrice = synthPrice;
+            initOrders.push(quoteOrder);
+            logger.info(`[TASK ${task.id}] 初始卖出 ${task.quoteAssert} 数量:${initQuoteQty} 价格:${quotePrice}`);
+        }
+
+        for (const order of initOrders) {
+            await saveOrder(order);
+        }
+    }
+
+    // 启动
+    task.startPrice = synthPrice;
+    task.startBaseP = basePrice;
+    task.startQuoteP = quotePrice;
     task.runtime = {
-        baseQty, quoteQty, buyPrice, sellPrice, lastTradePrice
+        baseQty,
+        quoteQty,
+        buyPrice,
+        sellPrice,
+        lastTradePrice,
+        initFilled: initOrders.length ? initOrders.map(order => ({
+            symbol: order.symbol,
+            side: order.side,
+            qty: order.origQty,
+            price: order.price,
+            orderId: order.orderId
+        })) : []
     };
     task.status = STATUS.RUNNING;
     console.log(`[TASK ${task.id}] 启动成功, runtime: ${JSON.stringify(task.runtime)}`);
-    return true;
+
+    return callRlt.ok(initOrders);
 }
 
 /**
@@ -234,7 +292,9 @@ export async function dealOrder(orderList) {
         let order = orderList[idx];
         let orderId = order.orderId;
         let symbol = order.symbol;
-        let realOrder = await czClient.getFuturesOrder(symbol, orderId);
+        let realOrder = await czClient.getFuturesOrder(symbol, orderId).catch(e => {
+            logger.error('[ORDER ${orderId}] 订单查询异常 :' + e.message)
+        });
         if (!realOrder) {
             logger.error(`[ORDER ${orderId}] 无法获取订单详情, 暂时跳过`);
             idx++;

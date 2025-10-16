@@ -236,6 +236,7 @@ class CzClient {
      * @param timestamp
      */
     async futureModifyOrder(symbol, side, orderId, quantity, price, timestamp = Date.now()) {
+
         const endpoint = 'https://fapi.binance.com/fapi/v1/order';
         const params = {
             symbol, orderId, side, quantity, price, timestamp,
@@ -256,15 +257,17 @@ class CzClient {
             if (order.status === 'CANCELED' && order.timeInForce === 'GTX') {
                 // gtx的订单、价格被修改后、若无法继续成为maker、则会被取消、需重新下单
                 // https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/trade/rest-api/Modify-Order
+                logger.error(`[ORDER ${orderId}] 价格修改失败、重新下单 ${order}`);
                 return callRlt.ok(await this.placeOrder(symbol, side === 'SELL', quantity));
             }
+            logger.info(`[ORDER ${orderId}] 价格修改成功--> ${order.price}`);
             return callRlt.ok(order);
         } catch (error) {
-            let msg = `${symbol}-${orderId} 修改失败: + ${error.response ? JSON.stringify(error.response.data) : JSON.stringify(error.message)}`;
+            let msg = `${symbol}-${orderId} 价格修改失败: + ${error.response ? JSON.stringify(error.response.data) : JSON.stringify(error.message)}`;
             logger.error(msg)
             if (error?.response?.data?.code === -2013) {
                 // 订单已成交、
-                logger.error(`${symbol}-${orderId} 订单已成交 直接查询返回`)
+                logger.error(`[ORDER ${orderId}] 价格修改失败、订单已成交 直接查询返回`);
                 return callRlt.ok(await this.getFuturesOrder(symbol, orderId));
             }
             return callRlt.fail(msg);
@@ -376,5 +379,5 @@ class CzClient {
     }
 }
 
-// new CzClient().getTxFee('ethusdc', 31435645980).then(e => console.log(e))
+// new CzClient().getFuturesOrder('bchusdc', 1780888623).then(e => console.log(e))
 export default new CzClient();

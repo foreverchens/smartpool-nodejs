@@ -10,6 +10,7 @@
  * @property {number=} startPrice     // 启动触发价；未指定则首次价格即为锚点
  * @property {number} gridRate        // 等比网格比率，如 0.005
  * @property {number} gridValue       // 每格交易价值（USDT）
+ * @property {{baseQty?: number, quoteQty?: number}=} initPosition // 启动后一次性建仓数量
  *
  * @typedef {Object} RuntimeParams    // 运行时参数：由引擎在启动时生成
  * @property {number=} baseQty
@@ -122,6 +123,21 @@ function validateParams(gridTask) {
     if (gridTask.startPrice != null && (typeof gridTask.startPrice !== 'number' || !Number.isFinite(gridTask.startPrice))) {
         errors.push('startPrice 如存在必须为数值');
     }
+
+    if (gridTask.initPosition != null) {
+        if (typeof gridTask.initPosition !== 'object' || Array.isArray(gridTask.initPosition)) {
+            errors.push('initPosition 必须为对象');
+        } else {
+            const {baseQty, quoteQty} = gridTask.initPosition;
+            if (baseQty != null && (typeof baseQty !== 'number' || !Number.isFinite(baseQty) || baseQty <= 0)) {
+                errors.push('initPosition.baseQty 必须为大于0的数值');
+            }
+            if (quoteQty != null && (typeof quoteQty !== 'number' || !Number.isFinite(quoteQty) || quoteQty <= 0)) {
+                errors.push('initPosition.quoteQty 必须为大于0的数值');
+            }
+        }
+    }
+
     return {valid: errors.length === 0, errors};
 }
 
@@ -149,16 +165,22 @@ async function loop() {
     // 2.遍历网格任务列表
     for (const task of gridTaskList) {
         switch (task.status) {
-            case STATUS.PENDING:
-                let started = await tryStart(task);
-                if (started) {
+            case STATUS.PENDING: {
+                const startRlt = await tryStart(task);
+                if (startRlt.suc) {
                     // 启动成功 订阅报价
                     subscribe(task.baseAssert);
                     if (task.doubled) {
-                        subscribe(task.quoteAssert)
+                        subscribe(task.quoteAssert);
+                    }
+                    if (Array.isArray(startRlt.data) && startRlt.data.length) {
+                        for (const order of startRlt.data) {
+                            orderList.push(order);
+                        }
                     }
                 }
-                break
+                break;
+            }
             case STATUS.RUNNING:
                 let callRlt = await dealTask(task);
                 if (callRlt.suc) {

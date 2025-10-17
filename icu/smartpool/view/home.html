@@ -429,6 +429,14 @@
     }, {});
     const KNOWN_QUOTES = ['USDT', 'USDC', 'BTC', 'ETH', 'BUSD'];
     const LINEAR_QUOTES = new Set(['USDT', 'USDC', 'BUSD']);
+    const PERIOD_INTERVAL_MS = {
+        '1m': 60 * 1000,
+        '5m': 5 * 60 * 1000,
+        '15m': 15 * 60 * 1000,
+        '30m': 30 * 60 * 1000,
+        '1h': 60 * 60 * 1000,
+        '4h': 4 * 60 * 60 * 1000
+    };
 
     let currentStageValue = DEFAULT_STAGE;
     let currentRows = [];
@@ -437,6 +445,10 @@
     let klineRequestId = 0;
     let activeBoundaries = null;
     const boundaryCache = new Map();
+    const ordersBySymbol = new Map();
+    let ordersLoadPromise = null;
+    let ordersLoadError = null;
+    let ordersSavedAt = null;
     const QUALITY_HINT_TEXT = '评分等级：C (<10000)，B (<15000)，A (<20000)，S (<25000)，SSS (≥25000)';
     if (qualityHintEl) {
         qualityHintEl.textContent = QUALITY_HINT_TEXT;
@@ -509,6 +521,285 @@
             return normalizedBase + resolvedQuote;
         }
         return `${normalizedBase}-${resolvedQuote}`;
+    }
+
+    function normalizeOrderSymbol(symbol) {
+        if (!symbol) {
+            return '';
+        }
+        const parsed = parseSymbol(symbol);
+        return normalizeSymbol(parsed.base, parsed.quote);
+    }
+
+    function addOrderToIndex(key, order) {
+        if (!key) {
+            return;
+        }
+        const normalizedKey = key.toUpperCase();
+        const existing = ordersBySymbol.get(normalizedKey);
+        if (existing) {
+            existing.push(order);
+            return;
+        }
+        ordersBySymbol.set(normalizedKey, [order]);
+    }
+
+    function indexOrders(orders) {
+        ordersBySymbol.clear();
+        if (!Array.isArray(orders)) {
+            return;
+        }
+        orders.forEach(order => {
+            if (!order || !order.symbol) {
+                return;
+            }
+            const originalSymbol = order.symbol.toUpperCase();
+            addOrderToIndex(originalSymbol, order);
+            const normalized = normalizeOrderSymbol(originalSymbol);
+            if (normalized && normalized !== originalSymbol) {
+                addOrderToIndex(normalized, order);
+            }
+        });
+        ordersBySymbol.forEach(list => {
+            list.sort((a, b) => {
+                const timeA = Number(a && a.updateTime);
+                const timeB = Number(b && b.updateTime);
+                if (Number.isFinite(timeA) && Number.isFinite(timeB)) {
+                    return timeA - timeB;
+                }
+                if (Number.isFinite(timeA)) {
+                    return -1;
+                }
+                if (Number.isFinite(timeB)) {
+                    return 1;
+                }
+                return 0;
+            });
+        });
+    }
+
+    function getOrdersForSymbol(symbol) {
+        if (!symbol) {
+            return [];
+        }
+        const upper = symbol.toUpperCase();
+        if (ordersBySymbol.has(upper)) {
+            return ordersBySymbol.get(upper) || [];
+        }
+        const normalized = normalizeOrderSymbol(symbol);
+        if (normalized) {
+            return ordersBySymbol.get(normalized.toUpperCase()) || [];
+        }
+        return [];
+    }
+
+    async function ensureOrdersLoaded() {
+        if (ordersLoadPromise) {
+            return ordersLoadPromise;
+        }
+        ordersLoadPromise = (async () => {
+            try {
+                const response = await fetchJson('/api/orders');
+                const orders = Array.isArray(response.orders) ? response.orders : [];
+                indexOrders(orders);
+                ordersSavedAt = response.savedAt || null;
+                ordersLoadError = null;
+                return orders;
+            } catch (err) {
+                ordersBySymbol.clear();
+                ordersSavedAt = null;
+                ordersLoadError = err;
+                return [];
+            }
+        })();
+        return ordersLoadPromise;
+    }
+
+    function findCandleIndex(openTimes, intervalMs, targetTime) {
+        if (!Array.isArray(openTimes) || openTimes.length === 0 || !Number.isFinite(intervalMs) || !Number.isFinite(targetTime)) {
+            return -1;
+        }
+        let left = 0;
+        let right = openTimes.length - 1;
+        while (left <= right) {
+            const mid = Math.floor((left + right) / 2);
+            const openTime = Number(openTimes[mid]);
+            if (!Number.isFinite(openTime)) {
+                return -1;
+            }
+            const closeTime = openTime + intervalMs;
+            if (targetTime < openTime) {
+                right = mid - 1;
+                continue;
+            }
+            if (targetTime >= closeTime) {
+                left = mid + 1;
+                continue;
+            }
+            return mid;
+        }
+        return -1;
+    }
+
+    function buildOrderMarkers(symbol, period, klineEntries, timeLabels) {
+        const interval = PERIOD_INTERVAL_MS[period];
+        if (!Number.isFinite(interval) || !Array.isArray(klineEntries) || klineEntries.length === 0) {
+            return [];
+        }
+        const orders = getOrdersForSymbol(symbol);
+        if (!orders.length) {
+            return [];
+        }
+        const openTimes = klineEntries.map(entry => Number(entry.openT));
+        const {base: baseSymbol} = parseSymbol(symbol);
+        const aggregated = new Map();
+        orders.forEach(order => {
+            if (!order) {
+                return;
+            }
+            const status = typeof order.status === 'string' ? order.status.toUpperCase() : '';
+            if (status && status !== 'FILLED' && status !== 'PARTIALLY_FILLED') {
+                return;
+            }
+            const normalizedDelta = Number(order.baseDelta);
+            let baseDelta = Number.isFinite(normalizedDelta) ? normalizedDelta : 0;
+            if (!baseDelta) {
+                const qty = Number(order.origQty);
+                const side = typeof order.side === 'string' ? order.side.toUpperCase() : '';
+                if (Number.isFinite(qty)) {
+                    if (side === 'BUY') {
+                        baseDelta = qty;
+                    } else if (side === 'SELL') {
+                        baseDelta = -qty;
+                    }
+                }
+            }
+            if (!baseDelta) {
+                return;
+            }
+            const updateTime = Number(order.updateTime);
+            if (!Number.isFinite(updateTime)) {
+                return;
+            }
+            const candleIndex = findCandleIndex(openTimes, interval, updateTime);
+            if (candleIndex < 0) {
+                return;
+            }
+            const openTime = openTimes[candleIndex];
+            const bucket = aggregated.get(openTime) || {
+                index: candleIndex,
+                openTime,
+                baseDelta: 0,
+                buys: 0,
+                sells: 0,
+                orders: []
+            };
+            bucket.baseDelta += baseDelta;
+            if (baseDelta > 0) {
+                bucket.buys += 1;
+            } else {
+                bucket.sells += 1;
+            }
+            bucket.orders.push(order);
+            aggregated.set(openTime, bucket);
+        });
+        const markers = [];
+        aggregated.forEach(bucket => {
+            if (!bucket || !bucket.baseDelta) {
+                return;
+            }
+            const isBuy = bucket.baseDelta > 0;
+            const candle = klineEntries[bucket.index];
+            const xValue = Array.isArray(timeLabels) ? timeLabels[bucket.index] : bucket.index;
+            const targetPrice = isBuy ? Number(candle.lowP) : Number(candle.highP);
+            if (!Number.isFinite(targetPrice)) {
+                return;
+            }
+            markers.push({
+                coord: [xValue, targetPrice],
+                value: isBuy ? 'B' : 'S',
+                symbol: 'circle',
+                symbolSize: 14,
+                symbolOffset: [0, isBuy ? 16 : -16],
+                itemStyle: {
+                    color: isBuy ? '#26a69a' : '#ef5350'
+                },
+                label: {
+                    formatter: isBuy ? 'B' : 'S',
+                    color: '#0f1624',
+                    fontWeight: 'bold'
+                },
+                baseDelta: bucket.baseDelta,
+                baseSymbol,
+                orders: bucket.orders.slice(),
+                buys: bucket.buys,
+                sells: bucket.sells,
+                openTime: bucket.openTime
+            });
+        });
+        return markers.sort((a, b) => {
+            const timeA = Number(a.openTime);
+            const timeB = Number(b.openTime);
+            if (Number.isFinite(timeA) && Number.isFinite(timeB)) {
+                return timeA - timeB;
+            }
+            return 0;
+        });
+    }
+
+    function formatOrderMarkerTooltip(data) {
+        if (!data) {
+            return '无订单信息';
+        }
+        const direction = data.value === 'B' ? '净买入' : '净卖出';
+        const baseSymbol = data.baseSymbol || '';
+        const baseDelta = Number(data.baseDelta);
+        const netQty = Number.isFinite(baseDelta) ? Math.abs(baseDelta) : null;
+        const netText = Number.isFinite(netQty) ? netQty.toPrecision(6) : '--';
+        const lines = [
+            `${direction}（净：${netText}${baseSymbol ? ` ${baseSymbol}` : ''}）`
+        ];
+        const orders = Array.isArray(data.orders) ? data.orders.slice() : [];
+        if (orders.length) {
+            const buys = Number(data.buys) || 0;
+            const sells = Number(data.sells) || 0;
+            lines.push(`笔数：${orders.length}（买：${buys} 卖：${sells}）`);
+            orders.sort((a, b) => {
+                const timeA = Number(a && a.updateTime);
+                const timeB = Number(b && b.updateTime);
+                if (Number.isFinite(timeA) && Number.isFinite(timeB)) {
+                    return timeA - timeB;
+                }
+                if (Number.isFinite(timeA)) {
+                    return -1;
+                }
+                if (Number.isFinite(timeB)) {
+                    return 1;
+                }
+                return 0;
+            });
+            orders.forEach(order => {
+                const side = typeof order.side === 'string' ? order.side.toUpperCase() : '';
+                const qtyVal = Number(order.origQty);
+                const qtyFallback = Number(order && order.origQtyRaw);
+                const qtyText = Number.isFinite(qtyVal)
+                    ? qtyVal.toPrecision(6)
+                    : (Number.isFinite(qtyFallback) ? qtyFallback.toPrecision(6) : (order.origQtyRaw || '--'));
+                const priceVal = Number(order.price);
+                const priceFallback = Number(order && order.priceRaw);
+                const priceText = Number.isFinite(priceVal)
+                    ? priceVal.toPrecision(8)
+                    : (Number.isFinite(priceFallback) ? priceFallback.toPrecision(8) : (order.priceRaw || '--'));
+                const updateTime = Number(order.updateTime);
+                const timeText = Number.isFinite(updateTime)
+                    ? new Date(updateTime).toLocaleString()
+                    : '未知时间';
+                lines.push(`${timeText} ${side || '--'} ${qtyText}${baseSymbol ? ` ${baseSymbol}` : ''} @ ${priceText}`);
+            });
+        } else {
+            lines.push('无关联订单数据');
+        }
+        return lines.join('<br/>');
     }
 
     function deriveQuality(score) {
@@ -854,7 +1145,12 @@
             maskColor: 'rgba(15, 22, 36, 0.45)'
         });
         try {
+            const ordersPromise = ensureOrdersLoaded().catch(err => {
+                console.warn('[renderKline] 订单加载失败:', err);
+                return [];
+            });
             const kline = await fetchKline(symbol, period);
+            await ordersPromise;
             if (requestId !== klineRequestId) {
                 return;
             }
@@ -915,7 +1211,39 @@
             } else {
                 console.log('[renderKline] markLineData:', markLineData);
             }
+            const orderMarkers = buildOrderMarkers(symbol, period, kline, times);
 
+            const seriesConfig = {
+                name: symbol,
+                type: 'candlestick',
+                data: values,
+                itemStyle: {
+                    color: '#26a69a',
+                    color0: '#ef5350',
+                    borderColor: '#26a69a',
+                    borderColor0: '#ef5350'
+                },
+                emphasis: {
+                    itemStyle: {color: '#2ec7c9', color0: '#f4606c'}
+                }
+            };
+            if (markLineData.length) {
+                seriesConfig.markLine = {
+                    symbol: 'none',
+                    data: markLineData
+                };
+            }
+            if (orderMarkers.length) {
+                seriesConfig.markPoint = {
+                    animation: false,
+                    tooltip: {
+                        formatter(params) {
+                            return formatOrderMarkerTooltip(params.data);
+                        }
+                    },
+                    data: orderMarkers
+                };
+            }
             chart.setOption({
                 backgroundColor: '#0f1624',
                 grid: {
@@ -936,7 +1264,6 @@
                     formatter(params) {
                         const k = params[0];
                         const [idx, open, close, low, high] = k.data;
-                        console.log(k.data)
                         const change = open ? ((close - open) / open * 100).toFixed(2) : '0.00';
                         return [
                             `时间：${k.axisValueLabel}`,
@@ -971,22 +1298,7 @@
                     splitLine: {show: true, lineStyle: {color: '#1f2a48'}}
                 },
                 series: [{
-                    name: symbol,
-                    type: 'candlestick',
-                    data: values,
-                    itemStyle: {
-                        color: '#26a69a',
-                        color0: '#ef5350',
-                        borderColor: '#26a69a',
-                        borderColor0: '#ef5350'
-                    },
-                    emphasis: {
-                        itemStyle: {color: '#2ec7c9', color0: '#f4606c'}
-                    },
-                    markLine: markLineData.length ? {
-                        symbol: 'none',
-                        data: markLineData
-                    } : undefined
+                    ...seriesConfig
                 }]
             });
             chart.resize();
@@ -1281,8 +1593,13 @@
 
     (async function initialize() {
         try {
+            const ordersPreload = ensureOrdersLoaded().catch(err => {
+                console.warn('[initialize] 订单预加载失败:', err);
+                return [];
+            });
             await loadSymbolAndPairs();
             await populateStageOptions();
+            await ordersPreload;
         } catch (err) {
             setStageMessage('初始化失败: ' + err.message);
         }

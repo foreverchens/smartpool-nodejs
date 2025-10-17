@@ -92,29 +92,51 @@ class OrderMapper {
         return {...order};
     }
 
+    /**
+     *     {
+     *       "taskId": "BCHETH",
+     *       "taskBindId": "7384524779370445457",
+     *       "synthPrice": "0.12951529",
+     *       "symbol": "BCHUSDC",
+     *       "orderId": 1780590936,
+     *       "side": "BUY",
+     *       "status": "FILLED",
+     *       "price": "521.90",
+     *       "origQty": "0.050",
+     *       "updateTime": 1760607905297,
+     *       "txFee": 0,
+     *       "makerFeeRate": "100%"
+     *     }
+     * @returns {Promise<number>}
+     */
     async list() {
         await this._init();
-        const {orders} = this.db.data;
+        let {orders} = this.db.data;
         let cnt = 0;
+        orders = orders.filter(e => e.symbol === 'BCHUSDC');
+        console.log(orders.length);
+        let totalBidQty = 0;
+        let totalBidVal = 0;
+        let totalAskQty = 0;
+        let totalAskVal = 0;
         for (const element of orders) {
             let order = element;
-            if (order.makerFeeRate === '0%' && order.txFee === 0) {
-                // 手续费获取
-                let {txFee, makerFeeRate} = await czClient.getTxFee(order.symbol, order.orderId);
-                order.txFee = txFee;
-                order.makerFeeRate = makerFeeRate;
-                console.log(order.orderId);
-                console.log(txFee);
-                console.log(makerFeeRate);
-                cnt++;
+            if (order.side === 'BUY') {
+                totalBidQty += Number(order.origQty);
+                totalBidVal += Number(order.origQty) * Number(order.synthPrice);
+            } else {
+                totalAskQty += Number(order.origQty);
+                totalAskVal += Number(order.origQty) * Number(order.synthPrice);
             }
         }
+        console.log(totalBidVal / totalBidQty)
+        console.log(totalAskVal / totalAskQty)
         await this.db.write();
         return cnt;
     }
 }
 
 const orderMapper = new OrderMapper(db);
-// orderMapper.list().then(e=> console.log(e));
+// orderMapper.list().then(e => console.log(e));
 export const saveOrder = order => orderMapper.save(order);
 export const updateOrderStatus = (orderId, status) => orderMapper.updateStatus(orderId, status);

@@ -321,6 +321,41 @@
             color: #8fa3bf;
         }
 
+        .arbitrage-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            margin: 12px 4px 0;
+        }
+
+        .arbitrage-page-btn {
+            padding: 4px 12px;
+            border: 1px solid rgba(47, 65, 102, 0.6);
+            border-radius: 6px;
+            background: rgba(37, 51, 82, 0.85);
+            color: #e0e6f1;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .arbitrage-page-btn:hover:not(:disabled) {
+            background: rgba(57, 81, 124, 0.9);
+            border-color: rgba(91, 123, 177, 0.9);
+            color: #f5f7fb;
+        }
+
+        .arbitrage-page-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+        }
+
+        .arbitrage-page-indicator {
+            font-size: 13px;
+            color: #8fa3bf;
+        }
+
         .arbitrage-detail-row td {
             padding: 0;
             border-bottom: 1px solid rgba(47, 65, 102, 0.6);
@@ -801,11 +836,15 @@
         isRefreshing: false,
         refreshTimerId: null,
         orderKeySnapshot: new Set(),
-        lastNewOrderKeys: new Set()
+        lastNewOrderKeys: new Set(),
+        expandedTaskBlocks: new Map(),
+        expandedArbitrages: new Map(),
+        arbitragePage: new Map()
     };
 
     const DEFAULT_DECIMALS = 4;
     const FEE_DECIMALS = 5;
+    const ARBITRAGE_PAGE_SIZE = 5;
 
     const taskSelectorEl = document.getElementById('grid-task-selector');
     if (taskSelectorEl) {
@@ -1315,6 +1354,9 @@
             participationNotional: 0,
             start: NaN,
             end: NaN,
+            averageCrossRate: null,
+            averageBuyRate: null,
+            averageSellRate: null,
             gridTask,
             hasOrders: false
         };
@@ -1468,10 +1510,36 @@
             const arbitrages = Array.isArray(rest.arbitrages)
                 ? rest.arbitrages.map(arbitrage => enhanceArbitrageWithGrid(arbitrage, rest.gridTask))
                 : [];
+            let crossWeightedTotal = 0;
+            let crossWeight = 0;
+            let buyWeightedTotal = 0;
+            let buyWeight = 0;
+            let sellWeightedTotal = 0;
+            let sellWeight = 0;
+            arbitrages.forEach(arbitrage => {
+                if (Number.isFinite(arbitrage.averageCrossRate) && Number.isFinite(arbitrage.matchedQty) && arbitrage.matchedQty > 0) {
+                    crossWeightedTotal += arbitrage.averageCrossRate * arbitrage.matchedQty;
+                    crossWeight += arbitrage.matchedQty;
+                }
+                if (Number.isFinite(arbitrage.averageBuyRate) && Number.isFinite(arbitrage.buyQty) && arbitrage.buyQty > 0) {
+                    buyWeightedTotal += arbitrage.averageBuyRate * arbitrage.buyQty;
+                    buyWeight += arbitrage.buyQty;
+                }
+                if (Number.isFinite(arbitrage.averageSellRate) && Number.isFinite(arbitrage.sellQty) && arbitrage.sellQty > 0) {
+                    sellWeightedTotal += arbitrage.averageSellRate * arbitrage.sellQty;
+                    sellWeight += arbitrage.sellQty;
+                }
+            });
+            const averageCrossRate = crossWeight ? crossWeightedTotal / crossWeight : null;
+            const averageBuyRate = buyWeight ? buyWeightedTotal / buyWeight : null;
+            const averageSellRate = sellWeight ? sellWeightedTotal / sellWeight : null;
             return {
                 ...rest,
                 assetStats,
-                arbitrages
+                arbitrages,
+                averageCrossRate,
+                averageBuyRate,
+                averageSellRate
             };
         });
     }
@@ -1576,10 +1644,22 @@
             },
             {
                 key: fieldKey('overview', task.taskId, 'net-exposure-notional'),
-                label: '未平仓名义',
+                label: '未平仓名义（双边仓位差值）',
                 value: task.netExposureNotional,
                 decimals: 4,
                 isProfit: true
+            },
+            {
+                key: fieldKey('overview', task.taskId, 'average-buy-rate'),
+                label: '平均买入汇率',
+                value: task.averageBuyRate,
+                decimals: 4
+            },
+            {
+                key: fieldKey('overview', task.taskId, 'average-sell-rate'),
+                label: '平均卖出汇率',
+                value: task.averageSellRate,
+                decimals: 4
             },
             {
                 key: fieldKey('overview', task.taskId, 'maker-order-ratio'),
@@ -1594,12 +1674,6 @@
                 value: task.makerParticipation,
                 decimals: 4,
                 isPercent: true
-            },
-            {
-                key: fieldKey('overview', task.taskId, 'total-orders'),
-                label: '订单总数',
-                value: task.totalOrders,
-                decimals: 0
             },
             {
                 key: fieldKey('overview', task.taskId, 'arbitrage-count'),
@@ -1990,6 +2064,7 @@
         const emptyHint = document.getElementById('task-empty');
         container.innerHTML = '';
 
+        const existingTaskIds = new Set(tasks.map(task => task.taskId));
         const filtered = selectedTaskId ? tasks.filter(task => task.taskId === selectedTaskId) : tasks;
 
         if (!filtered.length) {
@@ -1998,13 +2073,29 @@
         }
 
         emptyHint.hidden = true;
+        dashboardState.expandedTaskBlocks.forEach((_, taskId) => {
+            if (!existingTaskIds.has(taskId)) {
+                dashboardState.expandedTaskBlocks.delete(taskId);
+                dashboardState.expandedArbitrages.delete(taskId);
+            }
+        });
+        dashboardState.arbitragePage.forEach((_, taskId) => {
+            if (!existingTaskIds.has(taskId)) {
+                dashboardState.arbitragePage.delete(taskId);
+            }
+        });
+
         filtered.forEach((task, index) => {
             const details = document.createElement('details');
             details.className = 'task-block';
             details.dataset.taskId = task.taskId;
-            if (index === 0) {
-                details.open = true;
-            }
+            const hasExpandedState = dashboardState.expandedTaskBlocks.has(task.taskId);
+            const shouldOpenTask = hasExpandedState ? dashboardState.expandedTaskBlocks.get(task.taskId) : index === 0;
+            details.open = Boolean(shouldOpenTask);
+            dashboardState.expandedTaskBlocks.set(task.taskId, details.open);
+            details.addEventListener('toggle', () => {
+                dashboardState.expandedTaskBlocks.set(task.taskId, details.open);
+            });
 
             const summary = document.createElement('summary');
             summary.innerHTML = createTaskSummary(task);
@@ -2028,39 +2119,53 @@
                             <th>交易方向</th>
                             <th class="text-right">交易金额 (USDT)</th>
                             <th class="text-right">交易总手续费</th>
-                            <th>状态</th>
+                            <th>批次状态</th>
                             <th>套利时间</th>
                         </tr>
                     </thead>
                 `;
                 const tbody = document.createElement('tbody');
-                const arbitrageRows = task.arbitrages.slice(0, 5);
+                const totalPages = Math.max(1, Math.ceil(task.arbitrages.length / ARBITRAGE_PAGE_SIZE));
+                let currentPage = dashboardState.arbitragePage.get(task.taskId) || 1;
+                if (currentPage > totalPages) {
+                    currentPage = totalPages;
+                }
+                if (currentPage < 1) {
+                    currentPage = 1;
+                }
+                dashboardState.arbitragePage.set(task.taskId, currentPage);
+                const startIndex = (currentPage - 1) * ARBITRAGE_PAGE_SIZE;
+                const arbitrageRows = task.arbitrages.slice(startIndex, startIndex + ARBITRAGE_PAGE_SIZE);
                 const columnCount = table.querySelector('thead tr').children.length || 1;
+                let expandedBindId = dashboardState.expandedArbitrages.get(task.taskId) ?? null;
+                const hasArbState = Boolean(expandedBindId && arbitrageRows.some(item => item.taskBindId === expandedBindId));
                 arbitrageRows.forEach((arbitrage, index) => {
                     const summaryRow = document.createElement('tr');
                     summaryRow.className = 'arbitrage-summary-row';
                     summaryRow.innerHTML = createArbitrageSummaryCells(arbitrage, task);
                     summaryRow.tabIndex = 0;
                     summaryRow.setAttribute('role', 'button');
-                    summaryRow.setAttribute('aria-expanded', index === 0 ? 'true' : 'false');
+                    const shouldOpenArbitrage = hasArbState ? expandedBindId === arbitrage.taskBindId : index === 0;
+                    summaryRow.setAttribute('aria-expanded', shouldOpenArbitrage ? 'true' : 'false');
 
                     const detailRow = document.createElement('tr');
                     detailRow.className = 'arbitrage-detail-row';
-                    if (index !== 0) {
-                        detailRow.hidden = true;
-                    }
+                    detailRow.hidden = !shouldOpenArbitrage;
                     const detailCell = document.createElement('td');
                     detailCell.colSpan = columnCount;
                     detailCell.innerHTML = createArbitrageDetail(arbitrage, task);
                     detailRow.appendChild(detailCell);
+                    if (!hasArbState && shouldOpenArbitrage) {
+                        dashboardState.expandedArbitrages.set(task.taskId, arbitrage.taskBindId);
+                    }
 
                     summaryRow.addEventListener('click', () => {
-                        toggleArbitrageDetail(summaryRow, detailRow, tbody);
+                        toggleArbitrageDetail(task.taskId, arbitrage.taskBindId, summaryRow, detailRow, tbody);
                     });
                     summaryRow.addEventListener('keydown', event => {
                         if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
-                            toggleArbitrageDetail(summaryRow, detailRow, tbody);
+                            toggleArbitrageDetail(task.taskId, arbitrage.taskBindId, summaryRow, detailRow, tbody);
                         }
                     });
 
@@ -2069,13 +2174,31 @@
                 });
                 table.appendChild(tbody);
                 content.appendChild(table);
-                if (task.arbitrages.length > arbitrageRows.length) {
-                    const note = document.createElement('p');
-                    note.className = 'placeholder';
-                    note.textContent = `仅显示最新 ${arbitrageRows.length} 个批次`;
-                    content.appendChild(note);
+                if (totalPages > 1) {
+                    const pager = document.createElement('div');
+                    pager.className = 'arbitrage-pagination';
+                    pager.innerHTML = `
+                        <button type="button" class="arbitrage-page-btn prev" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>
+                        <span class="arbitrage-page-indicator">第 ${currentPage} / ${totalPages} 页</span>
+                        <button type="button" class="arbitrage-page-btn next" ${currentPage === totalPages ? 'disabled' : ''}>下一页</button>
+                    `;
+                    const prevBtn = pager.querySelector('.arbitrage-page-btn.prev');
+                    const nextBtn = pager.querySelector('.arbitrage-page-btn.next');
+                    if (prevBtn) {
+                        prevBtn.addEventListener('click', () => {
+                            changeArbitragePage(task.taskId, -1);
+                        });
+                    }
+                    if (nextBtn) {
+                        nextBtn.addEventListener('click', () => {
+                            changeArbitragePage(task.taskId, 1);
+                        });
+                    }
+                    content.appendChild(pager);
                 }
             } else {
+                dashboardState.expandedArbitrages.delete(task.taskId);
+                dashboardState.arbitragePage.delete(task.taskId);
                 const placeholder = document.createElement('p');
                 placeholder.className = 'placeholder';
                 placeholder.textContent = task.hasOrders
@@ -2210,6 +2333,7 @@
                                     <th class="text-right">成交金额</th>
                                     <th class="text-right">手续费</th>
                                     <th class="text-right">Maker占比</th>
+                                    <th class="text-right">订单状态</th>
                                     <th>成交时间</th>
                                 </tr>
                             </thead>
@@ -2224,12 +2348,25 @@
         `;
     }
 
+    function translateOrderStatus(status) {
+        switch (status) {
+            case 'NEW':
+                return '待成交';
+            case 'FILLED':
+                return '已成交';
+            case 'CANCELED':
+                return '已取消';
+            default:
+                return status || '-';
+        }
+    }
+
     function renderArbitrageOrderRows(leg, label) {
         if (!leg || !Array.isArray(leg.orders) || !leg.orders.length) {
             return `
                 <tr>
                     <td>${label}</td>
-                    <td colspan="9"><span class="placeholder">暂无订单</span></td>
+                    <td colspan="10"><span class="placeholder">暂无订单</span></td>
                 </tr>
             `;
         }
@@ -2251,6 +2388,7 @@
                         <td class="text-right">${formatNumber(order.notional, 4)}</td>
                         <td class="text-right">${formatNumber(order.txFee, FEE_DECIMALS)}</td>
                         <td class="text-right">${maker}</td>
+                        <td class="text-right">${translateOrderStatus(order.status)}</td>
                         <td>${formatDate(order.updateTime)}</td>
                     </tr>
                 `;
@@ -2275,21 +2413,51 @@
         `;
     }
 
-    function toggleArbitrageDetail(summaryRow, detailRow, tbody) {
+    function toggleArbitrageDetail(taskId, arbitrageId, summaryRow, detailRow, tbody) {
         const isHidden = detailRow.hidden;
         const summaryRows = Array.from(tbody.querySelectorAll('tr.arbitrage-summary-row'));
         const detailRows = Array.from(tbody.querySelectorAll('tr.arbitrage-detail-row'));
+        let openedBindId = null;
         detailRows.forEach((row, index) => {
             const summary = summaryRows[index];
             if (row === detailRow) {
                 const shouldOpen = isHidden;
                 row.hidden = !shouldOpen;
                 summary.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+                if (shouldOpen) {
+                    openedBindId = arbitrageId;
+                }
             } else {
                 row.hidden = true;
                 summary.setAttribute('aria-expanded', 'false');
             }
         });
+        if (taskId) {
+            if (openedBindId) {
+                dashboardState.expandedArbitrages.set(taskId, openedBindId);
+            } else {
+                dashboardState.expandedArbitrages.set(taskId, null);
+            }
+        }
+    }
+
+    function changeArbitragePage(taskId, delta) {
+        if (!taskId || typeof delta !== 'number') {
+            return;
+        }
+        const task = dashboardState.tasks.find(item => item.taskId === taskId);
+        if (!task || !Array.isArray(task.arbitrages) || !task.arbitrages.length) {
+            return;
+        }
+        const totalPages = Math.max(1, Math.ceil(task.arbitrages.length / ARBITRAGE_PAGE_SIZE));
+        const currentPage = dashboardState.arbitragePage.get(taskId) || 1;
+        const nextPage = Math.min(Math.max(currentPage + delta, 1), totalPages);
+        if (nextPage === currentPage) {
+            return;
+        }
+        dashboardState.arbitragePage.set(taskId, nextPage);
+        dashboardState.expandedArbitrages.delete(taskId);
+        renderDashboard();
     }
 
     function renderArbitrageRates(arbitrage, baseLabel, quoteLabel) {
@@ -2313,15 +2481,21 @@
     }
 
     function determineArbitrageStatus(arbitrage) {
-        const hasBuy = arbitrage.buyOrders.length > 0;
-        const hasSell = arbitrage.sellOrders.length > 0;
-        if (hasBuy && hasSell) {
+        const buyOrders = Array.isArray(arbitrage.buyOrders) ? arbitrage.buyOrders : [];
+        const sellOrders = Array.isArray(arbitrage.sellOrders) ? arbitrage.sellOrders : [];
+        const allOrders = buyOrders.concat(sellOrders).filter(Boolean);
+        if (allOrders.some(order => order.status === 'CANCELED')) {
+            return '部分完成';
+        }
+        const buyFilled = buyOrders.some(order => order.status === 'FILLED');
+        const sellFilled = sellOrders.some(order => order.status === 'FILLED');
+        if (buyFilled && sellFilled) {
             return '已完成';
         }
-        if (hasBuy) {
+        if (buyFilled) {
             return '待卖出';
         }
-        if (hasSell) {
+        if (sellFilled) {
             return '待买入';
         }
         return '待交易';

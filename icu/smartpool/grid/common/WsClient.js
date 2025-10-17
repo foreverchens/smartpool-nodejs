@@ -25,8 +25,8 @@ export function connect(symbol, callback) {
 
     // 当服务器关闭时，自动重连
     ws.on('close', (code, reason) => {
-        console.warn(`[close] code=${code} reason=${reason?.toString() || 'no reason'}`);
-        console.log('[reconnect] reconnecting in 2s...');
+        console.warn(`[closed] code=${code} reason=${reason?.toString() || 'no reason'}`);
+        // console.log('[reconnect] reconnecting in 2s...');
     });
 
     ws.on('error', (err) => {

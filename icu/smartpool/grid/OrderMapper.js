@@ -1,3 +1,4 @@
+import fs from 'fs/promises';
 import {Low} from 'lowdb';
 import {JSONFile} from 'lowdb/node';
 import path from 'path';
@@ -7,30 +8,128 @@ import czClient from "./common/CzClient.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DATA_FILE = path.join(__dirname, './data/orders.json');
+const DATA_DIR = path.join(__dirname, './data');
+const LEGACY_DATA_FILE = path.join(DATA_DIR, 'orders.json');
 const cloneDefaultData = () => ({orders: []});
-
-const adapter = new JSONFile(DATA_FILE);
-const db = new Low(adapter, cloneDefaultData());
 
 class OrderMapper {
     static ORDER_FIELDS = ['taskId', 'taskBindId', 'synthPrice', 'symbol', 'orderId', 'side', 'status', 'price', 'origQty', 'updateTime',];
 
-    constructor(database) {
-        this.db = database;
-        this.initialized = false;
+    constructor() {
+        this.dbCache = new Map();
+        this.legacyMigrated = false;
     }
 
-    async _init() {
-        if (this.initialized) {
+    _resolveFilePath(taskId) {
+        return path.join(DATA_DIR, `orders-${taskId}.json`);
+    }
+
+    async _ensureMigration() {
+        if (this.legacyMigrated) {
             return;
         }
 
-        await this.db.read();
-        if (!this.db.data) {
-            this.db.data = cloneDefaultData();
+        await this._migrateLegacyData().catch(() => {
+        });
+        this.legacyMigrated = true;
+    }
+
+    async _migrateLegacyData() {
+        let payload;
+        try {
+            payload = await fs.readFile(LEGACY_DATA_FILE, 'utf8');
+        } catch (err) {
+            if (err && err.code === 'ENOENT') {
+                return;
+            }
+            throw err;
         }
-        this.initialized = true;
+
+        if (!payload) {
+            return;
+        }
+
+        let parsed;
+        try {
+            parsed = JSON.parse(payload);
+        } catch (err) {
+            return;
+        }
+
+        const legacyOrders = Array.isArray(parsed)
+            ? parsed
+            : (Array.isArray(parsed.orders) ? parsed.orders : []);
+
+        if (!legacyOrders.length) {
+            return;
+        }
+
+        const grouped = legacyOrders.reduce((acc, order) => {
+            const taskId = order?.taskId;
+            if (!taskId) {
+                return acc;
+            }
+            if (!acc.has(taskId)) {
+                acc.set(taskId, []);
+            }
+            acc.get(taskId).push(order);
+            return acc;
+        }, new Map());
+
+        for (const [taskId, orders] of grouped.entries()) {
+            const filePath = this._resolveFilePath(taskId);
+            let existingOrders = [];
+            try {
+                const content = await fs.readFile(filePath, 'utf8');
+                const parsedOrders = JSON.parse(content);
+                existingOrders = Array.isArray(parsedOrders)
+                    ? parsedOrders
+                    : (Array.isArray(parsedOrders.orders) ? parsedOrders.orders : []);
+            } catch (err) {
+                if (!err || err.code !== 'ENOENT') {
+                    continue;
+                }
+            }
+
+            const merged = [...existingOrders];
+            const existingIds = new Set(existingOrders.map(item => item?.orderId));
+            for (const order of orders) {
+                if (order && !existingIds.has(order.orderId)) {
+                    merged.push(order);
+                    existingIds.add(order.orderId);
+                }
+            }
+            await fs.writeFile(filePath, JSON.stringify({orders: merged}, null, 4));
+        }
+    }
+
+    async _getDb(taskId) {
+        if (!taskId || typeof taskId !== 'string') {
+            throw new Error('taskId is required');
+        }
+
+        await this._ensureMigration();
+
+        if (!this.dbCache.has(taskId)) {
+            const filePath = this._resolveFilePath(taskId);
+            const adapter = new JSONFile(filePath);
+            const db = new Low(adapter, cloneDefaultData());
+            this.dbCache.set(taskId, {db, initialized: false});
+        }
+
+        const entry = this.dbCache.get(taskId);
+        if (!entry.initialized) {
+            await entry.db.read();
+            if (!entry.db.data) {
+                entry.db.data = cloneDefaultData();
+            }
+            if (!Array.isArray(entry.db.data.orders)) {
+                entry.db.data.orders = [];
+            }
+            entry.initialized = true;
+        }
+
+        return entry.db;
     }
 
     /**
@@ -52,7 +151,12 @@ class OrderMapper {
             throw new Error('order.orderId is required');
         }
 
-        await this._init();
+        const taskId = order.taskId;
+        if (!taskId) {
+            throw new Error('order.taskId is required');
+        }
+
+        const db = await this._getDb(taskId);
         const sanitizedOrder = OrderMapper.ORDER_FIELDS.reduce((result, key) => {
             if (typeof order[key] !== 'undefined') {
                 result[key] = order[key];
@@ -61,13 +165,16 @@ class OrderMapper {
         }, {});
 
 
-        const {orders} = this.db.data;
+        const {orders} = db.data;
         orders.push(sanitizedOrder);
-        await this.db.write();
+        await db.write();
         return {...orders[orders.length - 1]};
     }
 
-    async updateStatus(orderId, status) {
+    async updateStatus(taskId, orderId, status) {
+        if (!taskId) {
+            throw new Error('taskId is required');
+        }
         if (typeof orderId === 'undefined') {
             throw new Error('orderId is required');
         }
@@ -75,8 +182,8 @@ class OrderMapper {
             throw new Error('status is required');
         }
 
-        await this._init();
-        const order = this.db.data.orders.find(item => item.orderId === orderId);
+        const db = await this._getDb(taskId);
+        const order = db.data.orders.find(item => item.orderId === orderId);
 
         if (!order) {
             throw new Error(`Order ${orderId} not found`);
@@ -88,7 +195,7 @@ class OrderMapper {
         order.txFee = txFee;
         order.makerFeeRate = makerFeeRate;
 
-        await this.db.write();
+        await db.write();
         return {...order};
     }
 
@@ -109,9 +216,9 @@ class OrderMapper {
      *     }
      * @returns {Promise<number>}
      */
-    async list() {
-        await this._init();
-        let {orders} = this.db.data;
+    async list(taskId) {
+        const db = await this._getDb(taskId);
+        let {orders} = db.data;
         let cnt = 0;
         orders = orders.filter(e => e.symbol === 'BCHUSDC');
         console.log(orders.length);
@@ -131,12 +238,12 @@ class OrderMapper {
         }
         console.log(totalBidVal / totalBidQty)
         console.log(totalAskVal / totalAskQty)
-        await this.db.write();
+        await db.write();
         return cnt;
     }
 }
 
-const orderMapper = new OrderMapper(db);
+const orderMapper = new OrderMapper();
 // orderMapper.list().then(e => console.log(e));
 export const saveOrder = order => orderMapper.save(order);
-export const updateOrderStatus = (orderId, status) => orderMapper.updateStatus(orderId, status);
+export const updateOrderStatus = (taskId, orderId, status) => orderMapper.updateStatus(taskId, orderId, status);

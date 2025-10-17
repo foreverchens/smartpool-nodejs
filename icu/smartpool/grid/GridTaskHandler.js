@@ -293,22 +293,28 @@ export async function dealOrder(orderList) {
         let orderId = order.orderId;
         let symbol = order.symbol;
         let realOrder = await czClient.getFuturesOrder(symbol, orderId).catch(e => {
-            logger.error('[ORDER ${orderId}] 订单查询异常 :' + e.message)
+            logger.error(`[ORDER ${orderId}] 订单查询异常 :${e.message}`);
         });
         if (!realOrder) {
             logger.error(`[ORDER ${orderId}] 无法获取订单详情, 暂时跳过`);
             idx++;
             continue;
         }
+        const taskId = order.taskId;
+        if (!taskId) {
+            logger.error(`[ORDER ${orderId}] 缺少 taskId, 暂时跳过更新`);
+            idx++;
+            continue;
+        }
         if (realOrder.status === 'FILLED') {
             // 完全成交
-            await updateOrderStatus(orderId, 'FILLED');
+            await updateOrderStatus(taskId, orderId, 'FILLED');
             logger.info(`[ORDER ${orderId}] 完全成交`);
             orderList.splice(idx, 1);
             continue;
         }
         if (['CANCELED', 'EXPIRED', 'REJECTED'].includes(realOrder.status)) {
-            await updateOrderStatus(orderId, realOrder.status);
+            await updateOrderStatus(taskId, orderId, realOrder.status);
             logger.info(`[ORDER ${orderId}] 状态为 ${realOrder.status}, 移出跟踪队列`);
             orderList.splice(idx, 1);
             continue;

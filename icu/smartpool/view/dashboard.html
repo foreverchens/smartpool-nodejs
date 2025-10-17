@@ -853,8 +853,9 @@
         });
     }
 
-    async function loadOrders() {
-        const res = await fetch('../grid/data/orders.json', {cache: 'no-store'});
+    async function loadOrders(taskId) {
+        const query = taskId ? `?taskId=${encodeURIComponent(taskId)}` : '';
+        const res = await fetch(`/api/orders${query}`, {cache: 'no-store'});
         if (!res.ok) {
             throw new Error(`无法加载订单数据：${res.status} ${res.statusText}`);
         }
@@ -2847,7 +2848,7 @@
 
             const gridMeta = `${normalizedGridTasks.length} 个网格任务（../grid/data/grid_tasks.json）`;
             const orderMeta = normalizedOrders.length
-                ? `${normalizedOrders.length} 条订单（../grid/data/orders.json）`
+                ? `${normalizedOrders.length} 条订单（grid/data/orders-*.json）`
                 : '暂无订单数据';
             updateMeta(`数据源：${gridMeta} · ${orderMeta}`);
         } catch (error) {

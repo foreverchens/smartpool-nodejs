@@ -10,7 +10,7 @@
  * @property {number=} startPrice     // 启动触发价；未指定则首次价格即为锚点
  * @property {number} gridRate        // 等比网格比率，如 0.005
  * @property {number} gridValue       // 每格交易价值（USDT）
- * @property {{baseQty?: number, quoteQty?: number}=} initPosition // 启动后一次性建仓数量
+ * @property {{baseQty?: number, quoteQty?: number}=} initPosition // 启动后一次性建仓数量；正数买入、负数卖出
  *
  * @typedef {Object} RuntimeParams    // 运行时参数：由引擎在启动时生成
  * @property {number=} baseQty
@@ -129,11 +129,11 @@ function validateParams(gridTask) {
             errors.push('initPosition 必须为对象');
         } else {
             const {baseQty, quoteQty} = gridTask.initPosition;
-            if (baseQty != null && (typeof baseQty !== 'number' || !Number.isFinite(baseQty) || baseQty <= 0)) {
-                errors.push('initPosition.baseQty 必须为大于0的数值');
+            if (baseQty != null && (typeof baseQty !== 'number' || !Number.isFinite(baseQty) || baseQty === 0)) {
+                errors.push('initPosition.baseQty 必须为非零数值');
             }
-            if (quoteQty != null && (typeof quoteQty !== 'number' || !Number.isFinite(quoteQty) || quoteQty <= 0)) {
-                errors.push('initPosition.quoteQty 必须为大于0的数值');
+            if (quoteQty != null && (typeof quoteQty !== 'number' || !Number.isFinite(quoteQty) || quoteQty === 0)) {
+                errors.push('initPosition.quoteQty 必须为非零数值');
             }
         }
     }

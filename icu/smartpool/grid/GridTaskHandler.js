@@ -70,34 +70,42 @@ export async function tryStart(task) {
 
         let taskBindId = null;
 
-        const initBaseQty = formatQtyByPrice(basePrice, rawBaseQty);
-        const baseOrder = await czClient.placeOrder(task.baseAssert, 0, initBaseQty, basePrice);
-        if (baseOrder.msg) {
-            let msg = `[TASK ${task.id}] 初始仓位买入失败 msg:${baseOrder.msg}`;
-            logger.error(msg);
-            callRlt.fail(msg);
-        } else {
-            taskBindId = taskBindId ?? Snowflake.generate();
-            baseOrder.taskId = task.id;
-            baseOrder.taskBindId = taskBindId;
-            baseOrder.synthPrice = synthPrice;
-            initOrders.push(baseOrder);
-            logger.info(`[TASK ${task.id}] 初始买入 ${task.baseAssert} 数量:${initBaseQty} 价格:${basePrice}`);
+        const hasBaseQty = Number.isFinite(rawBaseQty) && rawBaseQty !== 0;
+        if (hasBaseQty) {
+            const baseIsAsk = rawBaseQty < 0;
+            const initBaseQty = formatQtyByPrice(basePrice, Math.abs(rawBaseQty));
+            const baseOrder = await czClient.placeOrder(task.baseAssert, baseIsAsk, initBaseQty, basePrice);
+            if (baseOrder.msg) {
+                let msg = `[TASK ${task.id}] 初始仓位${baseIsAsk ? '卖出' : '买入'}失败 msg:${baseOrder.msg}`;
+                logger.error(msg);
+                callRlt.fail(msg);
+            } else {
+                taskBindId = taskBindId ?? Snowflake.generate();
+                baseOrder.taskId = task.id;
+                baseOrder.taskBindId = taskBindId;
+                baseOrder.synthPrice = synthPrice;
+                initOrders.push(baseOrder);
+                logger.info(`[TASK ${task.id}] 初始${baseIsAsk ? '卖出' : '买入'} ${task.baseAssert} 数量:${initBaseQty} 价格:${basePrice}`);
+            }
         }
 
-        const initQuoteQty = formatQtyByPrice(quotePrice, rawQuoteQty);
-        const quoteOrder = await czClient.placeOrder(task.quoteAssert, 1, initQuoteQty, quotePrice);
-        if (quoteOrder.msg) {
-            let msg = `[TASK ${task.id}] 初始仓位卖出失败 msg:${quoteOrder.msg}`;
-            logger.error(msg);
-            callRlt.fail(msg)
-        } else {
-            taskBindId = taskBindId ?? Snowflake.generate();
-            quoteOrder.taskId = task.id;
-            quoteOrder.taskBindId = taskBindId;
-            quoteOrder.synthPrice = synthPrice;
-            initOrders.push(quoteOrder);
-            logger.info(`[TASK ${task.id}] 初始卖出 ${task.quoteAssert} 数量:${initQuoteQty} 价格:${quotePrice}`);
+        const hasQuoteQty = Number.isFinite(rawQuoteQty) && rawQuoteQty !== 0;
+        if (hasQuoteQty) {
+            const quoteIsAsk = rawQuoteQty < 0;
+            const initQuoteQty = formatQtyByPrice(quotePrice, Math.abs(rawQuoteQty));
+            const quoteOrder = await czClient.placeOrder(task.quoteAssert, quoteIsAsk, initQuoteQty, quotePrice);
+            if (quoteOrder.msg) {
+                let msg = `[TASK ${task.id}] 初始仓位${quoteIsAsk ? '卖出' : '买入'}失败 msg:${quoteOrder.msg}`;
+                logger.error(msg);
+                callRlt.fail(msg)
+            } else {
+                taskBindId = taskBindId ?? Snowflake.generate();
+                quoteOrder.taskId = task.id;
+                quoteOrder.taskBindId = taskBindId;
+                quoteOrder.synthPrice = synthPrice;
+                initOrders.push(quoteOrder);
+                logger.info(`[TASK ${task.id}] 初始${quoteIsAsk ? '卖出' : '买入'} ${task.quoteAssert} 数量:${initQuoteQty} 价格:${quotePrice}`);
+            }
         }
 
         for (const order of initOrders) {

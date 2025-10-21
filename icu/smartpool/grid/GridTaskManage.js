@@ -203,11 +203,14 @@ async function loop() {
         }
         updateTasks(gridTaskList);
     }
-    await dealOrder(orderList);
     if (orderList.length) {
         orderBackTask = setInterval(async () => {
             try {
-                await dealOrder(orderList);
+                if (orderList.length) {
+                    await dealOrder(orderList);
+                } else {
+                    clearInterval(orderBackTask);
+                }
             } catch (err) {
                 logger.error('[Manager] 定时检查订单异常:', err?.message ?? err);
             }

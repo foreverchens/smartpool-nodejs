@@ -4,8 +4,8 @@ import Binance from "node-binance-api";
 import callRlt from "../../common/CallResult.js";
 import logger from './logger.js';
 
-const APIKEY = 'qbc5djgYcospWpt5RNwBUgVesnzAP0jj68ZXeciXuBSRQGPVbExQomZKjYenuZ1Q';
-const APISECRET = '40pOBNmUndKuGY33nqNi8SMMuC3GsWTA8aRP7rb4fHZDpUE4CDEKhVKoSFkqqTqx';
+const APIKEY = process.env.APIKEY;
+const APISECRET = process.env.APISECRET;
 const client = new Binance({
     APIKEY: APIKEY, APISECRET: APISECRET,
 })
@@ -378,6 +378,5 @@ class CzClient {
         };
     }
 }
-
 // new CzClient().getFuturesOrder('bchusdc', 1780888623).then(e => console.log(e))
 export default new CzClient();

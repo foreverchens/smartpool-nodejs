@@ -124,11 +124,7 @@ export async function tryStart(task) {
         sellPrice,
         lastTradePrice,
         initFilled: initOrders.length ? initOrders.map(order => ({
-            symbol: order.symbol,
-            side: order.side,
-            qty: order.origQty,
-            price: order.price,
-            orderId: order.orderId
+            symbol: order.symbol, side: order.side, qty: order.origQty, price: order.price, orderId: order.orderId
         })) : []
     };
     task.status = STATUS.RUNNING;
@@ -333,7 +329,7 @@ export async function dealOrder(orderList) {
         // 最新价修改挂单
         let isBuy = realOrder.side === 'BUY';
         let price = isBuy ? bidP : askP;
-        if (price !== Number(realOrder.price)) {
+        if (price !== Number(realOrder.price) && price !== 0) {
             logger.info(`[ORDER ${orderId}] 价格修改 ` + realOrder.side + '  ' + realOrder.price + '-->' + price);
             let rlt = await czClient.futureModifyOrder(realOrder.symbol, realOrder.side, realOrder.orderId, realOrder.origQty, price);
             if (rlt.suc) {

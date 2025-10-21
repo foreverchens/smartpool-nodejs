@@ -340,6 +340,10 @@
         <small>追踪币对节奏，掌握双币震荡策略</small>
     </div>
     <div class="stage-selector">
+        <label for="cycle-select">周期</label>
+        <select disabled id="cycle-select">
+            <option value="">加载中...</option>
+        </select>
         <label for="stage-select">阶段</label>
         <select id="stage-select" disabled>
             <option value="">加载中...</option>
@@ -395,6 +399,7 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
 <script>
+    const cycleSelect = document.getElementById('cycle-select');
     const stageSelect = document.getElementById('stage-select');
     const container = document.getElementById('content');
     const listsSection = document.getElementById('lists-section');
@@ -438,6 +443,8 @@
         '4h': 4 * 60 * 60 * 1000
     };
 
+    // 当前选中的量化周期
+    let currentCycleKey = '';
     let currentStageValue = DEFAULT_STAGE;
     let currentRows = [];
     let symbolRowMap = new Map();
@@ -455,22 +462,91 @@
     }
     let cachedCycleMeta = null;
 
-    function normalizeCycleMeta(meta) {
-        if (!meta) {
-            return null;
+    function buildCycleQuery(cycleKey) {
+        if (!cycleKey) {
+            return '';
         }
-        let hours = Number(meta.cycleHours);
-        let days = Number(meta.cycleDays);
-        if (!Number.isFinite(hours) && Number.isFinite(days)) {
-            hours = days * 24;
+        return `?cycle=${encodeURIComponent(cycleKey)}`;
+    }
+
+    async function fetchCycleSummary(cycleKey) {
+        const query = buildCycleQuery(cycleKey);
+        return fetchJson(`/api/data${query}`);
+    }
+
+    function formatCycleOptionLabel(entry) {
+        if (!entry || (entry.cycleKey === null && entry.cycleHours === null)) {
+            return '未知周期';
         }
-        if (!Number.isFinite(days) && Number.isFinite(hours)) {
-            days = +(hours / 24).toFixed(2);
+        const hours = Number(entry.cycleHours);
+        const days = Number(entry.cycleDays);
+        const hoursText = Number.isFinite(hours) ? `${hours} 小时` : null;
+        const daysText = Number.isFinite(days) ? `${days} 天` : null;
+        if (hoursText && daysText) {
+            return `${daysText} (${hoursText})`;
         }
-        if (!Number.isFinite(hours) || !Number.isFinite(days)) {
-            return null;
+        if (daysText) {
+            return daysText;
         }
-        return {cycleHours: hours, cycleDays: days};
+        if (hoursText) {
+            return hoursText;
+        }
+        if (entry.cycleKey) {
+            return entry.cycleKey;
+        }
+        return '未知周期';
+    }
+
+    // 统一记录周期元信息，便于 UI 回显
+    function setCycleMeta(source) {
+        if (!source) {
+            return;
+        }
+        const hours = Number(source.cycleHours);
+        const days = Number(source.cycleDays);
+        const previousHours = cachedCycleMeta && Number.isFinite(cachedCycleMeta.cycleHours)
+            ? cachedCycleMeta.cycleHours
+            : undefined;
+        const previousDays = cachedCycleMeta && Number.isFinite(cachedCycleMeta.cycleDays)
+            ? cachedCycleMeta.cycleDays
+            : undefined;
+        const resolvedHours = Number.isFinite(hours) ? hours : previousHours;
+        const resolvedDays = Number.isFinite(days)
+            ? days
+            : (Number.isFinite(resolvedHours)
+                ? (Number.isFinite(previousDays) ? previousDays : resolvedHours / 24)
+                : previousDays);
+        cachedCycleMeta = {
+            cycleHours: resolvedHours,
+            cycleDays: resolvedDays
+        };
+    }
+
+    function populateCycleSelect(summary) {
+        if (!cycleSelect) {
+            return '';
+        }
+        const cycles = Array.isArray(summary && summary.cycles) ? summary.cycles : [];
+        if (!cycles.length) {
+            cycleSelect.innerHTML = '<option value="">暂无周期</option>';
+            cycleSelect.disabled = true;
+            currentCycleKey = '';
+            return '';
+        }
+        const optionsHtml = cycles.map(entry => {
+            const key = entry.cycleKey || String(entry.cycleHours);
+            const label = formatCycleOptionLabel(entry);
+            return `<option value="${key}">${label}</option>`;
+        });
+        cycleSelect.innerHTML = optionsHtml.join('');
+        cycleSelect.disabled = false;
+        const selectedKey = (summary && summary.cycleKey)
+            || (summary && summary.defaultCycleKey)
+            || cycles[0].cycleKey
+            || String(cycles[0].cycleHours);
+        currentCycleKey = selectedKey || '';
+        cycleSelect.value = currentCycleKey;
+        return currentCycleKey;
     }
 
     function setStageMessage(text) {
@@ -1379,7 +1455,16 @@
         chart.clear();
         chartFeedbackEl.textContent = '';
         try {
-            const {data, savedAt, batchTimestamp, stage, cycleHours: stageCycleHours, cycleDays: stageCycleDays} = await fetchJson(`/api/data/${stagePath}`);
+            const query = buildCycleQuery(currentCycleKey);
+            const {
+                data,
+                savedAt,
+                batchTimestamp,
+                stage,
+                cycleKey: stageCycleKey,
+                cycleHours: stageCycleHours,
+                cycleDays: stageCycleDays
+            } = await fetchJson(`/api/data/${stagePath}${query}`);
             const stageName = stageLabel || stage;
             if (!data || !Array.isArray(data) || data.length === 0) {
                 setStageMessage(`阶段 ${stageName} 暂无数据`);
@@ -1406,21 +1491,25 @@
             currentRows = sorted;
             renderSymbolList(sorted);
             const visibleSymbols = Array.from(symbolRowMap.keys());
-            const stageMeta = normalizeCycleMeta({cycleHours: stageCycleHours, cycleDays: stageCycleDays});
-            if (stageMeta) {
-                cachedCycleMeta = stageMeta;
+            if (typeof stageCycleKey === 'string' && stageCycleKey) {
+                currentCycleKey = stageCycleKey;
+                if (cycleSelect) {
+                    cycleSelect.value = stageCycleKey;
+                }
             }
-            const normalizedCycleMeta = normalizeCycleMeta(cachedCycleMeta);
-            const cycleHours = normalizedCycleMeta ? normalizedCycleMeta.cycleHours : NaN;
-            const cycleDays = normalizedCycleMeta ? normalizedCycleMeta.cycleDays : NaN;
+            setCycleMeta({cycleHours: stageCycleHours, cycleDays: stageCycleDays});
+            const cycleHours = cachedCycleMeta && cachedCycleMeta.cycleHours;
+            const cycleDays = cachedCycleMeta && cachedCycleMeta.cycleDays;
             const cycleText = Number.isFinite(cycleHours) && Number.isFinite(cycleDays)
                 ? `${cycleDays} 天 (${cycleHours} 小时)`
                 : '未知';
+            const savedText = savedAt ? formatDateTime(savedAt) : '未知';
 
             const summaryHtml = [
                 `<div class="overview-item"><span class="overview-label">阶段</span><span class="overview-value">${stageName}</span></div>`,
                 `<div class="overview-item"><span class="overview-label">量化周期</span><span class="overview-value">${cycleText}</span></div>`,
                 `<div class="overview-item"><span class="overview-label">批次时间</span><span class="overview-value">${formatDateTime(batchTimestamp)}</span></div>`,
+                `<div class="overview-item"><span class="overview-label">阶段更新</span><span class="overview-value">${savedText}</span></div>`,
                 `<div class="overview-item"><span class="overview-label">币对数量</span><span class="overview-value">${visibleSymbols.length}</span></div>`
             ].join('');
             setStageSummary(summaryHtml);
@@ -1450,9 +1539,10 @@
 
     async function loadSymbolAndPairs() {
         try {
+            const query = buildCycleQuery(currentCycleKey);
             const [symbolResp, pairResp] = await Promise.all([
-                fetchJson('/api/data/symbol-list').catch(() => null),
-                fetchJson('/api/data/pairs').catch(() => null)
+                fetchJson(`/api/data/symbol-list${query}`).catch(() => null),
+                fetchJson(`/api/data/pairs${query}`).catch(() => null)
             ]);
             renderLinkList(
                 initialListSpan,
@@ -1466,11 +1556,7 @@
                 pairListMeta,
                 pairResp && pairResp.savedAt
             );
-            const metaFromSymbol = normalizeCycleMeta(symbolResp);
-            const metaFromPairs = normalizeCycleMeta(pairResp);
-            cachedCycleMeta = metaFromSymbol || metaFromPairs || cachedCycleMeta;
             listsSection.style.display = '';
-            return cachedCycleMeta;
         } catch (err) {
             initialListSpan.textContent = '加载失败';
             pairListSpan.textContent = '加载失败';
@@ -1481,22 +1567,26 @@
                 pairListMeta.textContent = '';
             }
             listsSection.style.display = '';
-            return cachedCycleMeta;
         }
     }
 
-    async function populateStageOptions() {
+    async function populateStageOptions(summary) {
         stageSelect.disabled = true;
         stageSelect.innerHTML = '<option value="">加载中...</option>';
         try {
-            const summary = await fetchJson('/api/data');
-            if (!cachedCycleMeta && typeof summary.cycleHours === 'number') {
-                cachedCycleMeta = {
-                    cycleHours: summary.cycleHours,
-                    cycleDays: summary.cycleDays
-                };
+            const effectiveSummary = summary || await fetchCycleSummary(currentCycleKey);
+            if (!summary) {
+                populateCycleSelect(effectiveSummary);
             }
-            const stageSummaryMap = new Map(summary.stageSummary.map(item => [item.stage, item]));
+            if (typeof effectiveSummary.cycleKey === 'string') {
+                currentCycleKey = effectiveSummary.cycleKey;
+                if (cycleSelect) {
+                    cycleSelect.value = effectiveSummary.cycleKey;
+                }
+            }
+            setCycleMeta(effectiveSummary);
+            const stageSummaryArray = Array.isArray(effectiveSummary.stageSummary) ? effectiveSummary.stageSummary : [];
+            const stageSummaryMap = new Map(stageSummaryArray.map(item => [item.stage, item]));
             let fallbackStage = null;
             const optionsHtml = STAGE_OPTIONS.map(opt => {
                 const stageInfo = stageSummaryMap.get(opt.stage);
@@ -1517,9 +1607,6 @@
                 if (info && info.size > 0) {
                     stageMeta = preservedMeta;
                 }
-            }
-            if (!cachedCycleMeta) {
-                cachedCycleMeta = normalizeCycleMeta(summary) || cachedCycleMeta;
             }
             if (!stageMeta) {
                 const defaultMeta = STAGE_META_BY_VALUE[DEFAULT_STAGE];
@@ -1548,6 +1635,32 @@
             workspace.style.display = 'none';
             throw err;
         }
+    }
+
+    if (cycleSelect) {
+        cycleSelect.addEventListener('change', () => {
+            const selectedKey = cycleSelect.value;
+            if (currentCycleKey === selectedKey) {
+                return;
+            }
+            currentCycleKey = selectedKey;
+            currentStageValue = DEFAULT_STAGE;
+            (async () => {
+                try {
+                    const summary = await fetchCycleSummary(currentCycleKey);
+                    populateCycleSelect(summary);
+                    setCycleMeta(summary);
+                    await loadSymbolAndPairs();
+                    await populateStageOptions(summary);
+                } catch (err) {
+                    console.error('[cycleSelect] 切换周期失败:', err);
+                    setStageMessage('阶段概览加载失败: ' + err.message);
+                    stageSelect.innerHTML = '<option value="">加载失败</option>';
+                    stageSelect.disabled = true;
+                    workspace.style.display = 'none';
+                }
+            })().catch(err => console.error(err));
+        });
     }
 
     stageSelect.addEventListener('change', () => {
@@ -1597,8 +1710,11 @@
                 console.warn('[initialize] 订单预加载失败:', err);
                 return [];
             });
+            const summary = await fetchCycleSummary();
+            populateCycleSelect(summary);
+            setCycleMeta(summary);
             await loadSymbolAndPairs();
-            await populateStageOptions();
+            await populateStageOptions(summary);
             await ordersPreload;
         } catch (err) {
             setStageMessage('初始化失败: ' + err.message);

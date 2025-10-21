@@ -16,33 +16,49 @@ const STAGE_KEYS = ['symbolList', 'rltArr', 'centerList', 'highList', 'lowList',
 
 async function loadBatch() {
     const raw = await readLatestBatch();
-    const parsed = JSON.parse(JSON.stringify(raw));
-    const hasStageKeys = STAGE_KEYS.some(stageKey => Object.prototype.hasOwnProperty.call(parsed, stageKey));
+    return raw && typeof raw === 'object' ? raw : {};
+}
 
-    if (!hasStageKeys && parsed.data && typeof parsed.data === 'object') {
-        const normalized = parsed.data;
-        if (!normalized.timestamp && parsed.timestamp) {
-            normalized.timestamp = parsed.timestamp;
-        }
-        if (!normalized.lastSavedAt && parsed.savedAt) {
-            normalized.lastSavedAt = parsed.savedAt;
-        }
-        return normalized;
+// 根据请求参数挑选合适的周期数据
+function resolveCycle(batch, requestedCycle) {
+    const cycles = batch.cycles || {};
+    const cycleKeys = Object.keys(cycles);
+    if (!cycleKeys.length) {
+        return {cycle: null, cycleKey: null, cycleList: []};
     }
+    const requestedKey = requestedCycle ? String(requestedCycle) : null;
+    const defaultKey = batch.defaultCycleKey && cycles[batch.defaultCycleKey] ? batch.defaultCycleKey : null;
+    const cycleKey = (requestedKey && cycles[requestedKey])
+        ? requestedKey
+        : (defaultKey ?? cycleKeys[0]);
+    const cycle = cycles[cycleKey];
+    const cycleList = cycleKeys
+        .map(key => {
+            const entry = cycles[key];
+            return {
+                cycleKey: key,
+                cycleHours: entry.cycleHours,
+                cycleDays: entry.cycleDays ?? (entry.cycleHours / 24),
+                lastSavedAt: entry.lastSavedAt ?? null
+            };
+        })
+        .sort((a, b) => b.cycleHours - a.cycleHours);
+    return {cycle, cycleKey, cycleList};
+}
 
-    if (!parsed.lastSavedAt) {
-        const latestStage = STAGE_KEYS.map(key => parsed[key])
-            .filter(Boolean)
-            .map(stage => stage.savedAt)
-            .filter(Boolean)
-            .sort()
-            .pop();
-        if (latestStage) {
-            parsed.lastSavedAt = latestStage;
-        }
+// 统一格式化阶段数据，兼容无数据情况
+function extractStage(cycle, stageName) {
+    if (!cycle) {
+        return {savedAt: null, data: []};
     }
-
-    return parsed;
+    const stage = cycle[stageName];
+    if (!stage) {
+        return {savedAt: null, data: []};
+    }
+    return {
+        savedAt: stage.savedAt ?? null,
+        data: stage.data ?? []
+    };
 }
 
 function normalizeNumber(value) {
@@ -162,26 +178,27 @@ function handleReadError(res, err) {
     res.status(500).json({error: '服务器内部错误'});
 }
 
-function extractStage(data, stageName) {
-    const stage = data[stageName];
-    if (!stage) {
-        return {savedAt: null, data: []};
-    }
-    return {savedAt: stage.savedAt || null, data: stage.data ?? stage};
-}
-
 function createFieldEndpoint(pathSuffix, stageName) {
     app.get(`/api/data/${pathSuffix}`, async (req, res) => {
         try {
             const batch = await loadBatch();
-            const stage = extractStage(batch, stageName);
+            const {cycle, cycleKey, cycleList} = resolveCycle(batch, req.query.cycle);
+            if (!cycle) {
+                res.status(404).json({error: '未找到批次数据'});
+                return;
+            }
+            const stage = extractStage(cycle, stageName);
+            const cycleHours = cycle.cycleHours;
+            const cycleDays = cycle.cycleDays ?? (cycleHours / 24);
             res.json({
                 stage: stageName,
                 batchTimestamp: batch.timestamp,
                 savedAt: stage.savedAt,
                 data: stage.data,
-                cycleHours: batch.cycleHours,
-                cycleDays: batch.cycleDays
+                cycleKey,
+                cycleHours,
+                cycleDays,
+                cycles: cycleList
             });
         } catch (err) {
             handleReadError(res, err);
@@ -192,8 +209,15 @@ function createFieldEndpoint(pathSuffix, stageName) {
 app.get('/api/data', async (req, res) => {
     try {
         const batch = await loadBatch();
+        const {cycle, cycleKey, cycleList} = resolveCycle(batch, req.query.cycle);
+        if (!cycle) {
+            res.status(404).json({error: '未找到批次数据'});
+            return;
+        }
+        const cycleHours = cycle.cycleHours;
+        const cycleDays = cycle.cycleDays ?? (cycleHours / 24);
         const stageSummary = STAGE_KEYS.map(stageName => {
-            const stage = extractStage(batch, stageName);
+            const stage = extractStage(cycle, stageName);
             const value = stage.data;
             const size = Array.isArray(value) ? value.length : (value && typeof value === 'object' ? Object.keys(value).length : 0);
             return {
@@ -205,10 +229,14 @@ app.get('/api/data', async (req, res) => {
         res.json({
             message: '最新批次数据',
             timestamp: batch.timestamp,
-            savedAt: batch.lastSavedAt,
-            cycleHours: batch.cycleHours,
-            cycleDays: batch.cycleDays,
-            stageSummary
+            savedAt: cycle.lastSavedAt ?? batch.lastSavedAt ?? null,
+            cycleKey,
+            cycleHours,
+            cycleDays,
+            defaultCycleKey: batch.defaultCycleKey ?? cycleKey,
+            defaultCycleHours: batch.defaultCycleHours ?? cycleHours,
+            stageSummary,
+            cycles: cycleList
         });
     } catch (err) {
         handleReadError(res, err);

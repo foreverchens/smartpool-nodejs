@@ -1,7 +1,7 @@
+import config from "../common/Config.js";
+import models from "../common/Models.js";
 import czClient from "./CzClient.js";
-import config from "../common/Config.js"
-import models from "../common/Models.js"
-import KlineCacheManager from "./KlineCacheManager.js"
+import KlineCacheManager from "./KlineCacheManager.js";
 
 const SCALE_FACTOR = config.SCALE_MULTIPLIER;
 const SCALE_PRECISION = config.SCALE;
@@ -23,12 +23,16 @@ class SmartPoolService {
     constructor() {
         this.HOUR_MS = 1000 * 60 * 60;
         this.cacheManager = new KlineCacheManager(config.MAX_DAY * 24);
+        // 默认周期用于参数缺失时的兜底
+        this.defaultCycleHours = config.CYCLE[0];
     }
 
     async analyze(symbol, hours) {
+        // 对齐主流程传入的周期窗口
+        const windowHours = Math.floor(hours || this.defaultCycleHours);
         const queue = await this.cacheManager.get(symbol);
-        await this.updateH1Kline(symbol, queue);
-        let h1KlineList = queue.slice(hours);
+        await this.updateH1Kline(symbol, queue, windowHours);
+        let h1KlineList = queue.slice(windowHours);
         if (h1KlineList.length === 0) {
             // 新币对
             return {}
@@ -118,11 +122,13 @@ class SmartPoolService {
     /**
      * 填充或更新k线
      */
-    async updateH1Kline(symbol, queue) {
+    async updateH1Kline(symbol, queue, hours) {
+        // 针对不同周期裁剪缓存窗口
+        const windowHours = Math.max(1, Math.floor(hours || this.defaultCycleHours));
         let hasUpdate = false;
         // 时间处理、保留到小时级别精度、填充k线队列时、找到最远k线的开盘时间
         const lastTime = Math.floor(Date.now() / this.HOUR_MS) * this.HOUR_MS;
-        let startTime = queue.isEmpty() ? lastTime - config.CYCLE * this.HOUR_MS : queue.peek().openT + this.HOUR_MS;
+        let startTime = queue.isEmpty() ? lastTime - windowHours * this.HOUR_MS : queue.peek().openT + this.HOUR_MS;
         if ('BTCUSDT' === symbol) {
             console.log('curTime:%s\n总更新区间: %s --> %s', new Date().toLocaleString(), new Date(startTime).toLocaleString(), new Date(lastTime).toLocaleString())
         }
@@ -150,7 +156,7 @@ class SmartPoolService {
             await this.cacheManager.save(symbol);
         }
         if ('BTCUSDT' === symbol) {
-            let arr = queue.slice(config.CYCLE);
+            let arr = queue.slice(windowHours);
             console.log('量化区间: %s --> %s,%s个小时', new Date(arr[0].openT).toLocaleString(), new Date(arr[arr.length - 1].openT + this.HOUR_MS).toLocaleString(), arr.length)
         }
     }

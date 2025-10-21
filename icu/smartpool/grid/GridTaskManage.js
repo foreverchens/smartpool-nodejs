@@ -55,7 +55,7 @@ let orderList = [];
 // 订单异步处理指针
 let orderBackTask;
 // 定时循环周期（毫秒）
-const TICK_MS = 1000 * 5;
+const TICK_MS = 1000;
 
 
 /**
@@ -162,6 +162,7 @@ async function loop() {
         logger.error('[Manager] 未读取到有效的网格任务配置');
         return;
     }
+    let time = 1;
     // 2.遍历网格任务列表
     for (const task of gridTaskList) {
         switch (task.status) {
@@ -189,6 +190,7 @@ async function loop() {
                             orderList.push(order);
                         }
                     }
+                    time = callRlt.time;
                 } else {
                     logger.error(callRlt.msg);
                     // 运行时异常、失效任务
@@ -203,19 +205,7 @@ async function loop() {
         }
         updateTasks(gridTaskList);
     }
-    if (orderList.length) {
-        orderBackTask = setInterval(async () => {
-            try {
-                if (orderList.length) {
-                    await dealOrder(orderList);
-                } else {
-                    clearInterval(orderBackTask);
-                }
-            } catch (err) {
-                logger.error('[Manager] 定时检查订单异常:', err?.message ?? err);
-            }
-        }, 1000);
-    }
+    setTimeout(loop, time ? TICK_MS * time : TICK_MS);
 }
 
 /**
@@ -243,7 +233,15 @@ export function start() {
             logger.error('[ERR] Tick loop 异常:', err?.message ?? err)
         });
     };
-    setInterval(run, TICK_MS);
+    run();
+    // setInterval(run, TICK_MS);
+    setInterval(async () => {
+        try {
+            await dealOrder(orderList);
+        } catch (err) {
+            logger.error('[Manager] 定时检查订单异常:', err?.message ?? err);
+        }
+    }, 1000);
 }
 
 // start();

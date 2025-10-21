@@ -159,11 +159,14 @@ export async function dealTask(task) {
         curBidPrice = (baseBidPrice / quoteAskPrice).toPrecision(8);
         curAskPrice = (baseAskPrice / quoteBidPrice).toPrecision(8);
     }
-
+    if (isNaN(curBidPrice) || curBidPrice <= 0) {
+        return callRlt.ok();
+    }
     console.log(`[TASK ${task.id}] 当前汇率:${curBidPrice} 买入:${buyPrice} 卖出:${sellPrice} @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
     if (curBidPrice > buyPrice && curAskPrice < sellPrice) {
         // 仍在价格区间内
-        return callRlt.ok();
+        let time = ((0.5 - Math.abs(((sellPrice + buyPrice) / 2 - curBidPrice)) / (sellPrice - buyPrice)) * 10).toFixed(0);
+        return callRlt.loop(time > 1 ? time : 1);
     }
     // 进入交易价格
 

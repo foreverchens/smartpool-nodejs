@@ -87,3 +87,5 @@ let symbol = 'SUIUSDC';
 // getFuturesPositionRisk
 // let rlt = await czClient.getFuturesPositionRisk();
 // console.log(rlt);
+
+// await czClient.getFuturesOrder('xrpusdc', 5528212916).then(e => console.log(e))

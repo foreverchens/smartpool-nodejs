@@ -1,0 +1,24 @@
+:root {
+    color-scheme: dark;
+    background-color: #0f1624;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #0f1624;
+    color: #e0e6f1;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+a {
+    color: #64b5f6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}

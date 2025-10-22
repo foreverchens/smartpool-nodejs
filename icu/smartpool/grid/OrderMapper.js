@@ -220,7 +220,7 @@ class OrderMapper {
         const db = await this._getDb(taskId);
         let {orders} = db.data;
         let cnt = 0;
-        orders = orders.filter(e => e.symbol === 'BCHUSDC');
+        orders = orders.filter(e => e.symbol === 'SOLUSDC');
         console.log(orders.length);
         let totalBidQty = 0;
         let totalBidVal = 0;
@@ -244,6 +244,5 @@ class OrderMapper {
 }
 
 const orderMapper = new OrderMapper();
-// orderMapper.list().then(e => console.log(e));
 export const saveOrder = order => orderMapper.save(order);
 export const updateOrderStatus = (taskId, orderId, status) => orderMapper.updateStatus(taskId, orderId, status);

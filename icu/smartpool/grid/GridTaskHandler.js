@@ -128,7 +128,7 @@ export async function tryStart(task) {
         })) : []
     };
     task.status = STATUS.RUNNING;
-    console.log(`[TASK ${task.id}] 启动成功, runtime: ${JSON.stringify(task.runtime)}`);
+    console.log(`[TASK ${task.id}] 启动成功, runtime: [${buyPrice},${sellPrice}]`);
 
     return callRlt.ok(initOrders);
 }

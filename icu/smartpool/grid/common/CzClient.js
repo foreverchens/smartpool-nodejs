@@ -378,5 +378,4 @@ class CzClient {
         };
     }
 }
-// new CzClient().getFuturesOrder('bchusdc', 1780888623).then(e => console.log(e))
 export default new CzClient();

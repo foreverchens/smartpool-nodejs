@@ -152,8 +152,8 @@ export async function dealTask(task) {
         let time = ((0.5 - Math.abs(((sellPrice + buyPrice) / 2 - curBidPrice)) / (sellPrice - buyPrice)) * 10).toFixed(0);
         return callRlt.loop(time > 1 ? time : 1);
     }
-    // 进入交易价格
-
+    // 进入交易价格区间
+    logger.info('-------------------------')
     let [baseAssertPosit] = await czClient.getFuturesPositionRisk(baseAssert);
     let baseOrder = null;
     let quoteOrder = null;
@@ -297,20 +297,19 @@ export async function dealOrder(orderList) {
             idx++;
             continue;
         }
+        const taskBindId = order.taskBindId;
         if (realOrder.status === 'FILLED') {
-            // 完全成交
-            await updateOrderStatus(taskId, orderId, 'FILLED');
+            await updateOrderStatus(taskId, taskBindId, realOrder);
             logger.info(`[ORDER ${orderId}] 完全成交`);
             orderList.splice(idx, 1);
             continue;
         }
         if (['CANCELED', 'EXPIRED', 'REJECTED'].includes(realOrder.status)) {
-            await updateOrderStatus(taskId, orderId, realOrder.status);
+            await updateOrderStatus(taskId, taskBindId, realOrder);
             logger.info(`[ORDER ${orderId}] 状态为 ${realOrder.status}, 移出跟踪队列`);
             orderList.splice(idx, 1);
             continue;
         }
-        idx++;
         // 未成交 修改订单为最优价格
         let [bidP, askP] = getTicker(symbol);
         // 最新价修改挂单
@@ -320,10 +319,14 @@ export async function dealOrder(orderList) {
             logger.info(`[ORDER ${orderId}] 价格修改 ` + realOrder.side + '  ' + realOrder.price + '-->' + price);
             let rlt = await czClient.futureModifyOrder(realOrder.symbol, realOrder.side, realOrder.orderId, realOrder.origQty, price);
             if (rlt.suc) {
-                order = rlt.data;
+                rlt.data.taskId = order.taskId;
+                rlt.data.taskBindId = order.taskBindId;
+                rlt.data.synthPrice = order.synthPrice;
+                orderList[idx] = rlt.data;
             } else {
                 logger.error(rlt.msg);
             }
         }
+        idx++;
     }
 }

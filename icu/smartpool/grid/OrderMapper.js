@@ -56,9 +56,7 @@ class OrderMapper {
             return;
         }
 
-        const legacyOrders = Array.isArray(parsed)
-            ? parsed
-            : (Array.isArray(parsed.orders) ? parsed.orders : []);
+        const legacyOrders = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.orders) ? parsed.orders : []);
 
         if (!legacyOrders.length) {
             return;
@@ -82,9 +80,7 @@ class OrderMapper {
             try {
                 const content = await fs.readFile(filePath, 'utf8');
                 const parsedOrders = JSON.parse(content);
-                existingOrders = Array.isArray(parsedOrders)
-                    ? parsedOrders
-                    : (Array.isArray(parsedOrders.orders) ? parsedOrders.orders : []);
+                existingOrders = Array.isArray(parsedOrders) ? parsedOrders : (Array.isArray(parsedOrders.orders) ? parsedOrders.orders : []);
             } catch (err) {
                 if (!err || err.code !== 'ENOENT') {
                     continue;
@@ -171,32 +167,28 @@ class OrderMapper {
         return {...orders[orders.length - 1]};
     }
 
-    async updateStatus(taskId, orderId, status) {
+    async updateStatus(taskId, taskBindId, newOrder) {
         if (!taskId) {
             throw new Error('taskId is required');
         }
-        if (typeof orderId === 'undefined') {
-            throw new Error('orderId is required');
-        }
-        if (typeof status === 'undefined') {
-            throw new Error('status is required');
+        if (!taskBindId) {
+            throw new Error('taskBindId is required');
         }
 
         const db = await this._getDb(taskId);
-        const order = db.data.orders.find(item => item.orderId === orderId);
+        const oldOrder = db.data.orders.find(item => item.taskBindId === taskBindId && item.symbol === newOrder.symbol);
 
-        if (!order) {
-            throw new Error(`Order ${orderId} not found`);
+        if (!oldOrder) {
+            throw new Error(`Order not found for task ${taskId}, bind ${taskBindId}, symbol ${newOrder.symbol}`);
         }
-
-        order.status = status;
+        Object.assign(oldOrder, newOrder);
         // 手续费获取
-        let {txFee, makerFeeRate} = await czClient.getTxFee(order.symbol, order.orderId);
-        order.txFee = txFee;
-        order.makerFeeRate = makerFeeRate;
+        let {txFee, makerFeeRate} = await czClient.getTxFee(oldOrder.symbol, oldOrder.orderId);
+        oldOrder.txFee = txFee;
+        oldOrder.makerFeeRate = makerFeeRate;
 
         await db.write();
-        return {...order};
+        return {...oldOrder};
     }
 
     /**
@@ -245,4 +237,4 @@ class OrderMapper {
 
 const orderMapper = new OrderMapper();
 export const saveOrder = order => orderMapper.save(order);
-export const updateOrderStatus = (taskId, orderId, status) => orderMapper.updateStatus(taskId, orderId, status);
+export const updateOrderStatus = (taskId, taskBindId, order) => orderMapper.updateStatus(taskId, taskBindId, order);

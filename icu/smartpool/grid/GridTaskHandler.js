@@ -4,29 +4,13 @@ import callRlt from '../common/CallResult.js'
 import {getTicker} from "./common/BockTickerManage.js"
 import czClient from "./common/CzClient.js";
 import logger from './common/logger.js';
+import {formatQty} from "./common/Util.js";
 import {saveOrder, updateOrderStatus} from "./OrderMapper.js";
 
 const STATUS = {
     RUNNING: 'RUNNING',
 };
 
-/**
- * 基于价格修正数量精度
- * @param price
- * @param qty
- * @returns {number|string}
- */
-function formatQtyByPrice(price, qty) {
-    if (price < 1) {
-        return Math.floor(qty)
-    } else if (price > 10000) {
-        return qty.toFixed(3)
-    } else if (price > 100) {
-        return qty.toFixed(2)
-    } else {
-        return qty.toFixed(1);
-    }
-}
 
 /**
  * 尝试启动网格任务
@@ -52,10 +36,10 @@ export async function tryStart(task) {
         return callRlt.fail(msg);
     }
     // 启动过程
-    const baseQty = formatQtyByPrice(basePrice, task.gridValue / basePrice);
+    const baseQty = formatQty(task.baseAssert, basePrice, task.gridValue / basePrice);
     let quoteQty = null;
     if (task.doubled && quotePrice) {
-        quoteQty = formatQtyByPrice(quotePrice, task.gridValue / quotePrice);
+        quoteQty = formatQty(task.quoteAssert, quotePrice, task.gridValue / quotePrice);
     }
 
     const buyPrice = Number((synthPrice * (1 - task.gridRate)).toPrecision(8));
@@ -73,7 +57,7 @@ export async function tryStart(task) {
         const hasBaseQty = Number.isFinite(rawBaseQty) && rawBaseQty !== 0;
         if (hasBaseQty) {
             const baseIsAsk = rawBaseQty < 0;
-            const initBaseQty = formatQtyByPrice(basePrice, Math.abs(rawBaseQty));
+            const initBaseQty = formatQty(task.baseAssert, basePrice, Math.abs(rawBaseQty));
             const baseOrder = await czClient.placeOrder(task.baseAssert, baseIsAsk, initBaseQty, basePrice);
             if (baseOrder.msg) {
                 let msg = `[TASK ${task.id}] 初始仓位${baseIsAsk ? '卖出' : '买入'}失败 msg:${baseOrder.msg}`;
@@ -92,7 +76,7 @@ export async function tryStart(task) {
         const hasQuoteQty = Number.isFinite(rawQuoteQty) && rawQuoteQty !== 0;
         if (hasQuoteQty) {
             const quoteIsAsk = rawQuoteQty < 0;
-            const initQuoteQty = formatQtyByPrice(quotePrice, Math.abs(rawQuoteQty));
+            const initQuoteQty = formatQty(task.quoteAssert, quotePrice, Math.abs(rawQuoteQty));
             const quoteOrder = await czClient.placeOrder(task.quoteAssert, quoteIsAsk, initQuoteQty, quotePrice);
             if (quoteOrder.msg) {
                 let msg = `[TASK ${task.id}] 初始仓位${quoteIsAsk ? '卖出' : '买入'}失败 msg:${quoteOrder.msg}`;
@@ -156,10 +140,10 @@ export async function dealTask(task) {
     let curBidPrice = baseBidPrice;
     let curAskPrice = baseAskPrice;
     if (task.doubled) {
-        curBidPrice = (baseBidPrice / quoteAskPrice).toPrecision(8);
-        curAskPrice = (baseAskPrice / quoteBidPrice).toPrecision(8);
+        curBidPrice = Number((baseBidPrice / quoteAskPrice).toPrecision(8));
+        curAskPrice = Number((baseAskPrice / quoteBidPrice).toPrecision(8));
     }
-    if (isNaN(curBidPrice) || curBidPrice <= 0) {
+    if (!Number.isFinite(curBidPrice) || curBidPrice <= 0) {
         return callRlt.ok();
     }
     console.log(`[TASK ${task.id}] 当前汇率:${curBidPrice} 买入:${buyPrice} 卖出:${sellPrice} @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);

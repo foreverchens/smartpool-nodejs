@@ -35,6 +35,22 @@ export function connect(symbol, callback) {
             connect(symbol, callback);
         }, 2000);
     });
+
+    function shutdown() {
+        if (ws.readyState === WebSocket.OPEN) {
+            console.log('Closing WebSocket...');
+            ws.close(1000, 'Client closing');
+        }
+        setTimeout(() => {
+            process.exit(0)
+        }, 500);
+    }
+
+    process.on('SIGINT', shutdown);
+    // process.on('SIGTERM', shutdown);
+    // process.on('exit', shutdown);
+
+
     return ws;
 }
 

@@ -7,10 +7,11 @@ import {formatQty} from "./common/Util.js";
 const SCORE_THRESHOLD = 20000;
 const MAX_TOP_COUNT = 5;
 const FALLBACK_TOP_COUNT = 2;
-const POSIT_MIN = 0;
+const POSIT_MIN = -0.05;
 const POSIT_MAX = 0.1;
 const GRID_RATE = 0.005;
-const GRID_VALUE = 100;
+const GRID_VALUE = 20;
+const MAX_CNT = 5;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,10 +64,7 @@ function positIsNearLower(posit) {
 async function fetchPairPrices(base, quote) {
     const baseSymbol = `${base}USDT`;
     const quoteSymbol = `${quote}USDT`;
-    const [basePrice, quotePrice] = await Promise.all([
-        czClient.getFuturesPrice(baseSymbol),
-        czClient.getFuturesPrice(quoteSymbol)
-    ]);
+    const [basePrice, quotePrice] = await Promise.all([czClient.getFuturesPrice(baseSymbol), czClient.getFuturesPrice(quoteSymbol)]);
     if (!Number.isFinite(basePrice) || basePrice <= 0) {
         throw new Error(`base price invalid for ${baseSymbol}`);
     }
@@ -86,8 +84,9 @@ function buildTask({base, quote, lowP, amp, basePrice, quotePrice}) {
     if (absAmp <= 0) {
         throw new Error(`amp not positive for ${id}`);
     }
-    const baseQty = formatQty(base, basePrice, GRID_VALUE / basePrice) * Math.abs(amp);
-    const quoteQty = formatQty(quote, quotePrice, GRID_VALUE / quotePrice) * Math.abs(amp) * -1;
+    let cnt = Math.max(Math.abs(amp), MAX_CNT);
+    const baseQty = formatQty(base, basePrice, GRID_VALUE / basePrice) * cnt;
+    const quoteQty = formatQty(quote, quotePrice, GRID_VALUE / quotePrice) * -cnt;
     return {
         id,
         baseAssert: `${base}USDC`,
@@ -99,8 +98,7 @@ function buildTask({base, quote, lowP, amp, basePrice, quotePrice}) {
         gridValue: GRID_VALUE,
         status: "PENDING",
         initPosition: {
-            baseQty,
-            quoteQty
+            baseQty, quoteQty
         }
     };
 }

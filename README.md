@@ -1,11 +1,8 @@
-# SmartPool Quant Stack
-
-![Home overview](https://raw.githubusercontent.com/foreverchens/smartpool-nodejs/e526552b49bc1e406970625ce056bfcafc952495/icu/smartpool/common/home.png)
-![Grid dashboard](icu/smartpool/common/dashboard.jpeg)
+# 双币网格震荡分析平台
 
 ## 概览
 
-SmartPool 聚合了震荡量化、双币网格和可视化看板三大模块：
+专注于双币汇率市场、聚合了震荡分析量化、双币网格和可视化看板三大模块：
 
 - `icu/smartpool/Main.js` 定时批量拉取币对行情，筛选震荡对并写入最新批次数据。
 - `icu/smartpool/grid/` 按 `icu/smartpool/grid/data/grid_tasks.json` 中的配置运行单币或双币网格策略。
@@ -33,7 +30,7 @@ node icu/smartpool/WebServer.js
 - `node --watch icu/smartpool/Main.js` 可用于本地调试（勿提交 watch 脚本）。
 - Web 端首页 `/` 展示震荡批次摘要，`/dashboard` 聚焦网格任务详情。
 
-## 震荡量化批次（Main.js）
+## 震荡分析量化（Main.js）
 
 `Main.js` 是系统核心，流程如下：
 
@@ -66,7 +63,10 @@ node icu/smartpool/WebServer.js
 `WebServer.js` 基于 Express 提供两个主要页面：
 
 - `view/home.html`：概览批次时间、周期列表、阶段数据量。
+  - ![Home overview](https://raw.githubusercontent.com/foreverchens/smartpool-nodejs/e526552b49bc1e406970625ce056bfcafc952495/icu/smartpool/common/home.png)
+
 - `view/dashboard.html`：按任务聚合多币对网格表现。
+  - ![Grid dashboard](icu/smartpool/common/dashboard.jpeg)
 
 API 入口：
 

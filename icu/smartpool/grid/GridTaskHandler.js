@@ -140,13 +140,14 @@ export async function dealTask(task) {
     let curBidPrice = baseBidPrice;
     let curAskPrice = baseAskPrice;
     if (task.doubled) {
-        curBidPrice = Number((baseBidPrice / quoteAskPrice).toPrecision(8));
-        curAskPrice = Number((baseAskPrice / quoteBidPrice).toPrecision(8));
+        curBidPrice = Number((baseBidPrice / quoteAskPrice).toPrecision(5));
+        curAskPrice = Number((baseAskPrice / quoteBidPrice).toPrecision(5));
     }
     if (!Number.isFinite(curBidPrice) || curBidPrice <= 0) {
         return callRlt.ok();
     }
-    console.log(`[TASK ${task.id}] 当前汇率:${curBidPrice} 买入:${buyPrice} 卖出:${sellPrice} @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
+    console.log(`[TASK ${task.id}]  [${buyPrice} <- ${curBidPrice} -> ${sellPrice}]  @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
+    // console.log(`[TASK ${task.id}] 当前汇率:${curBidPrice} 买入:${buyPrice} 卖出:${sellPrice} @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
     if (curBidPrice > buyPrice && curAskPrice < sellPrice) {
         // 仍在价格区间内
         let time = ((0.5 - Math.abs(((sellPrice + buyPrice) / 2 - curBidPrice)) / (sellPrice - buyPrice)) * 10).toFixed(0);
@@ -157,7 +158,7 @@ export async function dealTask(task) {
     let [baseAssertPosit] = await czClient.getFuturesPositionRisk(baseAssert);
     let baseOrder = null;
     let quoteOrder = null;
-    if (curBidPrice < buyPrice) {
+    if (curBidPrice <= buyPrice) {
         logger.info(`[TASK ${task.id}] curP[${curBidPrice}] < buyP[${buyPrice}] 执行买入`)
         // 汇率降低、
         // 买入gridValue等值base资产、卖出等值quote资产
@@ -258,8 +259,8 @@ export async function dealTask(task) {
     }
 
 
-    task.runtime.buyPrice = Number((curBidPrice * (1 - task.gridRate)).toPrecision(8));
-    task.runtime.sellPrice = Number((curBidPrice * (1 + task.gridRate)).toPrecision(8));
+    task.runtime.buyPrice = Number((curBidPrice * (1 - task.gridRate)).toPrecision(5));
+    task.runtime.sellPrice = Number((curBidPrice * (1 + task.gridRate)).toPrecision(5));
     task.runtime.lastTradePrice = curBidPrice;
 
     const orders = [];

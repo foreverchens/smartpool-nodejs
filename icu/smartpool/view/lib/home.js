@@ -629,7 +629,7 @@ async function renderKline(base, quote) {
                 borderColor: '#1f2a48'
             },
             dataZoom: [
-                {type: 'inside', start: 60, end: 100},
+                {type: 'inside', start: 65, end: 100},
                 {type: 'slider', start: 0, end: 100, height: 20, bottom: 10}
             ],
             tooltip: {

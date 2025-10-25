@@ -1,3 +1,5 @@
+import czClient from "./CzClient.js";
+
 let symbol = 'SUIUSDC';
 
 // getSpotAccount test
@@ -88,4 +90,4 @@ let symbol = 'SUIUSDC';
 // let rlt = await czClient.getFuturesPositionRisk();
 // console.log(rlt);
 
-// await czClient.getFuturesOrder('xrpusdc', 5528212916).then(e => console.log(e))
+await czClient.getFuturesOrder('ethusdc', 32879425755).then(e => console.log(e))

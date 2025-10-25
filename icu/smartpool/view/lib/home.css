@@ -1,141 +1,141 @@
 body.page-home {
     font-family: Arial, sans-serif;
-    padding: 16px;
+    padding: 12.8px;
 }
 
 h1 {
     margin: 0;
-    font-size: 26px;
-    letter-spacing: 0.5px;
+    font-size: 20.8px;
+    letter-spacing: 0.4px;
 }
 
 select {
-    padding: 4px 6px;
+    padding: 3.2px 4.8px;
     background: #1f2a48;
     color: #e0e6f1;
     border: 1px solid #2c3e50;
-    border-radius: 4px;
+    border-radius: 3.2px;
 }
 
 .page-header {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 24px;
-    margin-bottom: 16px;
+    gap: 19.2px;
+    margin-bottom: 12.8px;
 }
 
 .page-title {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4.8px;
 }
 
 .page-title small {
     color: #8fa3bf;
-    font-size: 13px;
+    font-size: 10.4px;
 }
 
 .stage-selector {
     display: inline-flex;
     align-items: center;
-    gap: 16px;
-    padding: 12px 16px;
-    border-radius: 8px;
+    gap: 12.8px;
+    padding: 9.6px 12.8px;
+    border-radius: 6.4px;
     background: #111b2d;
     border: 1px solid #1f2a48;
-    box-shadow: 0 0 18px rgba(15, 22, 36, 0.4);
+    box-shadow: 0 0 14.4px rgba(15, 22, 36, 0.4);
 }
 
 .stage-selector label {
     color: #8fa3bf;
-    font-size: 14px;
-    letter-spacing: 0.4px;
+    font-size: 11.2px;
+    letter-spacing: 0.32px;
 }
 
 .stage-selector select {
-    min-width: 200px;
-    padding: 6px 10px;
-    font-size: 15px;
+    min-width: 160px;
+    padding: 4.8px 8px;
+    font-size: 12px;
 }
 
 .stage-overview {
-    margin-bottom: 16px;
-    padding: 16px;
+    margin-bottom: 12.8px;
+    padding: 12.8px;
     background: #111b2d;
     border: 1px solid #1f2a48;
-    border-radius: 8px;
-    box-shadow: 0 0 22px rgba(15, 22, 36, 0.35);
+    border-radius: 6.4px;
+    box-shadow: 0 0 17.6px rgba(15, 22, 36, 0.35);
 }
 
 .stage-message {
     margin: 0;
     color: #8fa3bf;
-    font-size: 14px;
+    font-size: 11.2px;
 }
 
 .overview-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 14px 24px;
+    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+    gap: 11.2px 19.2px;
 }
 
 .overview-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 10px 12px;
+    gap: 3.2px;
+    padding: 8px 9.6px;
     background: rgba(36, 45, 68, 0.45);
     border: 1px solid #1f2a48;
-    border-radius: 6px;
+    border-radius: 4.8px;
 }
 
 .overview-label {
-    font-size: 12px;
+    font-size: 9.6px;
     text-transform: uppercase;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.48px;
     color: #8fa3bf;
 }
 
 .overview-value {
-    font-size: 16px;
+    font-size: 12.8px;
     font-weight: 600;
     color: #e0e6f1;
 }
 
 .layout {
     display: flex;
-    gap: 16px;
-    margin-top: 16px;
+    gap: 12.8px;
+    margin-top: 12.8px;
 }
 
 #stage-symbols {
-    flex: 0 0 280px;
+    flex: 0 0 224px;
     background: #111b2d;
     border: 1px solid #1f2a48;
-    border-radius: 6px;
-    padding: 12px;
+    border-radius: 4.8px;
+    padding: 9.6px;
     overflow-y: auto;
     max-height: 80vh;
 }
 
 #stage-symbols h2 {
-    margin: 0 0 12px;
-    font-size: 18px;
+    margin: 0 0 9.6px;
+    font-size: 14.4px;
 }
 
 #stage-symbol-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4.8px;
 }
 
 .symbol-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 10px;
-    border-radius: 4px;
+    padding: 6.4px 8px;
+    border-radius: 3.2px;
     cursor: pointer;
     background: #1b253b;
     border: 1px solid transparent;
@@ -153,54 +153,54 @@ select {
 
 .symbol-name {
     font-weight: bold;
-    font-size: 15px;
+    font-size: 12px;
 }
 
 .symbol-quality {
-    font-size: 13px;
+    font-size: 10.4px;
     color: #90caf9;
 }
 
 #chart-section {
     flex: 1;
-    min-height: 500px;
+    min-height: 400px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 9.6px;
 }
 
 #symbol-summary {
     background: #111b2d;
     border: 1px solid #1f2a48;
-    border-radius: 6px;
-    padding: 12px;
+    border-radius: 4.8px;
+    padding: 9.6px;
     display: flex;
-    gap: 12px 24px;
+    gap: 9.6px 19.2px;
     align-items: center;
 }
 
 #symbol-inputs {
     display: flex;
-    gap: 8px;
+    gap: 6.4px;
     align-items: center;
 }
 
 #symbol-inputs input {
-    width: 80px;
-    padding: 4px 6px;
+    width: 64px;
+    padding: 3.2px 4.8px;
     background: #1f2a48;
     color: #e0e6f1;
     border: 1px solid #2c3e50;
-    border-radius: 4px;
+    border-radius: 3.2px;
     text-transform: uppercase;
 }
 
 #symbol-inputs button {
-    padding: 4px 8px;
+    padding: 3.2px 6.4px;
     background: #2b3d66;
     color: #e0e6f1;
     border: 1px solid #3d5a99;
-    border-radius: 4px;
+    border-radius: 3.2px;
     cursor: pointer;
 }
 
@@ -211,63 +211,63 @@ select {
 #summary-metrics {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px 24px;
+    gap: 9.6px 19.2px;
 }
 
 .summary-item {
-    min-width: 120px;
+    min-width: 96px;
 }
 
 .summary-label {
     display: block;
-    font-size: 12px;
+    font-size: 9.6px;
     color: #8fa3bf;
 }
 
 .summary-value {
-    font-size: 16px;
+    font-size: 12.8px;
     font-weight: bold;
-    margin-top: 2px;
+    margin-top: 1.6px;
 }
 
 #period-controls {
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6.4px;
 }
 
 #period-controls label {
-    font-size: 13px;
+    font-size: 10.4px;
     color: #8fa3bf;
 }
 
 #chart-container {
     background: #111b2d;
     border: 1px solid #1f2a48;
-    border-radius: 6px;
-    padding: 8px;
+    border-radius: 4.8px;
+    padding: 6.4px;
 }
 
 #chart {
     width: 100%;
-    height: 520px;
+    height: 416px;
 }
 
 #chart-feedback {
-    min-height: 18px;
+    min-height: 14.4px;
 }
 
 #details-panel {
     background: #111b2d;
     border: 1px solid #1f2a48;
-    border-radius: 6px;
-    padding: 12px;
+    border-radius: 4.8px;
+    padding: 9.6px;
 }
 
 #details-panel h3 {
-    margin: 0 0 8px;
-    font-size: 16px;
+    margin: 0 0 6.4px;
+    font-size: 12.8px;
 }
 
 #details-panel pre {
@@ -275,24 +275,24 @@ select {
     white-space: pre-wrap;
     word-break: break-word;
     font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
-    font-size: 13px;
+    font-size: 10.4px;
     color: #cfd8dc;
 }
 
 #lists-section {
-    margin-top: 18px;
-    padding: 12px;
+    margin-top: 14.4px;
+    padding: 9.6px;
     background: #111b2d;
     border: 1px solid #1f2a48;
-    border-radius: 6px;
+    border-radius: 4.8px;
 }
 
 .list-meta {
-    margin-left: 8px;
-    font-size: 12px;
+    margin-left: 6.4px;
+    font-size: 9.6px;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 768px) {
     .page-header {
         flex-direction: column;
         align-items: stretch;

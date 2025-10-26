@@ -1,6 +1,6 @@
 import axios from "axios";
-import util from "util";
 import crypto from "crypto";
+import util from "util";
 import config from "../common/Config.js";
 import models from "../common/Models.js";
 
@@ -266,6 +266,8 @@ class CzClient {
 
     }
 }
+
+// test();
 
 export default new CzClient();
 

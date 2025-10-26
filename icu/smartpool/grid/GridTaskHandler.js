@@ -146,7 +146,7 @@ export async function dealTask(task) {
     if (!Number.isFinite(curBidPrice) || curBidPrice <= 0) {
         return callRlt.ok();
     }
-    console.log(`[TASK ${task.id}]  [${buyPrice} <- ${curBidPrice} -> ${sellPrice}]  @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
+    console.log(`[TASK ${task.id}]  [${buyPrice} <- ${curBidPrice} | ${curAskPrice} -> ${sellPrice}]  @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
     // console.log(`[TASK ${task.id}] 当前汇率:${curBidPrice} 买入:${buyPrice} 卖出:${sellPrice} @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
     if (curBidPrice > buyPrice && curAskPrice < sellPrice) {
         // 仍在价格区间内
@@ -159,7 +159,7 @@ export async function dealTask(task) {
     let baseOrder = null;
     let quoteOrder = null;
     if (curBidPrice <= buyPrice) {
-        logger.info(`[TASK ${task.id}] curP[${curBidPrice}] < buyP[${buyPrice}] 执行买入`)
+        logger.info(`[TASK ${task.id}] curP[${curBidPrice}] <= buyP[${buyPrice}] 执行买入`)
         // 汇率降低、
         // 买入gridValue等值base资产、卖出等值quote资产
         if (!task.reversed) {
@@ -208,7 +208,7 @@ export async function dealTask(task) {
             logger.info(`[TASK ${task.id}] ${quoteAssert} 触发卖出 卖出汇率:${curBidPrice} 数量:${quoteQty} , 订单:${quoteOrder.orderId}`);
         }
     } else {
-        logger.info(`[TASK ${task.id}] curP[${curBidPrice}] > sellP[${sellPrice}] 执行卖出`)
+        logger.info(`[TASK ${task.id}] curP[${curAskPrice}] >= sellP[${sellPrice}] 执行卖出`)
 
         // 汇率上涨
         // 卖出gridValue等值base资产、买入等值quote资产

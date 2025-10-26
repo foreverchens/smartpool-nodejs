@@ -14,6 +14,7 @@ const dashboardState = {
 };
 
 const DEFAULT_DECIMALS = 4;
+const PRICE_PRECISION = 5;
 const FEE_DECIMALS = 5;
 const ARBITRAGE_PAGE_SIZE = 5;
 
@@ -716,10 +717,119 @@ function mergeGridTasksWithStats(gridTasks, taskStats) {
     });
 }
 
+function parseRuntimeTimestampValue(value) {
+    if (value === undefined || value === null) {
+        return null;
+    }
+    if (typeof value === 'number') {
+        if (!Number.isFinite(value) || value <= 0) {
+            return null;
+        }
+        if (value > 1e12) {
+            return value;
+        }
+        if (value > 1e9) {
+            return value * 1000;
+        }
+        return null;
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return null;
+        }
+        const numeric = Number(trimmed);
+        if (Number.isFinite(numeric)) {
+            return parseRuntimeTimestampValue(numeric);
+        }
+        const normalized = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
+        const parsed = Date.parse(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+}
+
+function gatherTimestampsFrom(source, explicitKeys = []) {
+    if (!source || typeof source !== 'object') {
+        return [];
+    }
+    const timestamps = [];
+    const candidateKeys = new Set(explicitKeys);
+    Object.keys(source).forEach(key => {
+        if (/(At|Time|Timestamp|Ts)$/i.test(key)) {
+            candidateKeys.add(key);
+        }
+    });
+    candidateKeys.forEach(key => {
+        if (!Object.prototype.hasOwnProperty.call(source, key)) {
+            return;
+        }
+        const parsed = parseRuntimeTimestampValue(source[key]);
+        if (parsed !== null) {
+            timestamps.push(parsed);
+        }
+    });
+    return timestamps;
+}
+
+function extractTaskActivityTimestamp(task) {
+    if (!task || typeof task !== 'object') {
+        return null;
+    }
+    const timestamps = [];
+    const endTime = parseRuntimeTimestampValue(task.end);
+    if (endTime !== null) {
+        timestamps.push(endTime);
+    }
+    const latestTrade = parseRuntimeTimestampValue(task.latestTrade);
+    if (latestTrade !== null) {
+        timestamps.push(latestTrade);
+    }
+    timestamps.push(...gatherTimestampsFrom(task.gridTask, [
+        'updatedAt',
+        'lastUpdatedAt',
+        'lastRunAt',
+        'lastRuntimeAt',
+        'runtimeAt',
+        'runAt'
+    ]));
+    timestamps.push(...gatherTimestampsFrom(task.gridTask?.runtime, [
+        'updatedAt',
+        'updateTime',
+        'lastUpdated',
+        'lastUpdate',
+        'lastRunAt',
+        'lastRuntimeAt',
+        'runtimeAt',
+        'runAt',
+        'timestamp'
+    ]));
+    if (!timestamps.length) {
+        return null;
+    }
+    return Math.max(...timestamps);
+}
+
 function determineDefaultTaskId(tasks) {
     if (!Array.isArray(tasks) || !tasks.length) {
         return null;
     }
+
+    let bestTaskId = null;
+    let bestTimestamp = Number.NEGATIVE_INFINITY;
+
+    tasks.forEach(task => {
+        const activityTimestamp = extractTaskActivityTimestamp(task);
+        if (activityTimestamp !== null && activityTimestamp > bestTimestamp) {
+            bestTimestamp = activityTimestamp;
+            bestTaskId = task.taskId;
+        }
+    });
+
+    if (bestTaskId) {
+        return bestTaskId;
+    }
+
     const withOrders = tasks.filter(task => task.totalOrders > 0);
     return (withOrders[0] || tasks[0]).taskId;
 }
@@ -825,13 +935,15 @@ function renderSelectedTaskOverview(task) {
             key: fieldKey('overview', task.taskId, 'average-buy-rate'),
             label: '平均买入汇率',
             value: task.averageBuyRate,
-            decimals: 4
+            decimals: PRICE_PRECISION,
+            formatter: formatPrice
         },
         {
             key: fieldKey('overview', task.taskId, 'average-sell-rate'),
             label: '平均卖出汇率',
             value: task.averageSellRate,
-            decimals: 4
+            decimals: PRICE_PRECISION,
+            formatter: formatPrice
         },
         {
             key: fieldKey('overview', task.taskId, 'maker-order-ratio'),
@@ -897,8 +1009,11 @@ function renderOverviewMetric(metric) {
     const isProfit = Boolean(metric.isProfit);
     const isPercent = Boolean(metric.isPercent);
     const key = metric.key || fieldKey('overview', label);
+    const formatter = typeof metric.formatter === 'function' ? metric.formatter : null;
     let displayValue = '-';
-    if (isPercent) {
+    if (formatter) {
+        displayValue = formatter(value, decimals);
+    } else if (isPercent) {
         displayValue = Number.isFinite(value) ? formatPercent(value, decimals) : '-';
     } else if (Number.isFinite(value)) {
         displayValue = formatNumber(value, decimals);
@@ -933,7 +1048,8 @@ function renderAssetCard(asset) {
             key: fieldKey('asset', asset.symbol, 'avg-buy-price'),
             label: '平均买入价',
             value: asset.avgBuyPrice,
-            decimals: 4
+            decimals: PRICE_PRECISION,
+            formatter: formatPrice
         },
         {
             key: fieldKey('asset', asset.symbol, 'total-sell-qty'),
@@ -951,13 +1067,15 @@ function renderAssetCard(asset) {
             key: fieldKey('asset', asset.symbol, 'avg-sell-price'),
             label: '平均卖出价',
             value: asset.avgSellPrice,
-            decimals: 4
+            decimals: PRICE_PRECISION,
+            formatter: formatPrice
         },
         {
             key: fieldKey('asset', asset.symbol, 'price-spread'),
             label: '价差',
             value: asset.priceSpread,
-            decimals: 4,
+            decimals: PRICE_PRECISION,
+            formatter: formatPrice,
             isProfit: true
         },
         {
@@ -1028,8 +1146,11 @@ function renderAssetMetric(asset, metric) {
     const isProfit = Boolean(metric.isProfit);
     const isPercent = Boolean(metric.isPercent);
     const key = metric.key || fieldKey('asset-metric', asset?.symbol || '-', label);
+    const formatter = typeof metric.formatter === 'function' ? metric.formatter : null;
     let displayValue = '-';
-    if (isPercent) {
+    if (formatter) {
+        displayValue = formatter(value, decimals);
+    } else if (isPercent) {
         displayValue = Number.isFinite(value) ? formatPercent(value, decimals) : '-';
     } else if (Number.isFinite(value)) {
         displayValue = formatNumber(value, decimals);
@@ -1160,7 +1281,7 @@ function createGridConfig(gridTask) {
                 ${renderConfigItem('基础资产', gridTask.baseAsset || '-', fieldKey('grid-task', gridTask.id, 'base-asset'))}
                 ${renderConfigItem('报价资产', gridTask.quoteAsset || '-', fieldKey('grid-task', gridTask.id, 'quote-asset'))}
                 ${renderConfigItem('标的组合', pair, fieldKey('grid-task', gridTask.id, 'pair'))}
-                ${renderConfigItem('起始价', formatNumber(gridTask.startPrice, 4), fieldKey('grid-task', gridTask.id, 'start-price'))}
+                ${renderConfigItem('起始价', formatPrice(gridTask.startPrice), fieldKey('grid-task', gridTask.id, 'start-price'))}
                 ${renderConfigItem('网格间距', formatPercent(gridTask.gridRate, 4), fieldKey('grid-task', gridTask.id, 'grid-rate'))}
                 ${renderConfigItem('单格金额', formatValueWithUnit(gridTask.gridValue, 'USDT', 4), fieldKey('grid-task', gridTask.id, 'grid-value'))}
                 ${renderConfigItem('双向执行', formatBoolean(gridTask.doubled), fieldKey('grid-task', gridTask.id, 'doubled'))}
@@ -1177,9 +1298,9 @@ function createGridConfig(gridTask) {
                 <div class="grid-config-grid">
                     ${renderConfigItem('base资产单格数量', formatNumber(runtime.baseQty, 4), fieldKey('grid-task', gridTask.id, 'runtime-baseqty'))}
                     ${renderConfigItem('quote资产单格数量', formatNumber(runtime.quoteQty, 4), fieldKey('grid-task', gridTask.id, 'runtime-quoteqty'))}
-                    ${renderConfigItem('当前买入价', formatNumber(runtime.buyPrice, 4), fieldKey('grid-task', gridTask.id, 'runtime-buy-price'))}
-                    ${renderConfigItem('当前卖出价', formatNumber(runtime.sellPrice, 4), fieldKey('grid-task', gridTask.id, 'runtime-sell-price'))}
-                    ${renderConfigItem('最新成交价', formatNumber(runtime.lastTradePrice, 4), fieldKey('grid-task', gridTask.id, 'runtime-last-trade-price'))}
+                    ${renderConfigItem('当前买入价', formatPrice(runtime.buyPrice), fieldKey('grid-task', gridTask.id, 'runtime-buy-price'))}
+                    ${renderConfigItem('当前卖出价', formatPrice(runtime.sellPrice), fieldKey('grid-task', gridTask.id, 'runtime-sell-price'))}
+                    ${renderConfigItem('最新成交价', formatPrice(runtime.lastTradePrice), fieldKey('grid-task', gridTask.id, 'runtime-last-trade-price'))}
                 </div>
             </div>
         `);
@@ -1388,9 +1509,9 @@ function createTaskSummary(task) {
 
     const symbolsText = task.symbols.length ? task.symbols.join('、') : '-';
     const arbitrageSummary = `${formatNumber(task.arbitrageCount, 0)}（完成 ${formatNumber(task.completedCount, 0)} / 未平 ${formatNumber(task.openCount, 0)}）`;
-    const latestTradedPrice = `${formatNumber(runtime.lastTradePrice, 4)}`;
-    const nextBidPrice = `${formatNumber(runtime.buyPrice, 4)}`;
-    const nextAskPrice = `${formatNumber(runtime.sellPrice, 4)}`;
+    const latestTradedPrice = formatPrice(runtime.lastTradePrice);
+    const nextBidPrice = formatPrice(runtime.buyPrice);
+    const nextAskPrice = formatPrice(runtime.sellPrice);
 
     const timeRange = (Number.isFinite(task.start) || Number.isFinite(task.end))
         ? `${formatDate(task.start)} ~ ${formatDate(task.end)}`
@@ -1408,7 +1529,7 @@ function createTaskSummary(task) {
             gridInfoChips.push(`单格金额 ${formatValueWithUnit(task.gridTask.gridValue, 'USDT', 4)}`);
         }
         if (Number.isFinite(task.gridTask.startPrice)) {
-            gridInfoChips.push(`启动汇率 ${formatValueWithUnit(task.gridTask.startPrice)} (base ${task.gridTask.startBaseP} / quote ${task.gridTask.startQuoteP})`);
+            gridInfoChips.push(`启动汇率 ${formatPrice(task.gridTask.startPrice)} (base ${task.gridTask.startBaseP} / quote ${task.gridTask.startQuoteP})`);
         }
     }
     if (Number.isFinite(runtime.baseQty) || Number.isFinite(runtime.quoteQty)) {
@@ -1463,7 +1584,7 @@ function createTaskSummary(task) {
 function createArbitrageSummaryCells(arbitrage, task) {
     const totalFee = (Number.isFinite(arbitrage.baseLeg?.totalFee) ? arbitrage.baseLeg.totalFee : 0)
         + (Number.isFinite(arbitrage.quoteLeg?.totalFee) ? arbitrage.quoteLeg.totalFee : 0);
-    const synthRate = Number.isFinite(arbitrage.synthPrice) ? formatNumber(arbitrage.synthPrice, 4) : '-';
+    const synthRate = Number.isFinite(arbitrage.synthPrice) ? formatPrice(arbitrage.synthPrice) : '-';
     const baseDirection = arbitrage.baseLeg?.side === 'BUY' ? '买入' : arbitrage.baseLeg?.side === 'SELL' ? '卖出' : '-';
     const baseAmountValue = Number.isFinite(arbitrage.baseLeg?.notional)
         ? formatNumber(arbitrage.baseLeg.notional, 4)
@@ -1556,7 +1677,7 @@ function renderArbitrageOrderRows(leg, label) {
                     <td>${order.side || '-'}</td>
                     <td>${order.symbol || '-'}</td>
                     <td class="text-right">${formatNumber(order.quantity, 4)}</td>
-                    <td class="text-right">${formatNumber(order.price, 4)}</td>
+                    <td class="text-right">${formatPrice(order.price)}</td>
                     <td class="text-right">${formatNumber(order.notional, 4)}</td>
                     <td class="text-right">${formatNumber(order.txFee, FEE_DECIMALS)}</td>
                     <td class="text-right">${maker}</td>
@@ -1575,7 +1696,7 @@ function renderLegSummaryLine(leg, label, symbolLabel) {
     }
     const direction = leg.side === 'BUY' ? '买入' : leg.side === 'SELL' ? '卖出' : '-';
     const quantity = Number.isFinite(leg.quantity) ? formatNumber(leg.quantity, 4) : '-';
-    const avgPrice = Number.isFinite(leg.avgPrice) ? formatNumber(leg.avgPrice, 4) : '-';
+    const avgPrice = Number.isFinite(leg.avgPrice) ? formatPrice(leg.avgPrice) : '-';
     const notional = Number.isFinite(leg.notional) ? formatNumber(leg.notional, 4) : '-';
     const fee = Number.isFinite(leg.totalFee) ? formatNumber(leg.totalFee, FEE_DECIMALS) : '-';
     const maker = Number.isFinite(leg.makerOrderRatio) ? formatPercent(leg.makerOrderRatio, 4) : '-';
@@ -1635,16 +1756,16 @@ function changeArbitragePage(taskId, delta) {
 function renderArbitrageRates(arbitrage, baseLabel, quoteLabel) {
     const lines = [];
     if (Number.isFinite(arbitrage.averageBuyRate)) {
-        lines.push(`买入 ${baseLabel}/${quoteLabel} ${formatNumber(arbitrage.averageBuyRate, 4)}`);
+        lines.push(`买入 ${baseLabel}/${quoteLabel} ${formatPrice(arbitrage.averageBuyRate)}`);
     }
     if (Number.isFinite(arbitrage.averageSellRate)) {
-        lines.push(`卖出 ${baseLabel}/${quoteLabel} ${formatNumber(arbitrage.averageSellRate, 4)}`);
+        lines.push(`卖出 ${baseLabel}/${quoteLabel} ${formatPrice(arbitrage.averageSellRate)}`);
     }
     if (!lines.length && Number.isFinite(arbitrage.averageCrossRate)) {
-        lines.push(`平均 ${baseLabel}/${quoteLabel} ${formatNumber(arbitrage.averageCrossRate, 4)}`);
+        lines.push(`平均 ${baseLabel}/${quoteLabel} ${formatPrice(arbitrage.averageCrossRate)}`);
     }
     if (Number.isFinite(arbitrage.synthPrice)) {
-        lines.push(`合成 ${formatNumber(arbitrage.synthPrice, 4)}`);
+        lines.push(`合成 ${formatPrice(arbitrage.synthPrice)}`);
     }
     if (!lines.length) {
         return '<span class="placeholder">-</span>';
@@ -1716,7 +1837,7 @@ function renderTimeline(orders) {
             <td>${orderIdDisplay}</td>
             <td><span class="badge ${order.side === 'BUY' ? 'badge-buy' : 'badge-sell'}">${order.side}</span></td>
             <td class="text-right">${formatNumber(order.quantity, 4)}</td>
-            <td class="text-right">${formatNumber(order.price, 4)}</td>
+            <td class="text-right">${formatPrice(order.price)}</td>
             <td class="text-right">${formatNumber(order.notional, 4)}</td>
             <td class="text-right">${formatNumber(order.txFee, FEE_DECIMALS)}</td>
             <td>${order.makerFeeRate || formatPercent(order.makerParticipation, 4)}</td>
@@ -1734,6 +1855,24 @@ function renderTimeline(orders) {
         tbody.appendChild(tr);
     });
     dashboardState.lastNewOrderKeys = rawNewKeys;
+}
+
+function formatPrice(value, precision = PRICE_PRECISION) {
+    if (!Number.isFinite(value)) {
+        return '-';
+    }
+    const safePrecision = Number.isFinite(precision) && precision > 0 ? precision : PRICE_PRECISION;
+    const num = Number(value);
+    const raw = num.toPrecision(safePrecision);
+    if (raw.includes('e') || raw.includes('E')) {
+        return raw;
+    }
+    const isNegative = raw.startsWith('-');
+    const unsignedRaw = isNegative ? raw.slice(1) : raw;
+    const [integerPartRaw, decimalPart] = unsignedRaw.split('.');
+    const groupedInteger = Number(integerPartRaw).toLocaleString('en-US');
+    const signedInteger = isNegative ? `-${groupedInteger}` : groupedInteger;
+    return decimalPart !== undefined ? `${signedInteger}.${decimalPart}` : signedInteger;
 }
 
 function formatNumber(value, decimals = DEFAULT_DECIMALS) {

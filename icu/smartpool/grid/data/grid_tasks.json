@@ -5,7 +5,7 @@
         "quoteAssert": "XRPUSDC",
         "doubled": true,
         "reversed": false,
-        "startPrice": 76.3571851,
+        "startPrice": null,
         "gridRate": 0.005,
         "gridValue": 10,
         "status": "PENDING"

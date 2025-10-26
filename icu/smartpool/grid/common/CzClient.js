@@ -378,4 +378,6 @@ class CzClient {
         };
     }
 }
+
+// new CzClient().getTxFee('solusdc',8997812783).then(e=> console.log(e))
 export default new CzClient();

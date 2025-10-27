@@ -177,6 +177,9 @@ class CzClient {
             if (err.message.includes('-5022')) {
                 return await this.placeOrder(symbol, isAsk, qty);
             }
+            if (err.message.includes('fetch failed')) {
+                return await this.placeOrder(symbol, isAsk, qty);
+            }
             return {'msg': err.message};
         }
     }
@@ -257,8 +260,9 @@ class CzClient {
             if (order.status === 'CANCELED' && order.timeInForce === 'GTX') {
                 // gtx的订单、价格被修改后、若无法继续成为maker、则会被取消、需重新下单
                 // https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/trade/rest-api/Modify-Order
-                logger.error(`[ORDER ${orderId}] 价格修改失败、重新下单 ${order}`);
-                return callRlt.ok(await this.placeOrder(symbol, side === 'SELL', quantity));
+                let newOrder = await this.placeOrder(symbol, side === 'SELL', quantity);
+                logger.error(`[ORDER ${orderId}] 价格修改失败、重新下单、 [${order.orderId} -> ${newOrder.orderId}]`);
+                return callRlt.ok(order);
             }
             logger.info(`[ORDER ${orderId}] 价格修改成功--> ${order.price}`);
             return callRlt.ok(order);
@@ -379,5 +383,5 @@ class CzClient {
     }
 }
 
-// new CzClient().getTxFee('solusdc',8997812783).then(e=> console.log(e))
+// new CzClient().getTxFee('solusdc', 9069260317).then(e => console.log(e))
 export default new CzClient();

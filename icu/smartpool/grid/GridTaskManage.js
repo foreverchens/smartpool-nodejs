@@ -242,7 +242,5 @@ export async function start() {
     }, TICK_MS);
 
 
-    // 启动网格任务自动创建脚本
-    // await startAutoCreator();
 
 }

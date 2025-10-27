@@ -84,6 +84,7 @@ function normalizeGridTasks(rawTasks) {
     }
     return rawTasks.map(task => {
         const runtime = task && typeof task === 'object' ? task.runtime || {} : {};
+        const initPosition = normalizeInitPosition(task?.initPosition);
         const id = String(task?.id ?? task?.taskId ?? '未命名任务').trim() || '未命名任务';
         const status = task?.status ? String(task.status).toUpperCase() : 'UNKNOWN';
         return {
@@ -98,15 +99,128 @@ function normalizeGridTasks(rawTasks) {
             gridRate: toNumberOrNull(task?.gridRate),
             gridValue: toNumberOrNull(task?.gridValue),
             status,
+            initPosition,
             runtime: {
                 baseQty: toNumberOrNull(runtime.baseQty),
                 quoteQty: toNumberOrNull(runtime.quoteQty),
                 buyPrice: toNumberOrNull(runtime.buyPrice),
                 sellPrice: toNumberOrNull(runtime.sellPrice),
-                lastTradePrice: toNumberOrNull(runtime.lastTradePrice)
+                lastTradePrice: toNumberOrNull(runtime.lastTradePrice),
+                initFilled: normalizeInitFilled(runtime.initFilled)
             }
         };
     });
+}
+
+function normalizeInitPosition(rawInitPosition) {
+    if (!rawInitPosition || typeof rawInitPosition !== 'object') {
+        return null;
+    }
+    const baseQty = toNumberOrNull(rawInitPosition.baseQty);
+    const quoteQty = toNumberOrNull(rawInitPosition.quoteQty);
+    if (baseQty === null && quoteQty === null) {
+        return null;
+    }
+    return {baseQty, quoteQty};
+}
+
+function normalizeInitFilled(rawInitFilled) {
+    if (!Array.isArray(rawInitFilled)) {
+        return [];
+    }
+    return rawInitFilled.map(entry => {
+        const orderId = entry?.orderId !== undefined && entry?.orderId !== null
+            ? String(entry.orderId)
+            : null;
+        const symbol = typeof entry?.symbol === 'string' ? entry.symbol : '';
+        const side = typeof entry?.side === 'string' ? entry.side.toUpperCase() : '';
+        const quantity = toNumberOrNull(entry?.qty ?? entry?.quantity ?? entry?.origQty);
+        const price = toNumberOrNull(entry?.price);
+        return {
+            orderId,
+            symbol,
+            side,
+            quantity,
+            price
+        };
+    }).filter(entry => {
+        if (entry.orderId) {
+            return true;
+        }
+        return Boolean(entry.symbol && entry.side && Number.isFinite(entry.quantity) && Number.isFinite(entry.price));
+    });
+}
+
+function accumulateInitialExposure(target, taskId, order) {
+    if (!taskId) {
+        return;
+    }
+    if (!target.has(taskId)) {
+        target.set(taskId, new Map());
+    }
+    const symbol = order?.symbol ? String(order.symbol).toUpperCase() : 'UNKNOWN';
+    const symbolMap = target.get(taskId);
+    if (!symbolMap.has(symbol)) {
+        symbolMap.set(symbol, {
+            qty: 0,
+            notional: 0
+        });
+    }
+    const entry = symbolMap.get(symbol);
+    const quantity = Number.isFinite(order.quantity) ? order.quantity : safeNumber(order.origQty);
+    const notional = Number.isFinite(order.notional) ? order.notional : (Number.isFinite(order.price) ? order.price * quantity : 0);
+    if (order.side === 'SELL') {
+        entry.qty -= quantity;
+        entry.notional -= notional;
+    } else {
+        entry.qty += quantity;
+        entry.notional += notional;
+    }
+}
+
+function partitionInitialOrders(orders, gridTasks) {
+    if (!Array.isArray(orders) || !orders.length || !Array.isArray(gridTasks) || !gridTasks.length) {
+        return {
+            filteredOrders: Array.isArray(orders) ? [...orders] : [],
+            initialExposure: new Map()
+        };
+    }
+
+    const tasksWithInitFilled = new Set();
+    gridTasks.forEach(task => {
+        if (Array.isArray(task.runtime?.initFilled) && task.runtime.initFilled.length) {
+            tasksWithInitFilled.add(String(task.id));
+        }
+    });
+
+    if (!tasksWithInitFilled.size) {
+        return {
+            filteredOrders: [...orders],
+            initialExposure: new Map()
+        };
+    }
+
+    const removalCounter = new Map();
+    const initialExposure = new Map();
+    const filteredOrders = [];
+    orders.forEach(order => {
+        const taskId = order?.taskId ? String(order.taskId) : null;
+        if (!taskId || !tasksWithInitFilled.has(taskId)) {
+            filteredOrders.push(order);
+            return;
+        }
+        const consumed = removalCounter.get(taskId) || 0;
+        if (consumed < 2) {
+            removalCounter.set(taskId, consumed + 1);
+            accumulateInitialExposure(initialExposure, taskId, order);
+            return;
+        }
+        filteredOrders.push(order);
+    });
+    return {
+        filteredOrders,
+        initialExposure
+    };
 }
 
 function safeNumber(value) {
@@ -640,7 +754,7 @@ function enhanceArbitrageWithGrid(arbitrage, gridTask) {
     };
 }
 
-function mergeGridTasksWithStats(gridTasks, taskStats) {
+function mergeGridTasksWithStats(gridTasks, taskStats, initialExposure = new Map()) {
     const statsById = new Map(taskStats.map(task => [task.taskId, task]));
     const used = new Set();
     const merged = gridTasks.map((gridTask, index) => {
@@ -680,6 +794,23 @@ function mergeGridTasksWithStats(gridTasks, taskStats) {
     return [...merged, ...leftovers].map(item => {
         const {gridIndex, ...rest} = item;
         const assetStats = composeAssetStats(rest.symbolStats, rest.gridTask);
+        const taskKey = rest.taskId ? String(rest.taskId) : null;
+        const exposureForTask = taskKey && initialExposure instanceof Map ? initialExposure.get(taskKey) : null;
+        const enhancedAssetStats = assetStats.map(asset => {
+            const symbolKey = asset?.symbol ? String(asset.symbol).toUpperCase() : null;
+            const symbolExposure = symbolKey && exposureForTask instanceof Map ? exposureForTask.get(symbolKey) : null;
+            const initialQty = symbolExposure && Number.isFinite(symbolExposure.qty) ? symbolExposure.qty : 0;
+            const initialNotional = symbolExposure && Number.isFinite(symbolExposure.notional) ? symbolExposure.notional : 0;
+            const baseOpenQty = Number.isFinite(asset.openQty) ? asset.openQty : 0;
+            const baseOpenNotional = Number.isFinite(asset.openNotional) ? asset.openNotional : 0;
+            return {
+                ...asset,
+                initialExposureQty: initialQty,
+                initialExposureNotional: initialNotional,
+                nominalOpenQty: baseOpenQty + initialQty,
+                nominalOpenNotional: baseOpenNotional + initialNotional
+            };
+        });
         const arbitrages = Array.isArray(rest.arbitrages)
             ? rest.arbitrages.map(arbitrage => enhanceArbitrageWithGrid(arbitrage, rest.gridTask))
             : [];
@@ -708,7 +839,7 @@ function mergeGridTasksWithStats(gridTasks, taskStats) {
         const averageSellRate = sellWeight ? sellWeightedTotal / sellWeight : null;
         return {
             ...rest,
-            assetStats,
+            assetStats: enhancedAssetStats,
             arbitrages,
             averageCrossRate,
             averageBuyRate,
@@ -1100,7 +1231,7 @@ function renderAssetCard(asset) {
         {
             key: fieldKey('asset', asset.symbol, 'open-qty'),
             label: '当前持仓数量',
-            value: asset.openQty,
+            value: Number.isFinite(asset.nominalOpenQty) ? asset.nominalOpenQty : asset.openQty,
             decimals: 4,
             isProfit: true
         },
@@ -1168,13 +1299,18 @@ function renderAssetMetric(asset, metric) {
 }
 
 function computeNominalHolding(asset) {
-    const quantity = Number.isFinite(asset.openQty) ? asset.openQty : null;
+    const nominalQty = Number.isFinite(asset.nominalOpenQty)
+        ? asset.nominalOpenQty
+        : (Number.isFinite(asset.openQty) ? asset.openQty : null);
+    const nominalNotional = Number.isFinite(asset.nominalOpenNotional)
+        ? asset.nominalOpenNotional
+        : (Number.isFinite(asset.openNotional) ? asset.openNotional : null);
     const lastPrice = Number.isFinite(asset.lastPrice) ? asset.lastPrice : null;
-    if (quantity !== null && lastPrice !== null) {
-        return quantity * lastPrice;
+    if (nominalQty !== null && lastPrice !== null) {
+        return nominalQty * lastPrice;
     }
-    if (Number.isFinite(asset.openNotional)) {
-        return asset.openNotional;
+    if (nominalNotional !== null) {
+        return nominalNotional;
     }
     return NaN;
 }
@@ -1267,11 +1403,27 @@ function renderConfigItem(label, value, key) {
     `;
 }
 
+function formatInitPositionDisplay(quantity) {
+    if (!Number.isFinite(quantity)) {
+        return '未配置';
+    }
+    if (quantity > 0) {
+        return `买入 ${formatNumber(quantity, 4)}`;
+    }
+    if (quantity < 0) {
+        return `卖出 ${formatNumber(Math.abs(quantity), 4)}`;
+    }
+    return '未配置';
+}
+
 function createGridConfig(gridTask) {
     if (!gridTask) {
         return '';
     }
     const pair = [gridTask.baseAsset, gridTask.quoteAsset].filter(Boolean).join(' / ') || '-';
+    const initPosition = gridTask.initPosition || null;
+    const baseInitDisplay = formatInitPositionDisplay(initPosition?.baseQty);
+    const quoteInitDisplay = formatInitPositionDisplay(initPosition?.quoteQty);
     const sections = [];
     sections.push(`
         <div class="grid-config-section">
@@ -1284,6 +1436,8 @@ function createGridConfig(gridTask) {
                 ${renderConfigItem('起始价', formatPrice(gridTask.startPrice), fieldKey('grid-task', gridTask.id, 'start-price'))}
                 ${renderConfigItem('网格间距', formatPercent(gridTask.gridRate, 4), fieldKey('grid-task', gridTask.id, 'grid-rate'))}
                 ${renderConfigItem('单格金额', formatValueWithUnit(gridTask.gridValue, 'USDT', 4), fieldKey('grid-task', gridTask.id, 'grid-value'))}
+                ${renderConfigItem('Base资产初始买入｜卖出数量', baseInitDisplay, fieldKey('grid-task', gridTask.id, 'init-position-base'))}
+                ${renderConfigItem('Quote资产初始买入｜卖出数量', quoteInitDisplay, fieldKey('grid-task', gridTask.id, 'init-position-quote'))}
                 ${renderConfigItem('双向执行', formatBoolean(gridTask.doubled), fieldKey('grid-task', gridTask.id, 'doubled'))}
                 ${renderConfigItem('反向套利', formatBoolean(gridTask.reversed), fieldKey('grid-task', gridTask.id, 'reversed'))}
             </div>
@@ -2118,12 +2272,14 @@ async function refreshData(options = {}) {
             }
         }
 
+        const {filteredOrders, initialExposure} = partitionInitialOrders(normalizedOrders, normalizedGridTasks);
+
         const previousOrderKeys = dashboardState.orderKeySnapshot instanceof Set
             ? dashboardState.orderKeySnapshot
             : new Set();
         const nextOrderKeys = new Set();
         const newOrderKeys = new Set();
-        normalizedOrders.forEach(order => {
+        filteredOrders.forEach(order => {
             const key = getOrderKey(order);
             if (!key) {
                 return;
@@ -2134,14 +2290,14 @@ async function refreshData(options = {}) {
             }
         });
 
-        const taskHierarchy = buildTaskHierarchy(normalizedOrders);
-        const mergedTasks = mergeGridTasksWithStats(normalizedGridTasks, taskHierarchy);
+        const taskHierarchy = buildTaskHierarchy(filteredOrders);
+        const mergedTasks = mergeGridTasksWithStats(normalizedGridTasks, taskHierarchy, initialExposure);
 
         const previousSelectedTaskId = dashboardState.selectedTaskId;
         const hasPreviousTask = previousSelectedTaskId
             && mergedTasks.some(task => task.taskId === previousSelectedTaskId);
 
-        dashboardState.orders = normalizedOrders;
+        dashboardState.orders = filteredOrders;
         dashboardState.tasks = mergedTasks;
         dashboardState.gridTasks = normalizedGridTasks;
         dashboardState.selectedTaskId = hasPreviousTask
@@ -2157,8 +2313,8 @@ async function refreshData(options = {}) {
         });
 
         const gridMeta = `${normalizedGridTasks.length} 个网格任务（../grid/data/grid_tasks.json）`;
-        const orderMeta = normalizedOrders.length
-            ? `${normalizedOrders.length} 条订单（grid/data/orders-*.json）`
+        const orderMeta = filteredOrders.length
+            ? `${filteredOrders.length} 条订单（grid/data/orders-*.json）`
             : '暂无订单数据';
         updateMeta(`数据源：${gridMeta} · ${orderMeta}`);
     } catch (error) {

@@ -1,3 +1,3 @@
 import {start} from './grid/GridTaskManage.js'
 
-start();
+start().catch(err => console.log(err));

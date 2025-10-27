@@ -4,33 +4,40 @@ import {fileURLToPath} from "url";
 import czClient from "./common/CzClient.js";
 import {formatQty} from "./common/Util.js";
 
+// 分数达到该阈值时，才允许分配全部自动网格名额。
 const SCORE_THRESHOLD = 20000;
+// 自动创建的网格任务上限，用于限制风险敞口。
 const MAX_TOP_COUNT = 2;
+// 当信号不够强时，仅保留最优的若干个任务。
 const FALLBACK_TOP_COUNT = 1;
+// 允许的价格位置区间，确保策略在低位附近开仓。
 const POSIT_MIN = 0;
 const POSIT_MAX = 0.1;
+// 自动任务默认使用的网格参数。
 const GRID_RATE = 0.005;
-const GRID_VALUE = 20;
-const MAX_POS_CNT = 5;
+const GRID_VALUE = 100;
+const MAX_POSIT_CNT = 5;
 
+// 解析真实路径，保证定时任务在不同入口下都能找到数据文件。
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
 const DATA_FILE = path.join(ROOT_DIR, "data", "latest.json");
 const TASK_FILE = path.join(__dirname, "data", "grid_tasks.json");
+// 内存中的自动任务索引，避免重复写入或并发冲突。
+const autoTaskStore = new Set();
 
-async function loadJson(filePath, defaultValue) {
+// 读取 JSON 配置，若文件缺失则返回默认值。
+async function loadJson(filePath) {
     try {
         const raw = await readFile(filePath, "utf8");
         return JSON.parse(raw);
     } catch (err) {
-        if (err.code === "ENOENT") {
-            return defaultValue;
-        }
         throw err;
     }
 }
 
+// 将 ETH-BTC 拆解成标准化的 base/quote。
 function splitSymbol(symbol) {
     if (!symbol || typeof symbol !== "string" || !symbol.includes("-")) {
         return null;
@@ -42,6 +49,7 @@ function splitSymbol(symbol) {
     return {base: base.trim().toUpperCase(), quote: quote.trim().toUpperCase()};
 }
 
+// 从最新周期结果中挑选最优的候选交易对。
 function selectTopPairs(entries = []) {
     if (!Array.isArray(entries) || entries.length === 0) {
         return [];
@@ -57,10 +65,12 @@ function selectTopPairs(entries = []) {
     return sorted.slice(0, limit);
 }
 
+// 判断当前点位是否贴近区间下沿，避免追高。
 function positIsNearLower(posit) {
     return typeof posit === "number" && posit > POSIT_MIN && posit < POSIT_MAX;
 }
 
+// 请求双币种的合约价格，为初始仓位估算提供真实报价。
 async function fetchPairPrices(base, quote) {
     const baseSymbol = `${base}USDT`;
     const quoteSymbol = `${quote}USDT`;
@@ -74,7 +84,8 @@ async function fetchPairPrices(base, quote) {
     return {basePrice, quotePrice, baseSymbol, quoteSymbol};
 }
 
-function buildTask({base, quote, lowP, amp, basePrice, quotePrice}) {
+// 根据行情+参数生成完整的网格任务描述。
+function buildTask({base, quote, lowP, amp, basePrice, quotePrice, baseSymbol, quoteSymbol}) {
     const id = `${base}${quote}-auto`;
     const absAmp = Math.abs(Number(amp) || 0);
     const startPrice = Number(lowP);
@@ -84,9 +95,9 @@ function buildTask({base, quote, lowP, amp, basePrice, quotePrice}) {
     if (absAmp <= 0) {
         throw new Error(`amp not positive for ${id}`);
     }
-    let cnt = Math.max(Math.abs(amp), MAX_POS_CNT);
-    const baseQty = formatQty(base, basePrice, GRID_VALUE / basePrice) * cnt;
-    const quoteQty = formatQty(quote, quotePrice, GRID_VALUE / quotePrice) * -cnt;
+    let cnt = Math.max(Math.abs(amp), MAX_POSIT_CNT);
+    const baseQty = formatQty(baseSymbol, basePrice, GRID_VALUE / basePrice) * cnt;
+    const quoteQty = formatQty(quoteSymbol, quotePrice, GRID_VALUE / quotePrice) * -cnt;
     return {
         id,
         baseAssert: `${base}USDC`,
@@ -103,32 +114,27 @@ function buildTask({base, quote, lowP, amp, basePrice, quotePrice}) {
     };
 }
 
-function isAutoTask(task) {
-    return Boolean(task?.id) && typeof task.id === "string" && task.id.endsWith("-auto");
-}
-
-function countActiveAutoTasks(tasks = []) {
-    return tasks.filter(task => isAutoTask(task) && (task.status ?? "PENDING") !== "EXPIRED").length;
-}
-
-function upsertTask(existingTasks, newTask) {
-    const next = [...existingTasks];
-    const index = next.findIndex(task => task && task.id === newTask.id);
-    if (index < 0) {
-        next.push(newTask);
-        return {tasks: next, inserted: true};
+// 通过 taskId 直接检查磁盘状态，标记过期就立刻移除。
+async function syncWithDiskStatuses() {
+    // 读取已有任务列表，便于判断过期与去重。
+    let diskTasks = await loadJson(TASK_FILE);
+    if (!Array.isArray(diskTasks) || autoTaskStore.size === 0) {
+        return;
     }
-    const current = next[index];
-    if ((current?.status ?? "PENDING") === "EXPIRED") {
-        next[index] = newTask;
-        return {tasks: next, inserted: true};
+    for (const id of Array.from(autoTaskStore)) {
+        const diskTask = diskTasks.find(task => task?.id === id);
+        if (diskTask?.status === "EXPIRED") {
+            autoTaskStore.delete(id);
+        }
     }
-    return {tasks: next, inserted: false};
 }
 
+
+// 核心调度循环：拉取排名、生成任务并持久化到磁盘。
 async function main() {
-    console.log('[Auto Creator] loop....')
-    const latest = await loadJson(DATA_FILE, null);
+    console.log('[auto-scheduler] loop....')
+    // 拉取量化批次最新快照，作为调度的决策依据。
+    const latest = await loadJson(DATA_FILE);
     if (!latest || typeof latest !== "object") {
         console.error("[auto-scheduler] latest.json 不存在或格式异常");
         return;
@@ -139,13 +145,11 @@ async function main() {
         return;
     }
 
-    let tasks = await loadJson(TASK_FILE, []);
-    if (!Array.isArray(tasks)) {
-        console.warn("[auto-scheduler] grid_tasks.json 非数组，将重新初始化");
-        tasks = [];
-    }
 
-    const activeAutoCount = countActiveAutoTasks(tasks);
+    await syncWithDiskStatuses();
+
+    // 计算还能投放多少自动任务，避免突破风险阈值。
+    const activeAutoCount = autoTaskStore.size;
     let availableSlots = Math.max(0, MAX_TOP_COUNT - activeAutoCount);
     let limitReached = availableSlots <= 0;
     let limitLogged = false;
@@ -154,15 +158,20 @@ async function main() {
         limitLogged = true;
     }
 
+    const stagedTasks = [];
+    const stagedIds = new Set();
+
     for (const [cycleKey, cycleValue] of Object.entries(cycles)) {
         if (limitReached) {
             break;
         }
         const stage = cycleValue?.data;
         const entries = stage?.data;
+        // 周期内没有有效候选则跳过。
         if (!Array.isArray(entries) || !entries.length) {
             continue;
         }
+        // 评估得分，挑选当前周期最具潜力的交易对。
         const candidates = selectTopPairs(entries);
         for (const entry of candidates) {
             if (availableSlots <= 0) {
@@ -170,6 +179,7 @@ async function main() {
                 break;
             }
             const pricePosit = Number(entry.pricePosit);
+            // 仅在价格位置贴近下沿时介入，降低追高风险。
             if (!positIsNearLower(pricePosit)) {
                 continue;
             }
@@ -178,26 +188,33 @@ async function main() {
                 continue;
             }
             try {
-                const {basePrice, quotePrice} = await fetchPairPrices(symbolParts.base, symbolParts.quote);
+                // 获取双边价格，用于推算初始化仓位规模。
+                const {
+                    basePrice,
+                    quotePrice,
+                    baseSymbol,
+                    quoteSymbol
+                } = await fetchPairPrices(symbolParts.base, symbolParts.quote);
+                // 依据指标与参数生成任务实体。
                 const task = buildTask({
                     base: symbolParts.base,
                     quote: symbolParts.quote,
                     lowP: entry.lowP,
                     amp: entry.amp,
                     basePrice,
-                    quotePrice
+                    quotePrice,
+                    baseSymbol,
+                    quoteSymbol
                 });
-                const {tasks: nextTasks, inserted} = upsertTask(tasks, task);
-                tasks = nextTasks;
-                if (inserted) {
-                    availableSlots -= 1;
-                    console.log(`[auto-scheduler] 周期 ${cycleKey} 创建/更新任务: ${task.id}`);
-                    if (availableSlots <= 0) {
-                        limitReached = true;
-                        if (!limitLogged) {
-                            console.log(`[auto-scheduler] 自动网格任务已达上限 (${MAX_TOP_COUNT})，等待现有任务过期`);
-                            limitLogged = true;
-                        }
+                autoTaskStore.add(task.id);
+                stagedTasks.push(task);
+                availableSlots -= 1;
+                console.log(`[auto-scheduler] 周期 ${cycleKey} 创建任务: ${task.id}`);
+                if (availableSlots <= 0) {
+                    limitReached = true;
+                    if (!limitLogged) {
+                        console.log(`[auto-scheduler] 自动网格任务已达上限 (${MAX_TOP_COUNT})，等待现有任务过期`);
+                        limitLogged = true;
                     }
                 }
             } catch (err) {
@@ -206,16 +223,31 @@ async function main() {
         }
     }
 
-    await writeFile(TASK_FILE, JSON.stringify(tasks, null, 4));
-    console.log("[auto-scheduler] grid_tasks.json 已更新");
+    if (stagedTasks.length > 0) {
+        let diskSnapshot;
+        try {
+            diskSnapshot = await loadJson(TASK_FILE);
+        } catch (err) {
+            diskSnapshot = [];
+        }
+        const merged = Array.isArray(diskSnapshot) ? diskSnapshot : [];
+        merged.push(...stagedTasks);
+        await writeFile(TASK_FILE, JSON.stringify(merged, null, 4));
+        console.log("[auto-scheduler] grid_tasks.json 已更新");
+    }
 }
 
 
+// 启动自动调度器，并按固定周期重跑逻辑。
 const startAutoCreator = async () => {
-    console.log('[Auto Creator] start....')
+    console.log('[auto-scheduler] start....')
     const run = () => main().catch(console.error);
     await run();
     setInterval(run, 1000 * 60 * 7);
 }
-export default startAutoCreator;
 
+
+// 启动网格任务自动创建脚本
+await startAutoCreator();
+
+// export default startAutoCreator;

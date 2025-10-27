@@ -27,7 +27,7 @@ export async function tryStart(task) {
             logger.error(msg);
             return callRlt.fail(msg);
         }
-        synthPrice = Number((basePrice / quotePrice).toFixed(8));
+        synthPrice = Number((basePrice / quotePrice).toPrecision(5));
     }
 
     if (task.startPrice != null && synthPrice >= Number(task.startPrice)) {

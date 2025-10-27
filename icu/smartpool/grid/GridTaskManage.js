@@ -52,8 +52,6 @@ const STATUS = {
 const TASKS_FILE = path.resolve(__dirname, './data/grid_tasks.json');     // 输入：网格任务“创建参数”列表
 // 订单队列
 let orderList = [];
-// 订单异步处理指针
-let orderBackTask;
 // 定时循环周期（毫秒）
 const TICK_MS = 1000;
 
@@ -154,7 +152,6 @@ function updateTasks(tasks) {
  * 主循环单步：
  */
 async function loop() {
-    clearInterval(orderBackTask);
 
     const gridTaskList = listGridTask();
 
@@ -205,7 +202,12 @@ async function loop() {
         }
         updateTasks(gridTaskList);
     }
-    setTimeout(loop, time ? TICK_MS * time : TICK_MS);
+
+    setTimeout(async () => {
+        await loop().catch(err => {
+            logger.error('[ERR] Tick loop 异常:', err?.message ?? err)
+        })
+    }, time ? TICK_MS * time : TICK_MS);
 }
 
 /**
@@ -213,10 +215,8 @@ async function loop() {
  *  - 立即执行一次 tick()
  *  - 每隔 TICK_MS 周期性执行
  */
-export function start() {
-    console.log('[Manager] Starting grid task loop...');
-
-    // 先订阅报价
+export async function start() {
+    // 扫描任务列表、订阅相关报价
     const gridTaskList = listGridTask();
     gridTaskList.forEach(ele => {
         if (ele.status === STATUS.RUNNING) {
@@ -227,21 +227,22 @@ export function start() {
         }
     });
 
-    // 注册定时任务
-    const run = () => {
-        loop().catch((err) => {
-            logger.error('[ERR] Tick loop 异常:', err?.message ?? err)
-        });
-    };
-    run();
-    // setInterval(run, TICK_MS);
+    // 启动网格任务调度循环
+    await loop().catch(err => {
+        logger.error('[ERR] Tick loop 异常:', err?.message ?? err)
+    });
+
+    // 启动挂单追踪同步脚本
     setInterval(async () => {
         try {
             await dealOrder(orderList);
         } catch (err) {
             logger.error('[Manager] 定时检查订单异常:', err?.message ?? err);
         }
-    }, 1000);
-}
+    }, TICK_MS);
 
-// start();
+
+    // 启动网格任务自动创建脚本
+    // await startAutoCreator();
+
+}

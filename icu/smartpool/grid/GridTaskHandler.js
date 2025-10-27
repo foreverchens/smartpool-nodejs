@@ -42,8 +42,8 @@ export async function tryStart(task) {
         quoteQty = formatQty(task.quoteAssert, quotePrice, task.gridValue / quotePrice);
     }
 
-    const buyPrice = Number((synthPrice * (1 - task.gridRate)).toPrecision(8));
-    const sellPrice = Number((synthPrice * (1 + task.gridRate)).toPrecision(8));
+    const buyPrice = Number((synthPrice * (1 - task.gridRate)).toPrecision(5));
+    const sellPrice = Number((synthPrice * (1 + task.gridRate)).toPrecision(5));
     const lastTradePrice = synthPrice;
 
     const initOrders = [];

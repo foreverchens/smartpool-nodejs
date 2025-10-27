@@ -12,6 +12,6 @@ const precisionMap = rlt.data.symbols
 export function formatQty(symbol, price, qty) {
     symbol = symbol?.toUpperCase();
     let rlt = precisionMap[symbol];
-    return qty.toFixed(rlt[1]);
+    return Number(qty.toFixed(rlt[1]));
 }
 

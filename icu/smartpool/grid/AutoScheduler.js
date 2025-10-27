@@ -5,13 +5,13 @@ import czClient from "./common/CzClient.js";
 import {formatQty} from "./common/Util.js";
 
 const SCORE_THRESHOLD = 20000;
-const MAX_TOP_COUNT = 5;
-const FALLBACK_TOP_COUNT = 2;
-const POSIT_MIN = -0.05;
+const MAX_TOP_COUNT = 2;
+const FALLBACK_TOP_COUNT = 1;
+const POSIT_MIN = 0;
 const POSIT_MAX = 0.1;
 const GRID_RATE = 0.005;
 const GRID_VALUE = 20;
-const MAX_CNT = 5;
+const MAX_POS_CNT = 5;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -84,7 +84,7 @@ function buildTask({base, quote, lowP, amp, basePrice, quotePrice}) {
     if (absAmp <= 0) {
         throw new Error(`amp not positive for ${id}`);
     }
-    let cnt = Math.max(Math.abs(amp), MAX_CNT);
+    let cnt = Math.max(Math.abs(amp), MAX_POS_CNT);
     const baseQty = formatQty(base, basePrice, GRID_VALUE / basePrice) * cnt;
     const quoteQty = formatQty(quote, quotePrice, GRID_VALUE / quotePrice) * -cnt;
     return {
@@ -103,16 +103,31 @@ function buildTask({base, quote, lowP, amp, basePrice, quotePrice}) {
     };
 }
 
+function isAutoTask(task) {
+    return Boolean(task?.id) && typeof task.id === "string" && task.id.endsWith("-auto");
+}
+
+function countActiveAutoTasks(tasks = []) {
+    return tasks.filter(task => isAutoTask(task) && (task.status ?? "PENDING") !== "EXPIRED").length;
+}
+
 function upsertTask(existingTasks, newTask) {
     const next = [...existingTasks];
     const index = next.findIndex(task => task && task.id === newTask.id);
     if (index < 0) {
         next.push(newTask);
+        return {tasks: next, inserted: true};
     }
-    return next;
+    const current = next[index];
+    if ((current?.status ?? "PENDING") === "EXPIRED") {
+        next[index] = newTask;
+        return {tasks: next, inserted: true};
+    }
+    return {tasks: next, inserted: false};
 }
 
 async function main() {
+    console.log('[Auto Creator] loop....')
     const latest = await loadJson(DATA_FILE, null);
     if (!latest || typeof latest !== "object") {
         console.error("[auto-scheduler] latest.json 不存在或格式异常");
@@ -130,7 +145,19 @@ async function main() {
         tasks = [];
     }
 
+    const activeAutoCount = countActiveAutoTasks(tasks);
+    let availableSlots = Math.max(0, MAX_TOP_COUNT - activeAutoCount);
+    let limitReached = availableSlots <= 0;
+    let limitLogged = false;
+    if (limitReached) {
+        console.log(`[auto-scheduler] 自动网格任务已达上限 (${MAX_TOP_COUNT})，等待现有任务过期`);
+        limitLogged = true;
+    }
+
     for (const [cycleKey, cycleValue] of Object.entries(cycles)) {
+        if (limitReached) {
+            break;
+        }
         const stage = cycleValue?.data;
         const entries = stage?.data;
         if (!Array.isArray(entries) || !entries.length) {
@@ -138,6 +165,10 @@ async function main() {
         }
         const candidates = selectTopPairs(entries);
         for (const entry of candidates) {
+            if (availableSlots <= 0) {
+                limitReached = true;
+                break;
+            }
             const pricePosit = Number(entry.pricePosit);
             if (!positIsNearLower(pricePosit)) {
                 continue;
@@ -156,9 +187,19 @@ async function main() {
                     basePrice,
                     quotePrice
                 });
-                console.log(task)
-                tasks = upsertTask(tasks, task);
-                console.log(`[auto-scheduler] 周期 ${cycleKey} 创建/更新任务: ${task.id}`);
+                const {tasks: nextTasks, inserted} = upsertTask(tasks, task);
+                tasks = nextTasks;
+                if (inserted) {
+                    availableSlots -= 1;
+                    console.log(`[auto-scheduler] 周期 ${cycleKey} 创建/更新任务: ${task.id}`);
+                    if (availableSlots <= 0) {
+                        limitReached = true;
+                        if (!limitLogged) {
+                            console.log(`[auto-scheduler] 自动网格任务已达上限 (${MAX_TOP_COUNT})，等待现有任务过期`);
+                            limitLogged = true;
+                        }
+                    }
+                }
             } catch (err) {
                 console.error(`[auto-scheduler] 跳过 ${entry.symbol}: ${err.message}`);
             }
@@ -169,7 +210,12 @@ async function main() {
     console.log("[auto-scheduler] grid_tasks.json 已更新");
 }
 
-main().catch(err => {
-    console.error("[auto-scheduler] 执行失败:", err);
-    process.exitCode = 1;
-});
+
+const startAutoCreator = async () => {
+    console.log('[Auto Creator] start....')
+    const run = () => main().catch(console.error);
+    await run();
+    setInterval(run, 1000 * 60 * 7);
+}
+export default startAutoCreator;
+

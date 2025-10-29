@@ -98,6 +98,14 @@ export async function tryStart(task) {
     }
 
     // 启动
+    if (task.extraBuys) {
+        task.extraBuys = task.extraBuys.map(item => ({
+            ...item, triggered: false,
+        }));
+    } else {
+        task.extraBuys = [];
+    }
+
     task.startPrice = synthPrice;
     task.startBaseP = basePrice;
     task.startQuoteP = quotePrice;
@@ -106,6 +114,9 @@ export async function tryStart(task) {
         quoteQty,
         buyPrice,
         sellPrice,
+        extraLatestPrice: task.extraBuys
+            .filter(item => !item.triggered)
+            .reduce((latest, item) => item.price > latest ? item.price : latest, 0),
         lastTradePrice,
         initFilled: initOrders.length ? initOrders.map(order => ({
             symbol: order.symbol, side: order.side, qty: order.origQty, price: order.price, orderId: order.orderId
@@ -130,7 +141,7 @@ export async function dealTask(task) {
     const baseAssert = task.baseAssert;
     const quoteAssert = task.quoteAssert;
     const {
-        baseQty, quoteQty, buyPrice, sellPrice,
+        baseQty, quoteQty, buyPrice, sellPrice
     } = task.runtime;
 
     // 获取最新汇率
@@ -263,12 +274,68 @@ export async function dealTask(task) {
     task.runtime.sellPrice = Number((curBidPrice * (1 + task.gridRate)).toPrecision(5));
     task.runtime.lastTradePrice = curBidPrice;
 
+    const extraOrders = [];
+    while (task.runtime.extraLatestPrice >= curBidPrice) {
+        const extraConfigs = task.extraBuys.filter(item => !item.triggered);
+        if (!extraConfigs.length) {
+            break
+        }
+        for (let item of extraConfigs) {
+            let price = item.price;
+            let mul = item.mul;
+            if (price < curBidPrice) {
+                continue;
+            }
+            const extraBaseQty = formatQty(baseAssert, baseBidPrice, baseQty * mul);
+            const extraQuoteQty = formatQty(quoteAssert, quoteBidPrice, quoteQty * mul);
+            const extraBindId = Snowflake.generate();
+            const extraBaseOrder = await czClient.placeOrder(baseAssert, 0, extraBaseQty, baseBidPrice);
+            if (extraBaseOrder.msg) {
+                let msg = `[TASK ${task.id}] 扩展买入失败 msg:${extraBaseOrder.msg}`;
+                logger.error(msg);
+                // 缺失事务处理
+                continue;
+            }
+            extraBaseOrder.taskId = task.id;
+            extraBaseOrder.taskBindId = extraBindId;
+            extraBaseOrder.synthPrice = curBidPrice;
+            await saveOrder(extraBaseOrder);
+            extraOrders.push(extraBaseOrder);
+            logger.info(`[TASK ${task.id}] ${baseAssert} 触发额外买入 汇率:${curBidPrice} 数量:${extraBaseQty} , 订单:${extraBaseOrder.orderId}`);
+
+            const extraQuoteOrder = await czClient.placeOrder(quoteAssert, 1, extraQuoteQty, quoteAskPrice);
+            if (extraQuoteOrder.msg) {
+                let msg = `[TASK ${task.id}] 扩展卖出失败 msg:${extraQuoteOrder.msg}`;
+                logger.error(msg);
+                // 缺失事务处理
+                continue;
+            }
+            extraQuoteOrder.taskId = task.id;
+            extraQuoteOrder.taskBindId = extraBindId;
+            extraQuoteOrder.synthPrice = curBidPrice;
+            await saveOrder(extraQuoteOrder);
+            extraOrders.push(extraQuoteOrder);
+            logger.info(`[TASK ${task.id}] ${quoteAssert} 触发额外卖出 汇率:${curBidPrice} 数量:${extraQuoteQty} , 订单:${extraQuoteOrder.orderId}`);
+            item.triggered = true;
+        }
+        const remain = extraConfigs.filter(item => !item.triggered);
+        if (remain.length) {
+            task.runtime.extraLatestPrice = remain[0].price;
+        } else {
+            task.runtime.extraLatestPrice = 0;
+        }
+        task.extraBuys = extraConfigs;
+    }
+
     const orders = [];
     if (baseOrder?.orderId) {
         orders.push(baseOrder);
     }
     if (quoteOrder?.orderId) {
         orders.push(quoteOrder);
+    }
+    if (extraOrders.length) {
+        orders.push(...extraOrders);
     }
 
     return callRlt.ok(orders);
@@ -285,29 +352,29 @@ export async function dealOrder(orderList) {
         let orderId = order.orderId;
         let symbol = order.symbol;
         let realOrder = await czClient.getFuturesOrder(symbol, orderId).catch(e => {
-            logger.error(`[ORDER ${orderId}] 订单查询异常 :${e.message}`);
+            logger.error(`[ORDER ${symbol}-${orderId}] 订单查询异常 :${e.message}`);
         });
         if (!realOrder) {
-            logger.error(`[ORDER ${orderId}] 无法获取订单详情, 暂时跳过`);
+            logger.error(`[ORDER ${symbol}-${orderId}] 无法获取订单详情, 暂时跳过`);
             idx++;
             continue;
         }
         const taskId = order.taskId;
         if (!taskId) {
-            logger.error(`[ORDER ${orderId}] 缺少 taskId, 暂时跳过更新`);
+            logger.error(`[ORDER ${symbol}-${orderId}] 缺少 taskId, 暂时跳过更新`);
             idx++;
             continue;
         }
         const taskBindId = order.taskBindId;
         if (realOrder.status === 'FILLED') {
             await updateOrderStatus(taskId, taskBindId, realOrder);
-            logger.info(`[ORDER ${orderId}] 完全成交`);
+            logger.info(`[ORDER ${symbol}-${orderId}] 完全成交`);
             orderList.splice(idx, 1);
             continue;
         }
         if (['CANCELED', 'EXPIRED', 'REJECTED'].includes(realOrder.status)) {
             await updateOrderStatus(taskId, taskBindId, realOrder);
-            logger.info(`[ORDER ${orderId}] 状态为 ${realOrder.status}, 移出跟踪队列`);
+            logger.info(`[ORDER ${symbol}-${orderId}] 状态为 ${realOrder.status}, 移出跟踪队列`);
             orderList.splice(idx, 1);
             continue;
         }
@@ -317,7 +384,7 @@ export async function dealOrder(orderList) {
         let isBuy = realOrder.side === 'BUY';
         let price = isBuy ? bidP : askP;
         if (price !== Number(realOrder.price) && price !== 0) {
-            logger.info(`[ORDER ${orderId}] 价格修改 ` + realOrder.side + '  ' + realOrder.price + '-->' + price);
+            logger.info(`[ORDER ${symbol}-${orderId}] 价格修改 ` + realOrder.side + '  ' + realOrder.price + '-->' + price);
             let rlt = await czClient.futureModifyOrder(realOrder.symbol, realOrder.side, realOrder.orderId, realOrder.origQty, price);
             if (rlt.suc) {
                 rlt.data.taskId = order.taskId;

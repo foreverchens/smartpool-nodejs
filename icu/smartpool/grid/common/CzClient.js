@@ -260,18 +260,23 @@ class CzClient {
             if (order.status === 'CANCELED' && order.timeInForce === 'GTX') {
                 // gtx的订单、价格被修改后、若无法继续成为maker、则会被取消、需重新下单
                 // https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/trade/rest-api/Modify-Order
-                let newOrder = await this.placeOrder(symbol, side === 'SELL', quantity);
-                logger.error(`[ORDER ${orderId}] 价格修改失败、重新下单、 [${order.orderId} -> ${newOrder.orderId}]`);
-                return callRlt.ok(order);
+                const newOrder = await this.placeOrder(symbol, side === 'SELL', quantity);
+                if (newOrder?.orderId) {
+                    logger.error(`[ORDER ${symbol}-${orderId}] 价格修改失败、重新下单、 [${order.orderId} -> ${newOrder.orderId}]`);
+                    return callRlt.ok(newOrder);
+                }
+                const fallbackMsg = `[ORDER ${symbol}-${orderId}] 价格修改失败后重新下单异常: ${newOrder?.msg ?? '未知错误'}`;
+                logger.error(fallbackMsg);
+                return callRlt.fail(fallbackMsg);
             }
-            logger.info(`[ORDER ${orderId}] 价格修改成功--> ${order.price}`);
+            logger.info(`[ORDER ${symbol}-${orderId}] 价格修改成功--> ${order.price}`);
             return callRlt.ok(order);
         } catch (error) {
             let msg = `${symbol}-${orderId} 价格修改失败: + ${error.response ? JSON.stringify(error.response.data) : JSON.stringify(error.message)}`;
             logger.error(msg)
             if (error?.response?.data?.code === -2013) {
                 // 订单已成交、
-                logger.error(`[ORDER ${orderId}] 价格修改失败、订单已成交 直接查询返回`);
+                logger.error(`[ORDER ${symbol}-${orderId}] 价格修改失败、订单已成交 直接查询返回`);
                 return callRlt.ok(await this.getFuturesOrder(symbol, orderId));
             }
             return callRlt.fail(msg);

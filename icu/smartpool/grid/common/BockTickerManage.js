@@ -1,3 +1,5 @@
+import * as timers from "node:timers";
+import logger from './logger.js';
 import {connect} from './WsClient.js';
 
 const map = new Map();
@@ -17,9 +19,9 @@ export function subscribe(symbol) {
     symbol = symbol.toLowerCase();
     let ws = connect(symbol, tickerHandle);
     map.set(symbol, {
-        'ws': ws, 'bid': null, 'ask': null, 'time': 0
+        'ws': ws, 'bid': null, 'ask': null, 'time': 0, 'restarting': false
     });
-    console.log(`[Web Socket] ${symbol} subscribe suc`)
+    logger.info(`[Web Socket] ${symbol} subscribe suc`);
 }
 
 /**
@@ -37,8 +39,22 @@ export function unsubscribe(symbol) {
  * @returns {*[]} [bestBidPrice,bestAskPrice]
  */
 export function getTicker(symbol) {
-    let val = map.get(symbol?.toLowerCase());
-    return [Number(val?.bid), Number(val?.ask), val?.time];
+    symbol = symbol?.toLowerCase();
+    const val = map.get(symbol);
+    const now = Date.now();
+    // 如果 ticker 超过阈值未更新，则触发一次重连
+    if (val.time && val.time + 5000 < now && !val.restarting) {
+        val.restarting = true;
+        try {
+            val.ws?.close(1012, 'stale ticker restart');
+        } catch (err) {
+            logger.warn(`[Web Socket] ${symbol} close error`, err?.message || err);
+        }
+        timers.setTimeout(() => {
+            subscribe(symbol);
+        }, 200);
+    }
+    return [Number(val.bid), Number(val.ask), val.time];
 }
 
 
@@ -46,7 +62,5 @@ export function getTicker(symbol) {
 // setInterval(()=>{
 //     console.log(getTicker('btcusdt'));
 // })
-
-
 
 

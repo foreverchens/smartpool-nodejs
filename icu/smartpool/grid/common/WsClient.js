@@ -1,9 +1,11 @@
 import WebSocket from 'ws';
+import logger from './logger.js';
+
 
 export function connect(symbol, callback) {
     let ws = new WebSocket(`wss://fstream.binance.com/stream?streams=${symbol}@bookTicker`);
     ws.on('open', () => {
-        console.log('[Web Socket] ' + symbol + ' connected');
+        logger.info('[Web Socket] ' + symbol + ' connected');
     });
 
     ws.on('message', (buf) => {
@@ -25,12 +27,12 @@ export function connect(symbol, callback) {
 
     // 当服务器关闭时，自动重连
     ws.on('close', (code, reason) => {
-        console.warn(`[closed] code=${code} reason=${reason?.toString() || 'no reason'}`);
+        logger.warn(`[closed] code=${code} reason=${reason?.toString() || 'no reason'}`);
         // console.log('[reconnect] reconnecting in 2s...');
     });
 
     ws.on('error', (err) => {
-        console.error('[error]', err?.message || err);
+        logger.error('[error]', err?.message || err);
         setTimeout(() => {
             connect(symbol, callback);
         }, 2000);
@@ -38,7 +40,7 @@ export function connect(symbol, callback) {
 
     function shutdown() {
         if (ws.readyState === WebSocket.OPEN) {
-            console.log('Closing WebSocket...');
+            logger.info('Closing WebSocket...');
             ws.close(1000, 'Client closing');
         }
         setTimeout(() => {

@@ -381,6 +381,10 @@ class CzClient {
             'txFee': +totalFee.toFixed(8), 'makerFeeRate': `${makerRate}%`
         };
     }
+
+    async listOrders(symbol, opt = {}) {
+        return await client.futuresAllOrders(symbol, opt);
+    }
 }
 
 // new CzClient().getTxFee('solusdc', 9069260317).then(e => console.log(e))

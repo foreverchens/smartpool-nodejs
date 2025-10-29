@@ -801,14 +801,52 @@ function mergeGridTasksWithStats(gridTasks, taskStats, initialExposure = new Map
             const symbolExposure = symbolKey && exposureForTask instanceof Map ? exposureForTask.get(symbolKey) : null;
             const initialQty = symbolExposure && Number.isFinite(symbolExposure.qty) ? symbolExposure.qty : 0;
             const initialNotional = symbolExposure && Number.isFinite(symbolExposure.notional) ? symbolExposure.notional : 0;
-            const baseOpenQty = Number.isFinite(asset.openQty) ? asset.openQty : 0;
-            const baseOpenNotional = Number.isFinite(asset.openNotional) ? asset.openNotional : 0;
+            const baseBuyQty = Number.isFinite(asset.buyQty) ? asset.buyQty : 0;
+            const baseBuyNotional = Number.isFinite(asset.buyNotional) ? asset.buyNotional : 0;
+            const baseSellQty = Number.isFinite(asset.sellQty) ? asset.sellQty : 0;
+            const baseSellNotional = Number.isFinite(asset.sellNotional) ? asset.sellNotional : 0;
+            let adjustedBuyQty = baseBuyQty;
+            let adjustedBuyNotional = baseBuyNotional;
+            let adjustedSellQty = baseSellQty;
+            let adjustedSellNotional = baseSellNotional;
+            if (initialQty > 0) {
+                adjustedBuyQty += initialQty;
+                adjustedBuyNotional += initialNotional;
+            } else if (initialQty < 0) {
+                const sellQtyAdjust = Math.abs(initialQty);
+                const sellNotionalAdjust = Math.abs(initialNotional);
+                adjustedSellQty += sellQtyAdjust;
+                adjustedSellNotional += sellNotionalAdjust;
+            }
+            const avgBuyPrice = adjustedBuyQty ? adjustedBuyNotional / adjustedBuyQty : 0;
+            const avgSellPrice = adjustedSellQty ? adjustedSellNotional / adjustedSellQty : 0;
+            const {matchedQty, priceSpread, realizedProfit} = computeRealizedMetrics(
+                adjustedBuyQty,
+                adjustedSellQty,
+                avgBuyPrice,
+                avgSellPrice
+            );
+            const adjustedProfit = adjustedSellNotional - adjustedBuyNotional;
+            const adjustedOpenQty = adjustedBuyQty - adjustedSellQty;
+            const adjustedOpenNotional = adjustedBuyNotional - adjustedSellNotional;
             return {
                 ...asset,
                 initialExposureQty: initialQty,
                 initialExposureNotional: initialNotional,
-                nominalOpenQty: baseOpenQty + initialQty,
-                nominalOpenNotional: baseOpenNotional + initialNotional
+                buyQty: adjustedBuyQty,
+                buyNotional: adjustedBuyNotional,
+                sellQty: adjustedSellQty,
+                sellNotional: adjustedSellNotional,
+                avgBuyPrice,
+                avgSellPrice,
+                matchedQty,
+                priceSpread,
+                realizedProfit,
+                profit: adjustedProfit,
+                openQty: adjustedOpenQty,
+                openNotional: adjustedOpenNotional,
+                nominalOpenQty: adjustedOpenQty,
+                nominalOpenNotional: adjustedOpenNotional
             };
         });
         const arbitrages = Array.isArray(rest.arbitrages)
@@ -837,13 +875,45 @@ function mergeGridTasksWithStats(gridTasks, taskStats, initialExposure = new Map
         const averageCrossRate = crossWeight ? crossWeightedTotal / crossWeight : null;
         const averageBuyRate = buyWeight ? buyWeightedTotal / buyWeight : null;
         const averageSellRate = sellWeight ? sellWeightedTotal / sellWeight : null;
+        const aggregatedPosition = enhancedAssetStats.reduce((acc, asset) => {
+            const buyQty = Number.isFinite(asset.buyQty) ? asset.buyQty : 0;
+            const sellQty = Number.isFinite(asset.sellQty) ? asset.sellQty : 0;
+            const buyNotional = Number.isFinite(asset.buyNotional) ? asset.buyNotional : 0;
+            const sellNotional = Number.isFinite(asset.sellNotional) ? asset.sellNotional : 0;
+            const realizedProfit = Number.isFinite(asset.realizedProfit) ? asset.realizedProfit : 0;
+            const openQty = Number.isFinite(asset.openQty) ? asset.openQty : 0;
+            const openNotional = Number.isFinite(asset.openNotional) ? asset.openNotional : 0;
+            acc.buyQty += buyQty;
+            acc.sellQty += sellQty;
+            acc.buyNotional += buyNotional;
+            acc.sellNotional += sellNotional;
+            acc.realizedProfit += realizedProfit;
+            acc.netExposureQty += openQty;
+            acc.netExposureNotional += openNotional;
+            return acc;
+        }, {
+            buyQty: 0,
+            sellQty: 0,
+            buyNotional: 0,
+            sellNotional: 0,
+            realizedProfit: 0,
+            netExposureQty: 0,
+            netExposureNotional: 0
+        });
+        const aggregatedProfit = aggregatedPosition.sellNotional - aggregatedPosition.buyNotional;
         return {
             ...rest,
             assetStats: enhancedAssetStats,
             arbitrages,
             averageCrossRate,
             averageBuyRate,
-            averageSellRate
+            averageSellRate,
+            buyNotional: aggregatedPosition.buyNotional,
+            sellNotional: aggregatedPosition.sellNotional,
+            profit: aggregatedProfit,
+            realizedProfit: aggregatedPosition.realizedProfit,
+            netExposureQty: aggregatedPosition.netExposureQty,
+            netExposureNotional: aggregatedPosition.netExposureNotional
         };
     });
 }

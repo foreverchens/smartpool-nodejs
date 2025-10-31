@@ -138,16 +138,16 @@ export async function dealTask(task) {
         return callRlt.ok();
     }
 
+    // 基本参数和运行时参数
     const baseAssert = task.baseAssert;
     const quoteAssert = task.quoteAssert;
     const {
         baseQty, quoteQty, buyPrice, sellPrice
     } = task.runtime;
 
-    // 获取最新汇率
+    // 获取最新报价和汇率
     let [baseBidPrice, baseAskPrice] = getTicker(baseAssert);
     let [quoteBidPrice, quoteAskPrice] = getTicker(quoteAssert);
-
     let curBidPrice = baseBidPrice;
     let curAskPrice = baseAskPrice;
     if (task.doubled) {
@@ -157,11 +157,71 @@ export async function dealTask(task) {
     if (!Number.isFinite(curBidPrice) || curBidPrice <= 0) {
         return callRlt.ok();
     }
-    console.log(`[TASK ${task.id}]  [${buyPrice} <- ${curBidPrice} | ${curAskPrice} -> ${sellPrice}]  @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
-    // console.log(`[TASK ${task.id}] 当前汇率:${curBidPrice} 买入:${buyPrice} 卖出:${sellPrice} @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
+    const posit = (curBidPrice - buyPrice) / (sellPrice - buyPrice);
+    console.log(`[TASK ${task.id}]  [${buyPrice} <- ${curBidPrice} |${(posit * 100).toFixed(1).concat('%')}| ${curAskPrice} -> ${sellPrice}]  @${dayjs().format('YYYY-MM-DD HH:mm:ss')}`);
+    // 检查额外买入订单组
+    const extraOrders = [];
+    while (task.runtime.extraLatestPrice >= curBidPrice) {
+        const extraConfigs = task.extraBuys.filter(item => !item.triggered);
+        if (!extraConfigs.length) {
+            break
+        }
+        for (let item of extraConfigs) {
+            let price = item.price;
+            let mul = item.mul;
+            if (price < curBidPrice) {
+                continue;
+            }
+            const extraBaseQty = formatQty(baseAssert, baseBidPrice, baseQty * mul);
+            const extraQuoteQty = formatQty(quoteAssert, quoteAskPrice, quoteQty * mul);
+            const extraBindId = Snowflake.generate();
+            const extraBaseOrder = await czClient.placeOrder(baseAssert, 0, extraBaseQty, baseBidPrice);
+            if (extraBaseOrder.msg) {
+                let msg = `[TASK ${task.id}] 扩展买入失败 msg:${extraBaseOrder.msg}`;
+                logger.error(msg);
+                // 缺失事务处理
+                continue;
+            }
+            extraBaseOrder.taskId = task.id;
+            extraBaseOrder.taskBindId = extraBindId;
+            extraBaseOrder.synthPrice = curBidPrice;
+            await saveOrder(extraBaseOrder);
+            extraOrders.push(extraBaseOrder);
+            logger.info(`[TASK ${task.id}] ${baseAssert} 触发额外买入 汇率:${curBidPrice} 数量:${extraBaseQty} , 订单:${extraBaseOrder.orderId}`);
+
+            const extraQuoteOrder = await czClient.placeOrder(quoteAssert, 1, extraQuoteQty, quoteAskPrice);
+            if (extraQuoteOrder.msg) {
+                let msg = `[TASK ${task.id}] 扩展卖出失败 msg:${extraQuoteOrder.msg}`;
+                logger.error(msg);
+                // 缺失事务处理
+                continue;
+            }
+            extraQuoteOrder.taskId = task.id;
+            extraQuoteOrder.taskBindId = extraBindId;
+            extraQuoteOrder.synthPrice = curBidPrice;
+            await saveOrder(extraQuoteOrder);
+            extraOrders.push(extraQuoteOrder);
+            logger.info(`[TASK ${task.id}] ${quoteAssert} 触发额外卖出 汇率:${curBidPrice} 数量:${extraQuoteQty} , 订单:${extraQuoteOrder.orderId}`);
+            item.triggered = true;
+        }
+        const remain = extraConfigs.filter(item => !item.triggered);
+        if (remain.length) {
+            task.runtime.extraLatestPrice = remain[0].price;
+        } else {
+            task.runtime.extraLatestPrice = 0;
+        }
+        task.extraBuys = extraConfigs;
+    }
+    if (extraOrders.length) {
+        // 额外订单组发生时、直接先返回
+        return callRlt.ok(extraOrders);
+    }
+
+    // 检查网格价格位置
     if (curBidPrice > buyPrice && curAskPrice < sellPrice) {
         // 仍在价格区间内
-        let time = ((0.5 - Math.abs(((sellPrice + buyPrice) / 2 - curBidPrice)) / (sellPrice - buyPrice)) * 10).toFixed(0);
+        // let time = ((0.5 - Math.abs(((sellPrice + buyPrice) / 2 - curBidPrice)) / (sellPrice - buyPrice)) * 10).toFixed(0);
+        let time = (1 + 9 * Math.pow(Math.cos(Math.PI * (posit - 0.5)), 2.5)).toFixed(2);
         return callRlt.loop(time > 1 ? time : 1);
     }
     // 进入交易价格区间
@@ -274,58 +334,6 @@ export async function dealTask(task) {
     task.runtime.sellPrice = Number((curBidPrice * (1 + task.gridRate)).toPrecision(5));
     task.runtime.lastTradePrice = curBidPrice;
 
-    const extraOrders = [];
-    while (task.runtime.extraLatestPrice >= curBidPrice) {
-        const extraConfigs = task.extraBuys.filter(item => !item.triggered);
-        if (!extraConfigs.length) {
-            break
-        }
-        for (let item of extraConfigs) {
-            let price = item.price;
-            let mul = item.mul;
-            if (price < curBidPrice) {
-                continue;
-            }
-            const extraBaseQty = formatQty(baseAssert, baseBidPrice, baseQty * mul);
-            const extraQuoteQty = formatQty(quoteAssert, quoteBidPrice, quoteQty * mul);
-            const extraBindId = Snowflake.generate();
-            const extraBaseOrder = await czClient.placeOrder(baseAssert, 0, extraBaseQty, baseBidPrice);
-            if (extraBaseOrder.msg) {
-                let msg = `[TASK ${task.id}] 扩展买入失败 msg:${extraBaseOrder.msg}`;
-                logger.error(msg);
-                // 缺失事务处理
-                continue;
-            }
-            extraBaseOrder.taskId = task.id;
-            extraBaseOrder.taskBindId = extraBindId;
-            extraBaseOrder.synthPrice = curBidPrice;
-            await saveOrder(extraBaseOrder);
-            extraOrders.push(extraBaseOrder);
-            logger.info(`[TASK ${task.id}] ${baseAssert} 触发额外买入 汇率:${curBidPrice} 数量:${extraBaseQty} , 订单:${extraBaseOrder.orderId}`);
-
-            const extraQuoteOrder = await czClient.placeOrder(quoteAssert, 1, extraQuoteQty, quoteAskPrice);
-            if (extraQuoteOrder.msg) {
-                let msg = `[TASK ${task.id}] 扩展卖出失败 msg:${extraQuoteOrder.msg}`;
-                logger.error(msg);
-                // 缺失事务处理
-                continue;
-            }
-            extraQuoteOrder.taskId = task.id;
-            extraQuoteOrder.taskBindId = extraBindId;
-            extraQuoteOrder.synthPrice = curBidPrice;
-            await saveOrder(extraQuoteOrder);
-            extraOrders.push(extraQuoteOrder);
-            logger.info(`[TASK ${task.id}] ${quoteAssert} 触发额外卖出 汇率:${curBidPrice} 数量:${extraQuoteQty} , 订单:${extraQuoteOrder.orderId}`);
-            item.triggered = true;
-        }
-        const remain = extraConfigs.filter(item => !item.triggered);
-        if (remain.length) {
-            task.runtime.extraLatestPrice = remain[0].price;
-        } else {
-            task.runtime.extraLatestPrice = 0;
-        }
-        task.extraBuys = extraConfigs;
-    }
 
     const orders = [];
     if (baseOrder?.orderId) {
@@ -333,9 +341,6 @@ export async function dealTask(task) {
     }
     if (quoteOrder?.orderId) {
         orders.push(quoteOrder);
-    }
-    if (extraOrders.length) {
-        orders.push(...extraOrders);
     }
 
     return callRlt.ok(orders);

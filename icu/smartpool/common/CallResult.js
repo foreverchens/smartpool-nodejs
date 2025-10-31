@@ -13,7 +13,8 @@ class CallResult {
         return {
             'suc': true,
             'msg': '',
-            'data': data
+            'data': data,
+            'time': 10
         }
     }
 

@@ -41,6 +41,9 @@ export function unsubscribe(symbol) {
 export function getTicker(symbol) {
     symbol = symbol?.toLowerCase();
     const val = map.get(symbol);
+    if (!val) {
+        return [0, 0, 0];
+    }
     const now = Date.now();
     // 如果 ticker 超过阈值未更新，则触发一次重连
     if (val.time && val.time + 5000 < now && !val.restarting) {

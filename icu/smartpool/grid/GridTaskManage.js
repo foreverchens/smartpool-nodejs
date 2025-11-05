@@ -8,6 +8,7 @@
  * @property {boolean} doubled        // true=单币；false=双币/合成
  * @property {boolean} reversed       // 仅对单币场景有意义；本模板未使用
  * @property {number=} startPrice     // 启动触发价；未指定则首次价格即为锚点
+ * @property {takeProfitPrice=} takeProfitPrice // 止盈价格
  * @property {number} gridRate        // 等比网格比率，如 0.005
  * @property {number} gridValue       // 每格交易价值（USDT）
  * @property {{baseQty?: number, quoteQty?: number}=} initPosition // 启动后一次性建仓数量；正数买入、负数卖出
@@ -121,6 +122,9 @@ function validateParams(gridTask) {
     if (gridTask.startPrice != null && (typeof gridTask.startPrice !== 'number' || !Number.isFinite(gridTask.startPrice))) {
         errors.push('startPrice 如存在必须为数值');
     }
+    if (gridTask.takeProfitPrice != null && (typeof gridTask.takeProfitPrice !== 'number' || !Number.isFinite(gridTask.takeProfitPrice))) {
+        errors.push('takeProfitPrice 如存在必须为数值');
+    }
 
     if (gridTask.initPosition != null) {
         if (typeof gridTask.initPosition !== 'object' || Array.isArray(gridTask.initPosition)) {
@@ -182,12 +186,33 @@ async function loop() {
             case STATUS.RUNNING:
                 let callRlt = await dealTask(task);
                 if (callRlt.suc) {
-                    if (callRlt.data) {
-                        for (let order of callRlt.data) {
-                            orderList.push(order);
-                        }
+                    switch (callRlt.code) {
+                        case 1:
+                            // loop等待中
+                            time = callRlt.time;
+                            break;
+                        case 2:
+                            // grid trade orders handler
+                            time = callRlt.time;
+                            if (callRlt.data) {
+                                for (let order of callRlt.data) {
+                                    orderList.push(order);
+                                }
+                            }
+                            break;
+                        case 3:
+                            // grid profit orders handler
+                            time = callRlt.time;
+                            if (callRlt.data) {
+                                for (let order of callRlt.data) {
+                                    orderList.push(order);
+                                }
+                            }
+                            task.status = STATUS.EXPIRED;
+                            break;
+                        default:
+                            console.log(0)
                     }
-                    time = callRlt.time;
                 } else {
                     logger.error(callRlt.msg);
                     // 运行时异常、失效任务
@@ -200,13 +225,16 @@ async function loop() {
                     unsubscribe(task.quoteAssert)
                 }
         }
-        updateTasks(gridTaskList);
     }
+    // 更新任务列表
+    updateTasks(gridTaskList);
 
+    // 启动下一步循环
     setTimeout(async () => {
         await loop().catch(err => {
             logger.error('[ERR] Tick loop 异常:', err?.message ?? err)
         })
+        // 多任务时 time会直接取最后一次更新的值
     }, time ? TICK_MS * time : TICK_MS);
 }
 

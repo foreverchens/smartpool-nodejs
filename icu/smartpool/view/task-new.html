@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>新增双币网格任务</title>
+    <link href="/view/lib/common.css" rel="stylesheet">
+    <link href="/view/lib/task-new.css" rel="stylesheet">
+</head>
+<body class="page-task-new">
+<div class="task-container">
+    <header>
+        <h1>新增双币网格任务</h1>
+        <a href="/dashboard">返回数据面板</a>
+    </header>
+    <form autocomplete="off" id="task-form">
+        <div class="form-row">
+            <label class="field" for="task-base">
+                <span>baseAssert *</span>
+                <input id="task-base" name="baseAssert" placeholder="SOLUSDC" required>
+            </label>
+            <label class="field" for="task-quote">
+                <span>quoteAssert</span>
+                <input id="task-quote" name="quoteAssert" placeholder="可留空或填写 BCHUSDC">
+            </label>
+        </div>
+        <div class="form-row">
+            <label class="field checkbox-field" for="task-doubled">
+                <input id="task-doubled" name="doubled" type="checkbox">
+                <span>Doubled (双币网格)</span>
+            </label>
+            <label class="field checkbox-field" for="task-reversed">
+                <input id="task-reversed" name="reversed" type="checkbox">
+                <span>Reversed (反向)</span>
+            </label>
+        </div>
+        <div class="form-row">
+            <label class="field" for="task-start-price">
+                <span>startPrice</span>
+                <input id="task-start-price" name="startPrice" placeholder="0" step="any" type="number">
+            </label>
+            <label class="field" for="task-take-profit">
+                <span>takeProfitPrice</span>
+                <input id="task-take-profit" name="takeProfitPrice" placeholder="0" step="any" type="number">
+            </label>
+        </div>
+        <div class="form-row">
+            <label class="field" for="task-grid-rate">
+                <span>gridRate *</span>
+                <input id="task-grid-rate" min="0" name="gridRate" placeholder="0.005" required step="any"
+                       type="number">
+            </label>
+            <label class="field" for="task-grid-value">
+                <span>gridValue *</span>
+                <input id="task-grid-value" min="0" name="gridValue" placeholder="100" required step="any"
+                       type="number">
+            </label>
+        </div>
+        <details class="collapsible" id="init-position-section">
+            <summary>初始化建仓 (可选)</summary>
+            <div class="collapsible-body">
+                <div class="collapsible-row">
+                    <label class="field" for="init-position-base">
+                        <span>base建仓倍数</span>
+                        <input id="init-position-base" name="initPositionBaseLvl"
+                               placeholder="整数倍；正数买入 / 负数卖出" step="1"
+                               type="number">
+                    </label>
+                    <label class="field" for="init-position-quote">
+                        <span>quote建仓倍数</span>
+                        <input id="init-position-quote" name="initPositionQuoteLvl"
+                               placeholder="整数倍；正数买入 / 负数卖出" step="1"
+                               type="number">
+                    </label>
+                </div>
+                <p class="collapsible-hint">倍数以单格交易数量为基准，正数表示买入、负数表示卖出，留空或填写 0
+                    表示不建仓。</p>
+            </div>
+        </details>
+        <details class="collapsible" id="extra-buys-section">
+            <summary>额外买入订单组 (可选)</summary>
+            <div class="collapsible-body">
+                <div class="extra-buys-list" id="extra-buys-list"></div>
+                <div class="collapsible-actions">
+                    <button class="secondary-button" id="extra-buys-add" type="button">添加订单组</button>
+                </div>
+                <p class="collapsible-hint">触发价满足条件时按倍数追加一次买卖组合，价格与倍数均需为正数。</p>
+            </div>
+        </details>
+        <div class="feedback hidden" id="submission-feedback"></div>
+        <div class="form-actions">
+            <button id="task-submit" type="submit">创建任务</button>
+        </div>
+    </form>
+    <section class="task-list" id="task-list">
+        <div class="empty-hint">加载中...</div>
+    </section>
+</div>
+<script src="/view/lib/task-new.js" type="module"></script>
+</body>
+</html>

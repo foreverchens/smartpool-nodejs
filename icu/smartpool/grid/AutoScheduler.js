@@ -2,7 +2,6 @@ import {readFile, writeFile} from "fs/promises";
 import path from "path";
 import {fileURLToPath} from "url";
 import czClient from "./common/CzClient.js";
-import {formatQty} from "./common/Util.js";
 
 // 分数达到该阈值时，才允许分配全部自动网格名额。
 const SCORE_THRESHOLD = 20000;
@@ -96,8 +95,10 @@ function buildTask({base, quote, lowP, amp, basePrice, quotePrice, baseSymbol, q
         throw new Error(`amp not positive for ${id}`);
     }
     let cnt = Math.max(Math.abs(amp), MAX_POSIT_CNT);
-    const baseQty = formatQty(baseSymbol, basePrice, GRID_VALUE / basePrice) * cnt;
-    const quoteQty = formatQty(quoteSymbol, quotePrice, GRID_VALUE / quotePrice) * -cnt;
+    cnt = Math.round(cnt);
+    if (cnt === 0) {
+        throw new Error(`invalid qty level for ${id}`);
+    }
     return {
         id,
         baseAssert: `${base}USDC`,
@@ -109,7 +110,8 @@ function buildTask({base, quote, lowP, amp, basePrice, quotePrice, baseSymbol, q
         gridValue: GRID_VALUE,
         status: "PENDING",
         initPosition: {
-            baseQty, quoteQty
+            baseQtyLvl: cnt,
+            quoteQtyLvl: -cnt
         }
     };
 }

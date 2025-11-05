@@ -63,7 +63,7 @@ node icu/smartpool/WebServer.js
 `WebServer.js` 基于 Express 提供两个主要页面：
 
 - `view/home.html`：概览批次时间、周期列表、阶段数据量。
-  - ![Home overview](https://raw.githubusercontent.com/foreverchens/smartpool-nodejs/e526552b49bc1e406970625ce056bfcafc952495/icu/smartpool/common/home.png)
+  - ![Home overview](icu/smartpool/common/home.jpeg)
 
 - `view/dashboard.html`：按任务聚合多币对网格表现。
   - ![Grid dashboard](icu/smartpool/common/dashboard.jpeg)

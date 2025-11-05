@@ -51,15 +51,15 @@ export async function tryStart(task) {
     const initOrders = [];
     const initPosition = task.initPosition;
     if (initPosition && typeof initPosition === 'object') {
-        const rawBaseQty = Number(initPosition.baseQty);
-        const rawQuoteQty = Number(initPosition.quoteQty);
+        const baseQtyLvl = Number(initPosition.baseQtyLvl);
+        const quoteQtyLvl = Number(initPosition.quoteQtyLvl);
 
         let taskBindId = null;
 
-        const hasBaseQty = Number.isFinite(rawBaseQty) && rawBaseQty !== 0;
-        if (hasBaseQty) {
-            const baseIsAsk = rawBaseQty < 0;
-            const initBaseQty = formatQty(task.baseAssert, basePrice, Math.abs(rawBaseQty));
+        const hasBaseQtyLvl = Number.isInteger(baseQtyLvl) && baseQtyLvl !== 0 && Number.isFinite(baseQty) && baseQty > 0;
+        if (hasBaseQtyLvl) {
+            const baseIsAsk = baseQtyLvl < 0;
+            const initBaseQty = formatQty(task.baseAssert, basePrice, Math.abs(baseQtyLvl) * baseQty);
             const baseOrder = await czClient.placeOrder(task.baseAssert, baseIsAsk, initBaseQty, basePrice);
             if (baseOrder.msg) {
                 let msg = `[TASK ${task.id}] 初始仓位${baseIsAsk ? '卖出' : '买入'}失败 msg:${baseOrder.msg}`;
@@ -76,10 +76,10 @@ export async function tryStart(task) {
             }
         }
 
-        const hasQuoteQty = Number.isFinite(rawQuoteQty) && rawQuoteQty !== 0;
-        if (hasQuoteQty) {
-            const quoteIsAsk = rawQuoteQty < 0;
-            const initQuoteQty = formatQty(task.quoteAssert, quotePrice, Math.abs(rawQuoteQty));
+        const hasQuoteQtyLvl = Number.isInteger(quoteQtyLvl) && quoteQtyLvl !== 0 && Number.isFinite(quoteQty) && quoteQty > 0;
+        if (hasQuoteQtyLvl) {
+            const quoteIsAsk = quoteQtyLvl < 0;
+            const initQuoteQty = formatQty(task.quoteAssert, quotePrice, Math.abs(quoteQtyLvl) * quoteQty);
             const quoteOrder = await czClient.placeOrder(task.quoteAssert, quoteIsAsk, initQuoteQty, quotePrice);
             if (quoteOrder.msg) {
                 let msg = `[TASK ${task.id}] 初始仓位${quoteIsAsk ? '卖出' : '买入'}失败 msg:${quoteOrder.msg}`;
@@ -163,8 +163,10 @@ export async function dealTask(task) {
     if (!Number.isFinite(curBidPrice) || curBidPrice <= 0) {
         return callRlt.ok();
     }
+    // 止盈
     const takeProfitOrders = [];
     while (task.takeProfitPrice && curAskPrice >= task.takeProfitPrice) {
+        logger.info('开始止盈')
         const extraBindId = Snowflake.generate();
 
         const basePosit = task.runtime.basePosition;
@@ -172,8 +174,8 @@ export async function dealTask(task) {
             break;
         }
         const baseIsAsk = basePosit > 0;
-        const baseTakeQty = Math.abs(basePosit);
         const baseTakePrice = baseIsAsk ? baseAskPrice : baseBidPrice;
+        const baseTakeQty = formatQty(baseAssert, baseTakePrice, Math.abs(basePosit));
 
         const takeBaseOrder = await czClient.placeOrder(baseAssert, baseIsAsk, baseTakeQty, baseTakePrice);
         if (takeBaseOrder.msg) {
@@ -194,8 +196,8 @@ export async function dealTask(task) {
         if (task.doubled) {
             const quotePosit = task.runtime.quotePosition;
             const quoteIsAsk = quotePosit > 0;
-            const quoteTakeQty = Math.abs(quotePosit);
             const quoteTakePrice = quoteIsAsk ? quoteAskPrice : quoteBidPrice;
+            const quoteTakeQty = formatQty(quoteAssert, quoteTakePrice, Math.abs(quotePosit));
 
             const takeQuoteOrder = await czClient.placeOrder(quoteAssert, quoteIsAsk, quoteTakeQty, quoteTakePrice);
             if (takeQuoteOrder.msg) {
@@ -219,57 +221,64 @@ export async function dealTask(task) {
     // 检查额外买入订单组
     const extraOrders = [];
     while (task.runtime.extraLatestPrice >= curBidPrice) {
-        const extraConfigs = task.extraBuys.filter(item => !item.triggered);
-        if (!extraConfigs.length) {
+        let idx = -1;
+        let curBuy = {};
+        for (let i = 0; i < task.extraBuys.length; i++) {
+            let extraBuy = task.extraBuys[i];
+            if (!extraBuy.triggered) {
+                idx = i;
+                curBuy = extraBuy;
+                break;
+            }
+        }
+        if (idx < 0) {
+            // 没有未触发的额外买入
             break
         }
-        for (let item of extraConfigs) {
-            let price = item.price;
-            let mul = item.mul;
-            if (price < curBidPrice) {
-                continue;
-            }
-            const extraBaseQty = formatQty(baseAssert, baseBidPrice, baseQty * mul);
-            const extraQuoteQty = formatQty(quoteAssert, quoteAskPrice, quoteQty * mul);
-            const extraBindId = Snowflake.generate();
-            const extraBaseOrder = await czClient.placeOrder(baseAssert, 0, extraBaseQty, baseBidPrice);
-            if (extraBaseOrder.msg) {
-                let msg = `[TASK ${task.id}] 扩展买入失败 msg:${extraBaseOrder.msg}`;
-                logger.error(msg);
-                // 缺失事务处理
-                continue;
-            }
-            extraBaseOrder.taskId = task.id;
-            extraBaseOrder.taskBindId = extraBindId;
-            extraBaseOrder.synthPrice = curBidPrice;
-            await saveOrder(extraBaseOrder);
-            extraOrders.push(extraBaseOrder);
-            task.runtime.basePosition = task.runtime.basePosition + extraBaseQty;
-            logger.info(`[TASK ${task.id}] ${baseAssert} 触发额外买入 汇率:${curBidPrice} 数量:${extraBaseQty} , 订单:${extraBaseOrder.orderId}`);
+        const {price, mul} = curBuy;
+        if (price < curBidPrice) {
+            // 价格未满足额外买入
+            break;
+        }
+        const extraBaseQty = formatQty(baseAssert, baseBidPrice, baseQty * mul);
+        const extraQuoteQty = formatQty(quoteAssert, quoteAskPrice, quoteQty * mul);
+        const extraBindId = Snowflake.generate();
+        const extraBaseOrder = await czClient.placeOrder(baseAssert, 0, extraBaseQty, baseBidPrice);
+        if (extraBaseOrder.msg) {
+            let msg = `[TASK ${task.id}] 扩展买入失败 msg:${extraBaseOrder.msg}`;
+            logger.error(msg);
+            // 缺失事务处理
+            break;
+        }
+        extraBaseOrder.taskId = task.id;
+        extraBaseOrder.taskBindId = extraBindId;
+        extraBaseOrder.synthPrice = curBidPrice;
+        await saveOrder(extraBaseOrder);
+        extraOrders.push(extraBaseOrder);
+        task.runtime.basePosition = task.runtime.basePosition + extraBaseQty;
+        logger.info(`[TASK ${task.id}] ${baseAssert} 触发额外买入 汇率:${curBidPrice} 数量:${extraBaseQty} , 订单:${extraBaseOrder.orderId}`);
 
-            const extraQuoteOrder = await czClient.placeOrder(quoteAssert, 1, extraQuoteQty, quoteAskPrice);
-            if (extraQuoteOrder.msg) {
-                let msg = `[TASK ${task.id}] 扩展卖出失败 msg:${extraQuoteOrder.msg}`;
-                logger.error(msg);
-                // 缺失事务处理
-                continue;
-            }
-            extraQuoteOrder.taskId = task.id;
-            extraQuoteOrder.taskBindId = extraBindId;
-            extraQuoteOrder.synthPrice = curBidPrice;
-            await saveOrder(extraQuoteOrder);
-            extraOrders.push(extraQuoteOrder);
-            task.runtime.quotePosition = task.runtime.quotePosition - extraQuoteQty;
-            logger.info(`[TASK ${task.id}] ${quoteAssert} 触发额外卖出 汇率:${curBidPrice} 数量:${extraQuoteQty} , 订单:${extraQuoteOrder.orderId}`);
-            item.triggered = true;
+        const extraQuoteOrder = await czClient.placeOrder(quoteAssert, 1, extraQuoteQty, quoteAskPrice);
+        if (extraQuoteOrder.msg) {
+            let msg = `[TASK ${task.id}] 扩展卖出失败 msg:${extraQuoteOrder.msg}`;
+            logger.error(msg);
+            // 缺失事务处理
+            break;
         }
-        const remain = extraConfigs.filter(item => !item.triggered);
-        if (remain.length) {
-            task.runtime.extraLatestPrice = remain[0].price;
-        } else {
+        extraQuoteOrder.taskId = task.id;
+        extraQuoteOrder.taskBindId = extraBindId;
+        extraQuoteOrder.synthPrice = curBidPrice;
+        await saveOrder(extraQuoteOrder);
+        extraOrders.push(extraQuoteOrder);
+        task.runtime.quotePosition = task.runtime.quotePosition - extraQuoteQty;
+        logger.info(`[TASK ${task.id}] ${quoteAssert} 触发额外卖出 汇率:${curBidPrice} 数量:${extraQuoteQty} , 订单:${extraQuoteOrder.orderId}`);
+        task.extraBuys[idx].triggered = true;
+        if (idx === task.extraBuys.length - 1) {
+            // 最后一个额外买入被触发、无更多买入
             task.runtime.extraLatestPrice = 0;
+        } else {
+            task.runtime.extraLatestPrice = task.extraBuys[idx + 1].price;
         }
-        task.extraBuys = extraConfigs;
     }
     if (extraOrders.length) {
         // 额外订单组发生时、直接先返回
@@ -296,7 +305,7 @@ export async function dealTask(task) {
             // 默认不支持订单反向、以base资产为准
             // 不支持反向、检查剩余仓位是否满足开单要求
             // 当前执行base资产买入、若当前持有空单、检查是否满足此次买入平仓
-            if (baseAssertPosit?.positionAmt && Number(baseAssertPosit.positionAmt) < 0 && Number(baseAssertPosit.positionAmt) + baseQty > 0) {
+            if (!baseAssertPosit || (baseAssertPosit.positionAmt && Number(baseAssertPosit.positionAmt) < 0 && Number(baseAssertPosit.positionAmt) + baseQty > 0)) {
                 let msg = `[TASK ${task.id}] 仓位不足, 待买入:${baseQty}, 当前仓位:${baseAssertPosit.positionAmt}`;
                 logger.error(msg);
                 return callRlt.fail(msg);
@@ -349,7 +358,7 @@ export async function dealTask(task) {
             // 默认不支持订单反向、以base资产为准
             // 不支持反向、检查剩余仓位是否满足开单要求
             // 当前为卖出场合、持有多单时需检查、买前检查多单仓位、仓位不足则取消交易
-            if (baseAssertPosit?.positionAmt && Number(baseAssertPosit.positionAmt) > 0 && Number(baseAssertPosit.positionAmt) - baseQty < 0) {
+            if (!baseAssertPosit || (baseAssertPosit.positionAmt && Number(baseAssertPosit.positionAmt) > 0 && Number(baseAssertPosit.positionAmt) - baseQty < 0)) {
                 let msg = `[TASK ${task.id}] 仓位不足, 待卖出:${baseQty}, 当前仓位:${baseAssertPosit.positionAmt}`;
                 logger.error(msg);
                 return callRlt.fail(msg);

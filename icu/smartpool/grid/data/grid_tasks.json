@@ -1,13 +1,54 @@
 [
     {
-        "id": "SOLXRP",
+        "id": "SOL-XRP",
         "baseAssert": "SOLUSDC",
         "quoteAssert": "XRPUSDC",
-        "doubled": true,
+        "doubled": false,
         "reversed": false,
-        "startPrice": null,
+        "startPrice": 161.37,
+        "takeProfitPrice": 100,
         "gridRate": 0.005,
-        "gridValue": 10,
-        "status": "PENDING"
+        "gridValue": 100,
+        "status": "RUNNING",
+        "runtime": {
+            "baseQty": 0.62,
+            "quoteQty": null,
+            "buyPrice": 160.56,
+            "sellPrice": 162.18,
+            "extraLatestPrice": 66,
+            "lastTradePrice": 161.37,
+            "basePosition": 0,
+            "quotePosition": 0,
+            "initFilled": []
+        },
+        "extraBuys": [
+            {
+                "price": 66,
+                "mul": 1,
+                "triggered": false
+            },
+            {
+                "price": 63,
+                "mul": 2,
+                "triggered": false
+            },
+            {
+                "price": 62,
+                "mul": 3,
+                "triggered": false
+            },
+            {
+                "price": 61,
+                "mul": 4,
+                "triggered": false
+            },
+            {
+                "price": 50,
+                "mul": 5,
+                "triggered": false
+            }
+        ],
+        "startBaseP": 161.37,
+        "startQuoteP": null
     }
 ]

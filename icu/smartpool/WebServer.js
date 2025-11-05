@@ -1,5 +1,5 @@
 import express from 'express';
-import {readdir, readFile} from 'fs/promises';
+import {readdir, readFile, writeFile} from 'fs/promises';
 import path from 'path';
 import {fileURLToPath} from 'url';
 import {readLatestBatch} from './service/SmartPoolMapper.js';
@@ -11,9 +11,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const VIEW_DIR = path.join(__dirname, 'view');
 const GRID_DATA_DIR = path.join(__dirname, 'grid', 'data');
+const GRID_TASK_FILE = path.join(GRID_DATA_DIR, 'grid_tasks.json');
 const STAGE_KEYS = ['symbolList', 'rltArr', 'centerList', 'highList', 'lowList', 'highLowList', 'data'];
 const ORDER_FILE_PREFIX = 'orders-';
 const ORDER_FILE_SUFFIX = '.json';
+
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
 
 async function loadBatch() {
     const raw = await readLatestBatch();
@@ -76,6 +80,38 @@ function normalizeTaskId(value) {
         return '';
     }
     return String(value).trim();
+}
+
+function defaultRuntime() {
+    return {
+        baseQty: 0,
+        quoteQty: 0,
+        buyPrice: 0,
+        sellPrice: 0,
+        extraLatestPrice: 0,
+        lastTradePrice: 0,
+        basePosition: 0,
+        quotePosition: 0,
+        initFilled: []
+    };
+}
+
+async function readGridTasks() {
+    try {
+        const raw = await readFile(GRID_TASK_FILE, 'utf8');
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+        if (err && err.code === 'ENOENT') {
+            return [];
+        }
+        throw err;
+    }
+}
+
+async function writeGridTasks(tasks) {
+    const payload = JSON.stringify(tasks, null, 4);
+    await writeFile(GRID_TASK_FILE, `${payload}\n`, 'utf8');
 }
 
 async function loadOrderFiles(taskId) {
@@ -240,6 +276,42 @@ app.get('/api/orders', async (req, res) => {
     }
 });
 
+app.post('/api/grid/tasks', async (req, res) => {
+    try {
+        const payload = req.body ?? {};
+        console.log(payload)
+        const rawId = normalizeTaskId(payload.id);
+        const resolvedId = rawId || `GRID-${Date.now()}`;
+
+        const newTask = {
+            id: resolvedId,
+            baseAssert: payload.baseAssert ?? '',
+            quoteAssert: payload.quoteAssert ?? null,
+            doubled: payload.doubled ?? false,
+            reversed: payload.reversed ?? false,
+            startPrice: payload.startPrice ?? null,
+            takeProfitPrice: payload.takeProfitPrice ?? null,
+            gridRate: payload.gridRate ?? null,
+            gridValue: payload.gridValue ?? null,
+            status: 'PENDING',
+            runtime: defaultRuntime(),
+            extraBuys: Array.isArray(payload.extraBuys) ? payload.extraBuys : [],
+            startBaseP: payload.startBaseP ?? null,
+            startQuoteP: payload.startQuoteP ?? null,
+            initPosition: payload.initPosition ?? null
+        };
+
+        const tasks = await readGridTasks();
+        tasks.push(newTask);
+        await writeGridTasks(tasks);
+
+        res.status(201).json({message: '创建成功', task: newTask});
+    } catch (err) {
+        console.error('创建网格任务失败:', err);
+        res.status(500).json({error: '创建网格任务失败'});
+    }
+});
+
 createFieldEndpoint('symbol-list', 'symbolList');
 createFieldEndpoint('initial-results', 'rltArr');
 createFieldEndpoint('center-list', 'centerList');
@@ -250,6 +322,14 @@ createFieldEndpoint('final-results', 'data');
 
 app.get('/', (req, res, next) => {
     res.sendFile(path.join(VIEW_DIR, 'home.html'), err => {
+        if (err) {
+            next(err);
+        }
+    });
+});
+
+app.get('/grid/tasks/new', (req, res, next) => {
+    res.sendFile(path.join(VIEW_DIR, 'task-new.html'), err => {
         if (err) {
             next(err);
         }
@@ -273,4 +353,5 @@ app.use((req, res) => {
 app.listen(PORT, () => {
     console.log(`首页 http://localhost:${PORT}`);
     console.log(`双币网格任务数据面板 http://localhost:${PORT}/dashboard`);
+    console.log(`新增网格任务 http://localhost:${PORT}/grid/tasks/new`);
 });

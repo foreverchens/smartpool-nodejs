@@ -16,6 +16,7 @@ const periodSelect = document.getElementById('period-select');
 const baseInput = document.getElementById('base-input');
 const quoteInput = document.getElementById('quote-input');
 const symbolApplyBtn = document.getElementById('symbol-apply');
+const symbolReverseBtn = document.getElementById('symbol-reverse');
 const qualityHintEl = document.getElementById('quality-hint');
 
 const chart = echarts.init(document.getElementById('chart'));
@@ -629,8 +630,9 @@ async function renderKline(base, quote) {
                 borderColor: '#1f2a48'
             },
             dataZoom: [
-                {type: 'inside', start: 65, end: 100},
-                {type: 'slider', start: 0, end: 100, height: 20, bottom: 10}
+                // 控制初始k线显示区间范围
+                {type: 'inside', start: 80, end: 100},
+                {type: 'slider', start: 0, end: 100, height: 20, bottom: 5}
             ],
             tooltip: {
                 trigger: 'axis',
@@ -653,7 +655,8 @@ async function renderKline(base, quote) {
                 type: 'category',
                 data: times,
                 min: 'dataMin',
-                max: value => value.max + (value.max - value.min) * 0.05,
+                // k线右侧新增留白范围
+                max: value => value.max + (value.max - value.min) * 0.02,
                 axisLine: {lineStyle: {color: '#2c3e50'}},
                 axisLabel: {color: '#8fa3bf'},
                 splitLine: {show: true, lineStyle: {color: '#1f2a48'}}
@@ -740,6 +743,21 @@ function applyManualSymbol() {
     }
     chartFeedbackEl.textContent = '';
     selectSymbolByName(symbol, true);
+}
+
+function reverseSymbolInputs() {
+    const {base, quote, symbol} = getInputSymbol();
+    if (!symbol) {
+        chartFeedbackEl.textContent = '请输入 base/quote';
+        return;
+    }
+    if (!base || !quote) {
+        chartFeedbackEl.textContent = '当前币对不完整，无法反转';
+        return;
+    }
+    assignInputValues(quote, base);
+    chartFeedbackEl.textContent = '';
+    applyManualSymbol();
 }
 
 async function renderStage(stagePath, stageLabel) {
@@ -990,6 +1008,9 @@ periodSelect.addEventListener('change', () => {
 });
 
 symbolApplyBtn.addEventListener('click', applyManualSymbol);
+if (symbolReverseBtn) {
+    symbolReverseBtn.addEventListener('click', reverseSymbolInputs);
+}
 [baseInput, quoteInput].forEach(input => {
     input.addEventListener('keydown', event => {
         if (event.key === 'Enter') {

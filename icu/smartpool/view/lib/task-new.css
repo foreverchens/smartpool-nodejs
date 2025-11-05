@@ -1,0 +1,306 @@
+body.page-task-new {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.task-container {
+    width: min(760px, 92vw);
+    margin: 48px auto;
+    padding: 32px;
+    border-radius: 16px;
+    background: rgba(9, 14, 26, 0.86);
+    box-shadow: 0 20px 40px rgba(3, 9, 20, 0.55);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.task-container header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.task-container header h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+.task-container header a {
+    font-size: 14px;
+}
+
+form#task-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.field {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(20, 29, 45, 0.75);
+    border: 1px solid rgba(77, 99, 140, 0.35);
+}
+
+.field span {
+    min-width: 96px;
+    font-size: 13px;
+    letter-spacing: 0.4px;
+    color: #8fa5c0;
+}
+
+.field input {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(121, 136, 176, 0.35);
+    background: rgba(22, 30, 46, 0.9);
+    color: #e0e6f1;
+    font-size: 15px;
+}
+
+.collapsible {
+    border-radius: 10px;
+    background: rgba(20, 29, 45, 0.75);
+    border: 1px solid rgba(77, 99, 140, 0.35);
+    padding: 12px 14px;
+}
+
+.collapsible summary {
+    cursor: pointer;
+    font-size: 14px;
+    letter-spacing: 0.4px;
+    color: #c7d7f1;
+}
+
+.collapsible[open] summary {
+    margin-bottom: 12px;
+}
+
+.collapsible-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.collapsible-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.collapsible-hint {
+    margin: 0;
+    font-size: 12px;
+    color: #7f93b9;
+}
+
+.collapsible-actions {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.secondary-button {
+    padding: 10px 16px;
+    border-radius: 6px;
+    border: 1px solid rgba(70, 118, 255, 0.6);
+    background: transparent;
+    color: #9fb4ff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.secondary-button:hover {
+    background: rgba(70, 118, 255, 0.12);
+    color: #c9d9ff;
+}
+
+.extra-buys-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.extra-buy-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    gap: 12px;
+    align-items: center;
+}
+
+.extra-buy-remove {
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(210, 92, 92, 0.6);
+    background: transparent;
+    color: #ff9c9c;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.extra-buy-remove:hover {
+    background: rgba(210, 92, 92, 0.12);
+    color: #ffc2c2;
+}
+
+.checkbox-field {
+    justify-content: flex-start;
+}
+
+.checkbox-field span {
+    min-width: auto;
+    font-size: 14px;
+    color: #e0e6f1;
+}
+
+.checkbox-field input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #4676ff;
+}
+
+.feedback {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    background: rgba(26, 37, 58, 0.92);
+    border: 1px solid rgba(87, 123, 187, 0.35);
+}
+
+.feedback.hidden {
+    display: none;
+}
+
+.feedback.success {
+    border-color: rgba(116, 221, 160, 0.6);
+    color: #a7f1cf;
+}
+
+.feedback.error {
+    border-color: rgba(255, 119, 119, 0.6);
+    color: #ffb5b5;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.form-actions button {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    background: #4676ff;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.form-actions button:disabled {
+    background: rgba(70, 118, 255, 0.5);
+    cursor: not-allowed;
+}
+
+.form-actions button:hover:not(:disabled) {
+    background: #345bff;
+}
+
+.task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-top: 1px solid rgba(77, 99, 140, 0.35);
+    padding-top: 20px;
+}
+
+.task-list-item {
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(20, 29, 45, 0.9);
+    border: 1px solid rgba(77, 99, 140, 0.25);
+    font-size: 14px;
+}
+
+.task-list-item strong {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.task-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    color: #9fb4d7;
+    font-size: 13px;
+}
+
+.empty-hint {
+    color: #73839f;
+    font-size: 14px;
+}
+
+@media (max-width: 640px) {
+    .task-container {
+        padding: 24px 18px;
+        margin: 24px auto;
+    }
+
+    .task-container header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .field {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .field span {
+        min-width: auto;
+    }
+
+    .collapsible-row {
+        grid-template-columns: 1fr;
+    }
+
+    .extra-buy-row {
+        grid-template-columns: 1fr;
+    }
+
+    .collapsible-actions {
+        justify-content: stretch;
+    }
+
+    .secondary-button,
+    .extra-buy-remove {
+        width: 100%;
+    }
+
+    .form-actions {
+        justify-content: stretch;
+    }
+
+    .form-actions button {
+        width: 100%;
+    }
+}

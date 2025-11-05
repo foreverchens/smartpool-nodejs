@@ -116,12 +116,14 @@ function normalizeInitPosition(rawInitPosition) {
     if (!rawInitPosition || typeof rawInitPosition !== 'object') {
         return null;
     }
+    const baseQtyLvl = toNumberOrNull(rawInitPosition.baseQtyLvl);
+    const quoteQtyLvl = toNumberOrNull(rawInitPosition.quoteQtyLvl);
     const baseQty = toNumberOrNull(rawInitPosition.baseQty);
     const quoteQty = toNumberOrNull(rawInitPosition.quoteQty);
-    if (baseQty === null && quoteQty === null) {
+    if (baseQtyLvl === null && quoteQtyLvl === null && baseQty === null && quoteQty === null) {
         return null;
     }
-    return {baseQty, quoteQty};
+    return {baseQtyLvl, quoteQtyLvl, baseQty, quoteQty};
 }
 
 function normalizeInitFilled(rawInitFilled) {
@@ -1473,17 +1475,21 @@ function renderConfigItem(label, value, key) {
     `;
 }
 
-function formatInitPositionDisplay(quantity) {
-    if (!Number.isFinite(quantity)) {
+function formatInitPositionDisplay(level, quantity, unitQty) {
+    let normalizedQty = null;
+    if (Number.isFinite(quantity) && quantity !== 0) {
+        normalizedQty = quantity;
+    } else if (Number.isInteger(level) && level !== 0 && Number.isFinite(unitQty) && unitQty > 0) {
+        const computed = Math.abs(level) * unitQty;
+        normalizedQty = level > 0 ? computed : -computed;
+    }
+    if (!Number.isFinite(normalizedQty) || normalizedQty === 0) {
         return '未配置';
     }
-    if (quantity > 0) {
-        return `买入 ${formatNumber(quantity, 4)}`;
+    if (normalizedQty > 0) {
+        return `买入 ${formatNumber(normalizedQty, 4)}`;
     }
-    if (quantity < 0) {
-        return `卖出 ${formatNumber(Math.abs(quantity), 4)}`;
-    }
-    return '未配置';
+    return `卖出 ${formatNumber(Math.abs(normalizedQty), 4)}`;
 }
 
 function createGridConfig(gridTask) {
@@ -1492,8 +1498,16 @@ function createGridConfig(gridTask) {
     }
     const pair = [gridTask.baseAsset, gridTask.quoteAsset].filter(Boolean).join(' / ') || '-';
     const initPosition = gridTask.initPosition || null;
-    const baseInitDisplay = formatInitPositionDisplay(initPosition?.baseQty);
-    const quoteInitDisplay = formatInitPositionDisplay(initPosition?.quoteQty);
+    const baseInitDisplay = formatInitPositionDisplay(
+        initPosition?.baseQtyLvl,
+        initPosition?.baseQty,
+        gridTask.runtime?.baseQty
+    );
+    const quoteInitDisplay = formatInitPositionDisplay(
+        initPosition?.quoteQtyLvl,
+        initPosition?.quoteQty,
+        gridTask.runtime?.quoteQty
+    );
     const sections = [];
     sections.push(`
         <div class="grid-config-section">
@@ -1506,8 +1520,8 @@ function createGridConfig(gridTask) {
                 ${renderConfigItem('起始价', formatPrice(gridTask.startPrice), fieldKey('grid-task', gridTask.id, 'start-price'))}
                 ${renderConfigItem('网格间距', formatPercent(gridTask.gridRate, 4), fieldKey('grid-task', gridTask.id, 'grid-rate'))}
                 ${renderConfigItem('单格金额', formatValueWithUnit(gridTask.gridValue, 'USDT', 4), fieldKey('grid-task', gridTask.id, 'grid-value'))}
-                ${renderConfigItem('Base资产初始买入｜卖出数量', baseInitDisplay, fieldKey('grid-task', gridTask.id, 'init-position-base'))}
-                ${renderConfigItem('Quote资产初始买入｜卖出数量', quoteInitDisplay, fieldKey('grid-task', gridTask.id, 'init-position-quote'))}
+                ${renderConfigItem('Base资产初始建仓数量', baseInitDisplay, fieldKey('grid-task', gridTask.id, 'init-position-base'))}
+                ${renderConfigItem('Quote资产初始建仓数量', quoteInitDisplay, fieldKey('grid-task', gridTask.id, 'init-position-quote'))}
                 ${renderConfigItem('双向执行', formatBoolean(gridTask.doubled), fieldKey('grid-task', gridTask.id, 'doubled'))}
                 ${renderConfigItem('反向套利', formatBoolean(gridTask.reversed), fieldKey('grid-task', gridTask.id, 'reversed'))}
             </div>

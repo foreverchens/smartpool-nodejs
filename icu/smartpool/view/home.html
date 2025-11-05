@@ -41,11 +41,15 @@
     <section id="chart-section">
         <div id="symbol-summary">
             <div id="symbol-inputs">
-                <label for="base-input">base:</label>
-                <input id="base-input" placeholder="ETH" maxlength="10"/>
-                <label for="quote-input">quote:</label>
-                <input id="quote-input" placeholder="BTC" maxlength="10"/>
-                <button id="symbol-apply" type="button">刷新</button>
+                <div class="symbol-pair-inputs">
+                    <input id="base-input" maxlength="10" placeholder="ETH"/>
+                    <span class="symbol-input-separator">/</span>
+                    <input id="quote-input" maxlength="10" placeholder="BTC"/>
+                </div>
+                <div class="symbol-actions">
+                    <button id="symbol-reverse" type="button">反转</button>
+                    <button id="symbol-apply" type="button">刷新</button>
+                </div>
             </div>
             <div id="summary-metrics"></div>
             <div id="period-controls">

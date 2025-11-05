@@ -11,7 +11,7 @@
  * @property {takeProfitPrice=} takeProfitPrice // 止盈价格
  * @property {number} gridRate        // 等比网格比率，如 0.005
  * @property {number} gridValue       // 每格交易价值（USDT）
- * @property {{baseQty?: number, quoteQty?: number}=} initPosition // 启动后一次性建仓数量；正数买入、负数卖出
+ * @property {{baseQtyLvl?: number, quoteQtyLvl?: number}=} initPosition // 启动后一次性建仓数量倍数；正数买入、负数卖出
  *
  * @typedef {Object} RuntimeParams    // 运行时参数：由引擎在启动时生成
  * @property {number=} baseQty
@@ -32,6 +32,7 @@
  * @property {'NEW'|'FILLED'|'CANCELLED'} status
  * @property {string} groupId         // 归属的网格回合ID；同组全部 FILLED 代表本格完成
  */
+import dayjs from "dayjs";
 import fs from 'fs';
 import path from 'path';
 import {fileURLToPath} from 'url';
@@ -130,12 +131,34 @@ function validateParams(gridTask) {
         if (typeof gridTask.initPosition !== 'object' || Array.isArray(gridTask.initPosition)) {
             errors.push('initPosition 必须为对象');
         } else {
-            const {baseQty, quoteQty} = gridTask.initPosition;
-            if (baseQty != null && (typeof baseQty !== 'number' || !Number.isFinite(baseQty) || baseQty === 0)) {
-                errors.push('initPosition.baseQty 必须为非零数值');
+            const {baseQtyLvl, quoteQtyLvl} = gridTask.initPosition;
+            if (baseQtyLvl != null && (!Number.isInteger(baseQtyLvl))) {
+                errors.push('initPosition.baseQtyLvl 必须为整数');
             }
-            if (quoteQty != null && (typeof quoteQty !== 'number' || !Number.isFinite(quoteQty) || quoteQty === 0)) {
-                errors.push('initPosition.quoteQty 必须为非零数值');
+            if (quoteQtyLvl != null && (!Number.isInteger(quoteQtyLvl))) {
+                errors.push('initPosition.quoteQtyLvl 必须为整数');
+            }
+        }
+    }
+
+    if (gridTask.extraBuys != null) {
+        if (!Array.isArray(gridTask.extraBuys)) {
+            errors.push('extraBuys 必须为数组');
+        } else {
+            for (const item of gridTask.extraBuys) {
+                if (!item || typeof item !== 'object') {
+                    errors.push('extraBuys 项必须为对象');
+                    break;
+                }
+                const {price, mul} = item;
+                if (price == null || typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
+                    errors.push('extraBuys.price 必须为正数');
+                    break;
+                }
+                if (mul == null || typeof mul !== 'number' || !Number.isFinite(mul) || mul <= 0) {
+                    errors.push('extraBuys.mul 必须为正数');
+                    break;
+                }
             }
         }
     }
@@ -209,6 +232,7 @@ async function loop() {
                                 }
                             }
                             task.status = STATUS.EXPIRED;
+                            task.reason = 'Take profit';
                             break;
                         default:
                             console.log(0)
@@ -217,6 +241,7 @@ async function loop() {
                     logger.error(callRlt.msg);
                     // 运行时异常、失效任务
                     task.status = STATUS.EXPIRED;
+                    task.reason = callRlt.msg;
                 }
                 break
             default:
@@ -256,7 +281,9 @@ export async function start() {
     });
 
     // 启动网格任务调度循环
-    await loop().catch(err => {
+    await loop().then(ele => {
+        console.log(dayjs().toJSON())
+    }).catch(err => {
         logger.error('[ERR] Tick loop 异常:', err?.message ?? err)
     });
 
@@ -268,7 +295,6 @@ export async function start() {
             logger.error('[Manager] 定时检查订单异常:', err?.message ?? err);
         }
     }, TICK_MS);
-
 
 
 }
